@@ -44,6 +44,7 @@ pnpm typecheck      # tsc in every package
 pnpm lint           # Biome check (code and config, not Markdown)
 pnpm format         # Biome format, writes changes
 pnpm check          # lint, typecheck, test; what the pre-push hook and CI run
+pnpm coverage       # tests with v8 coverage; add --project @rowing/core for one package
 ```
 
 Run one package's script with `pnpm --filter @rowing/api <script>` (or `@rowing/web`, `@rowing/core`).

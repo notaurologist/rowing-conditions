@@ -27,6 +27,7 @@ pnpm dev       # api on http://localhost:3000, web on http://localhost:5173
 | `pnpm lint` | Biome lint and format check (code and config, not Markdown) |
 | `pnpm format` | Formats with Biome |
 | `pnpm check` | Lint, typecheck, and test; runs before every push and in CI |
+| `pnpm coverage` | Tests with coverage; text summary plus an HTML report in `coverage/` |
 
 `git push --no-verify` skips the pre-push check once.
 

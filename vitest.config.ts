@@ -4,5 +4,12 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   test: {
     projects: ['packages/*', 'apps/*'],
+    coverage: {
+      provider: 'v8',
+      // Patterns are matched per project, against each package's own folder.
+      include: ['**/src/**/*.{ts,tsx}'],
+      exclude: ['**/*.test.{ts,tsx}'],
+      reporter: ['text', 'html'],
+    },
   },
 });
