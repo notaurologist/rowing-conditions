@@ -34,18 +34,21 @@ Versions are pinned exactly. Libraries like Hono and Drizzle change quickly: che
 
 ## Commands
 
-Fill in at M0 and keep accurate.
+Keep this list to commands that work today. Requires Node 26 (`.nvmrc`) and pnpm 12.15.0.
 
 ```
-pnpm install
-pnpm dev            # run api and web
-pnpm test           # all tests
-pnpm typecheck
-pnpm lint           # Biome check
-pnpm format         # Biome format
-pnpm db:migrate     # apply Drizzle migrations
-pnpm fixtures:record  # manual only, never in the pre-push check or CI
+pnpm install        # also turns on the pre-push hook
+pnpm dev            # api on :3000, web on :5173
+pnpm test           # Vitest, every package
+pnpm typecheck      # tsc in every package
+pnpm lint           # Biome check (code and config, not Markdown)
+pnpm format         # Biome format, writes changes
+pnpm check          # lint, typecheck, test; what the pre-push hook and CI run
 ```
+
+Run one package's script with `pnpm --filter @rowing/api <script>` (or `@rowing/web`, `@rowing/core`).
+
+Added later, with their milestones: `pnpm db:migrate` (M4) and `pnpm fixtures:record` (M2, manual only, never in the pre-push check or CI).
 
 ## Conventions
 
