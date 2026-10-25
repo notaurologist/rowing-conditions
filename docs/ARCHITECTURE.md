@@ -101,7 +101,8 @@ type Qualifier =
   | 'provisional'
   | 'estimated'
   | 'iceAffected'
-  | 'equipmentMalfunction';
+  | 'equipmentMalfunction'
+  | 'unreliable';    // other codes meaning the value may be wrong, and any unrecognized code
 
 interface ForecastPoint {
   time: string;                // start of hour, ISO 8601, UTC
@@ -242,7 +243,7 @@ For each threshold that applies to the boat class, in this order:
 
 1. If the metric has no provenance at any hour: unknown, `noSource`.
 2. If the value is null or absent for this hour: unknown, `missing`.
-3. If the value's provenance carries a disqualifying qualifier (`iceAffected`, `equipmentMalfunction`, `estimated`): unknown, `qualified`. `provisional` does not disqualify.
+3. If the value's provenance carries a disqualifying qualifier (`iceAffected`, `equipmentMalfunction`, `estimated`, `unreliable`): unknown, `qualified`. `provisional` does not disqualify. Each adapter maps its source's codes; any code an adapter doesn't recognize becomes `unreliable` and is logged.
 4. If `now - asOf` exceeds the maximum age: unknown, `stale`. So is a value dated more than 1 hour after `now` (`futureToleranceHours`), which points to a clock or adapter error rather than unusually fresh data.
 5. Otherwise compare (see "Comparison") and record a `limit` failure if it fails.
 

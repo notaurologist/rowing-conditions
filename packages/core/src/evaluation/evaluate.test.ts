@@ -180,7 +180,7 @@ describe('unknown reasons', () => {
       ?.reason;
   };
 
-  it.each<Qualifier>(['iceAffected', 'equipmentMalfunction', 'estimated'])(
+  it.each<Qualifier>(['iceAffected', 'equipmentMalfunction', 'estimated', 'unreliable'])(
     'treats a %s reading as unknown',
     (q) => {
       expect(reasonFor({ qualifiers: [q] })).toBe('qualified');

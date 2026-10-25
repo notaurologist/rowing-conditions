@@ -131,7 +131,9 @@ Hours past the end of a flow forecast are unknown for flow. The app does not fal
 
 ### Flagged readings
 
-USGS marks recent data as provisional. That is normal and does not affect evaluation. Some qualifiers mean the value itself is unreliable: ice-affected discharge, equipment malfunction, and estimated values. Estimated values are common during ice periods. Those readings are shown with their qualifier, but evaluation treats them as unknown. While a gauge reports estimates, a flow limit can stay unknown for weeks in winter; revisit this during backtesting (M9) if that turns out to hide too much. The exact USGS qualifier codes are confirmed during adapter work (M2). (Decided in issue #41, October 2026.)
+USGS marks recent data as provisional. That is normal and does not affect evaluation. Some qualifiers mean the value itself is unreliable: ice-affected discharge, equipment malfunction, and estimated values. Estimated values are common during ice periods. Those readings are shown with their qualifier, but evaluation treats them as unknown. While a gauge reports estimates, a flow limit can stay unknown for weeks in winter; revisit this during backtesting (M9) if that turns out to hide too much. (Decided in issue #41, October 2026.)
+
+USGS also flags maintenance, flood damage, backwater, a rating still being developed, debris, dam failure, test data, and values below what's shown ("less than", "below minimum"). These count as unreliable too, and so does any code the app doesn't recognize, so a new USGS code can never let a doubtful value through. Only codes known to be informational, such as "discontinued" or "regulated", are ignored. A "less than" value matters most for low-water minimums: the true flow is lower than the number shown. The full code table is in `DATA_SOURCES.md`. (Decided in issue #13, October 2026.)
 
 ### Limits the location cannot check
 

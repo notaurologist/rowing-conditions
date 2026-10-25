@@ -72,6 +72,7 @@ export const Qualifier = z.enum([
   'estimated',
   'iceAffected',
   'equipmentMalfunction',
+  'unreliable', // any other code meaning the value may be wrong, including unrecognized codes
 ]);
 export type Qualifier = z.infer<typeof Qualifier>;
 

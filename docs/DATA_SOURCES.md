@@ -59,25 +59,31 @@ These are the codes seen across about 25,000 latest readings for flow, gauge hei
 | `ESTIMATED` | 83 | Value estimated, often during ice | present | `estimated` (disqualifying) |
 | `ICE` | 26 | Ice affected | null | `iceAffected` (disqualifying) |
 | `EQUIP` | 116 | Equipment malfunction | null | `equipmentMalfunction` (disqualifying) |
-| `MAINT` | 20 | Under maintenance | null | not mapped yet (see below) |
-| `FLOOD` | 14 | Flood damage to the gauge | null | not mapped yet |
-| `BACKWATER` | 48 | Backwater; stage–discharge relation affected | null | not mapped yet |
-| `RATINGDEV` | 35 | Rating being developed | null | not mapped yet |
-| `DEBRIS` | 5 | Debris affecting the record | present | not mapped yet |
-| `DAMFAILURE` | 3 | Dam failure | present | not mapped yet |
-| `TEST` | 3 | Test data | present | not mapped yet |
-| `GHNOTASSCPKQ` | 1 | Unclear | null | not mapped yet |
+| `MAINT` | 20 | Under maintenance | null | `unreliable` (disqualifying) |
+| `FLOOD` | 14 | Flood damage to the gauge | null | `unreliable` (disqualifying) |
+| `BACKWATER` | 48 | Backwater; stage–discharge relation affected | null | `unreliable` (disqualifying) |
+| `RATINGDEV` | 35 | Rating being developed | null | `unreliable` (disqualifying) |
+| `DEBRIS` | 5 | Debris affecting the record | present | `unreliable` (disqualifying) |
+| `DAMFAILURE` | 3 | Dam failure | present | `unreliable` (disqualifying) |
+| `TEST` | 3 | Test data | present | `unreliable` (disqualifying) |
+| `GHNOTASSCPKQ` | 1 | Unclear | null | `unreliable`, as an unrecognized code |
 | `DISCONTINUED` | 894 | Gauge discontinued | old | ignore; the stale check catches it |
 | `SEASONAL` | 256 | Seasonal gauge, out of season | null or old | ignore; missing or stale |
 | `UNAVAIL` | 75 | Data unavailable | null or old | ignore; missing or stale |
 | `DRY` | 40 | Channel dry | `0.00` or null | ignore |
 | `ZEROFLOW` | 14 | Zero flow | null | ignore |
-| `LESSTHAN` | 15 | Actual value is less than reported | present | not mapped yet; matters for minimum limits |
-| `BLWMIN` | 7 | Below the sensor's minimum | present | not mapped yet; matters for minimum limits |
+| `LESSTHAN` | 15 | Actual value is less than reported | present | `unreliable` (disqualifying); the true value is lower, which matters for minimum limits |
+| `BLWMIN` | 7 | Below the sensor's minimum | present | `unreliable` (disqualifying); the true value is lower, which matters for minimum limits |
 | `REVISED` | 19 | Value revised | present | ignore |
 | `URBAN`, `REGULATED`, `TIDE`, `DIFFDATUM`, `OTHERAGENCY`, `OPPORTUNISTIC`, `FORCEINTERPOLATION` | ≤ 7 each | Informational | present | ignore |
 
-Most reliability codes come with a null value, so those readings are already `missing`. The open question, in issue #13's PR, is what to do with the "not mapped yet" codes, and with codes that first appear later. Until that's decided, the adapter must not drop an unrecognized code silently.
+Most reliability codes come with a null value, so those readings are already `missing`.
+
+**Decided in #13:**
+- The codes marked `unreliable` above map to the internal disqualifying qualifier `unreliable`.
+- Any code not listed here is also treated as `unreliable`, and the adapter logs it so the table can be updated. The same applies to an `approval_status` other than `Provisional` or `Approved`.
+- Only the codes marked "ignore" are dropped.
+- The mapping is in `apps/api/src/adapters/usgs/qualifiers.ts`.
 
 ### Quirks
 
