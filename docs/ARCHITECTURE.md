@@ -398,6 +398,8 @@ No secrets in code or fixtures.
 
 ## Testing
 
+Test files sit next to the code they test as `*.test.ts` or `*.test.tsx`. `pnpm test` runs every package as a Vitest project from the root config. Biome lints and formats code and config, but not Markdown.
+
 - **core:** unit tests for every conversion and evaluation rule, including edge cases (missing values, boundaries, boat class scoping, multiple rule sets, forecast vs observed flow, darkness).
 - **adapters:** tests against recorded fixtures in `apps/api/test/fixtures/`. No live network calls in tests or CI.
 - **api routes:** tests with adapters stubbed by fixtures, covering partial failure.
