@@ -301,7 +301,16 @@ Dividing temperatures by their limit would divide by zero at 0 °C and flip sign
 
 ### Daylight
 
-- Use the `suncalc` library for sunrise, sunset, civil dawn, and civil dusk (suncalc's `dawn` and `dusk`). No external API.
+- Use the `suncalc` library for sunrise, sunset, civil dawn, and civil dusk (suncalc's `dawn` and `dusk`). No external API. The code is in `packages/core/src/daylight/daylight.ts`.
+- **suncalc 2.x behavior:**
+  - It works in degrees.
+  - It returns `null` for an event that doesn't happen that day, and sets `alwaysUp` or `alwaysDown` when the Sun never crosses the horizon.
+  - `getPosition` returns altitude corrected for atmospheric refraction, so classify light levels from `getTimes` event times rather than from altitude.
+- **`daylightTimes(date, lat, lon)`** returns civil dawn, sunrise, sunset and civil dusk for a local date, in UTC, plus `sun`: `risesAndSets`, `alwaysUp` or `alwaysDown`.
+  - suncalc returns the events of the solar day that contains the instant it's given. Asking at the date's approximate local solar noon therefore selects the right local day with no time zone needed.
+  - A summer sunset in the US often falls on the next UTC date. It's still reported with the local day it belongs to.
+- **`hourLightLevel(hourStart, lat, lon)`** returns the light level at the middle of the hour.
+  - Where the Sun never crosses −6° that day, it falls back to the Sun's altitude: twilight all night in Fairbanks in June, dark in deep polar night.
 - Light is context by default. See "Hour status" for how light levels are assigned and when a daylight window affects status.
 
 ## apps/api
