@@ -18,6 +18,7 @@ Pin these as installed on October 25, 2026. `package.json` files hold the exact 
 | React | 19.3.1 | |
 | Hono | 4.13.13 | 4.13.14 was under a day old at install. |
 | `@hono/node-server` | 2.1.5 | |
+| suncalc | 2.1.1 | Added in #9. Version 2 works in degrees (1.x used radians), ships its own types, and returns `null` for events that don't happen that day. |
 
 Added later with their own tickets: Zod 4 (0013), Vitest and Biome (#4), Drizzle (M4).
 
