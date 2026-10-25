@@ -215,7 +215,12 @@ The code is in `packages/core/src/evaluation/evaluate.ts`.
   - `unavailableMetrics` lists metrics with an applicable threshold but no provenance at any hour (`noSource`), so the UI can show one notice per rule set instead of 48 unknowns. For a combined temperature limit, it lists the part with no source (for example `waterTemp`).
   - `flowByGauge` holds flow series by gauge ref. If the rule set names a flow gauge, each hour's flow is replaced with that gauge's flow for the same hour. If the gauge has no data, flow is `noSource`. It never falls back to the location's display gauge. Only flow moves to the named gauge; a gauge height limit is still evaluated at the display gauge, until a club needs otherwise.
   - `hasLimits` is false when the rule set has no thresholds for the boat class and no daylight window. Every hour would then be vacuously `within`, so `hours` is returned empty: no client can show "within Club A's limits" for a club with none. The UI shows its empty state ("enter your or your club's limits") instead.
-- `findWindows(timeline, daylightTimes) → { start, end }[]` with ISO 8601 UTC times: contiguous runs of `within` hours, with edges cut at the rule set's daylight window boundaries to the minute.
+- `findWindows(hours, { ruleSet, lat, lon }) → { start, end }[]` returns ISO 8601 UTC times, with `end` exclusive. It's in `packages/core/src/evaluation/windows.ts`.
+  - A window is a contiguous run of `within` hours. An `outside` or `unknown` hour ends a run, and so does a gap in the timeline.
+  - With a daylight window, edges are cut at the rule set's daylight window, inward to whole minutes. A window never starts before the daylight window opens or ends after it closes.
+  - The start is cut by the first hour's solar day and the end by the last hour's.
+  - A window that cutting leaves empty is dropped.
+  - During polar day nothing is cut.
 - `findLimitingFactor(timeline, forecast, ruleSet, boatClassId, daylightTimes) → { metric, reason: 'mostHoursOutside' | 'leastHeadroom', hoursOutside, headroom } | null`
   - Considers only metrics that have a limit applying to the boat class, excluding `unavailableMetrics`, and only rowing hours. Rowing hours are those overlapping the rule set's daylight window, or civil dawn to civil dusk if it has none. The default includes pre-sunrise twilight because crews often push off before sunrise with lights.
   - Picks the metric that causes the most hours to be `outside`. Ties break by least headroom.
