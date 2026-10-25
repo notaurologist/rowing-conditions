@@ -1,6 +1,6 @@
 # Data Sources
 
-Status: Draft v0.2, details as of October 2026.
+Status: Draft v0.3. USGS verified October 25, 2026; other sources as of October 2026.
 
 **Before implementing or changing any adapter, verify the details below against the source's official documentation.** APIs change (USGS is mid-migration as of this writing). If the docs differ from this file, follow the docs and update this file in the same change.
 
@@ -10,38 +10,83 @@ General rules for all adapters are in `ARCHITECTURE.md` (Zod parsing, SI convers
 
 ## USGS Water Data APIs (US flow, gauge height, water temperature)
 
-- **Docs:** https://api.waterdata.usgs.gov/docs/ (OpenAPI with query builder)
+Verified against the live API on October 25, 2026 (issue #13). Facts below come from real responses unless marked otherwise.
+
+- **Docs:** https://api.waterdata.usgs.gov/docs/ (OpenAPI with query builder). Field descriptions are also served at `/collections/{id}/queryables?f=json`.
 - **Base URL:** `https://api.waterdata.usgs.gov/ogcapi/v1`
 - **Do not use** the legacy WaterServices API (`waterservices.usgs.gov`). It is being decommissioned: degradation from November 16, 2026, full retirement in early 2027. Many tutorials and code samples online still use it, and some examples use the earlier `v0` path. Use `v1`.
-- **Auth:** none required. Optional API key (sign up at https://api.waterdata.usgs.gov/signup/) for higher rate limits, sent as `X-Api-Key` header or `api_key` query parameter. Read from `USGS_API_KEY` env var if present.
-- **Format:** OGC API Features. Add `f=json` to get JSON (browsers default to HTML). Responses are GeoJSON with records under `features`.
+- **Auth:** none required. An optional API key (sign up at https://api.waterdata.usgs.gov/signup/) raises rate limits. Send it as an `X-Api-Key` header or `api_key` query parameter; both are honored. An invalid key returns **403**, so never send an empty or placeholder key: omit it when `USGS_API_KEY` is unset.
+- **Rate limits:** not documented on the docs or signup pages, and no rate-limit headers are returned. Cache as `ARCHITECTURE.md` describes, and treat a 429 or 403 as an upstream error.
+- **Format:** OGC API Features. Add `f=json` to get JSON (browsers default to HTML). Responses are GeoJSON: `{ type, features, numberReturned, links, timeStamp }`, with records in `features[].properties`. `numberMatched` is not always present.
+- **Paging:** `limit` is capped at 50,000. Larger values return 400 `InvalidParameterValue`. More results are signaled by a `links` entry with `rel: "next"`.
 
 ### Collections we use
 
 | Collection | Use |
 |---|---|
-| `monitoring-locations` | Gauge metadata and nearby search (by bounding box) |
+| `monitoring-locations` | Gauge metadata and nearby search (`bbox=minLon,minLat,maxLon,maxLat`; `site_type_code=ST` for streams) |
 | `latest-continuous` | Most recent reading per time series at a gauge |
-| `continuous` | Historical readings (backtesting, trends) |
-| `time-series-metadata` | Which parameters a gauge actually reports |
+| `continuous` | Recent and historical readings (trend, backtesting). `time=PT6H` returns the last 6 hours, in ascending time order |
+| `time-series-metadata` | Which parameters a gauge reports, and from when |
 | `parameter-codes` | Reference for parameter codes |
+
+Also available but not used yet: `daily`, `latest-daily`, `field-measurements`, `combined-metadata`, `statistic-codes`.
 
 ### Identifiers and parameters
 
 - Monitoring location IDs combine agency and number: `USGS-01170500`.
-- Parameter codes we care about (verify in `parameter-codes`):
-  - `00060` discharge, ft³/s → convert to m³/s
-  - `00065` gauge height, ft → convert to m
-  - `00010` water temperature, °C
-- Filter with `monitoring_location_id` and `parameter_code` (both accept comma-separated lists). Use `skipGeometry=true` when coordinates are not needed.
+- Parameter codes and the units they come back in (`unit_of_measure`):
+  - `00060` discharge, `ft^3/s`. Convert to m³/s.
+  - `00065` gauge height, `ft`. Convert to m.
+  - `00010` water temperature, `degC`.
+- **Statistic:** real-time readings have `statistic_id` `00011` (instantaneous). In `time-series-metadata`, the same series shows `computation_period_identifier: "Points"`. A few latest readings have a null `statistic_id`; filter on `00011`.
+- **Filters:** `monitoring_location_id` and `parameter_code` both accept comma-separated lists (checked with two gauges and three parameters in one request). Use `skipGeometry=true` when coordinates are not needed, and `properties=` to trim fields.
+- **Response fields that matter:**
+  - `value` is a **string** (for example `"2120"`), to preserve precision, and may be `null`. Parse it to a number in the adapter.
+  - `time` uses an offset (`2026-10-25T17:15:00+00:00`), not `Z`. Normalize to `Z` before it reaches the core schemas, which require `Z`.
+  - `qualifier` is an **array of strings** or `null` (for example `["ICE"]`, `["DISCONTINUED", "EQUIP"]`), even though the queryables page describes it as a string.
+  - `approval_status` is `"Provisional"` or `"Approved"`.
+
+### Qualifiers
+
+USGS does not publish a code list in the v1 API or its docs. The codes are descriptive words, and their meanings below are inferred from their names and from the legacy WaterServices codes.
+
+These are the codes seen across about 25,000 latest readings for flow, gauge height and water temperature:
+
+| Code | Count | Meaning | Value usually | Internal mapping |
+|---|---|---|---|---|
+| (approval) `Provisional` | most | Not yet reviewed; may be revised | present | `provisional` |
+| `ESTIMATED` | 83 | Value estimated, often during ice | present | `estimated` (disqualifying) |
+| `ICE` | 26 | Ice affected | null | `iceAffected` (disqualifying) |
+| `EQUIP` | 116 | Equipment malfunction | null | `equipmentMalfunction` (disqualifying) |
+| `MAINT` | 20 | Under maintenance | null | not mapped yet (see below) |
+| `FLOOD` | 14 | Flood damage to the gauge | null | not mapped yet |
+| `BACKWATER` | 48 | Backwater; stage–discharge relation affected | null | not mapped yet |
+| `RATINGDEV` | 35 | Rating being developed | null | not mapped yet |
+| `DEBRIS` | 5 | Debris affecting the record | present | not mapped yet |
+| `DAMFAILURE` | 3 | Dam failure | present | not mapped yet |
+| `TEST` | 3 | Test data | present | not mapped yet |
+| `GHNOTASSCPKQ` | 1 | Unclear | null | not mapped yet |
+| `DISCONTINUED` | 894 | Gauge discontinued | old | ignore; the stale check catches it |
+| `SEASONAL` | 256 | Seasonal gauge, out of season | null or old | ignore; missing or stale |
+| `UNAVAIL` | 75 | Data unavailable | null or old | ignore; missing or stale |
+| `DRY` | 40 | Channel dry | `0.00` or null | ignore |
+| `ZEROFLOW` | 14 | Zero flow | null | ignore |
+| `LESSTHAN` | 15 | Actual value is less than reported | present | not mapped yet; matters for minimum limits |
+| `BLWMIN` | 7 | Below the sensor's minimum | present | not mapped yet; matters for minimum limits |
+| `REVISED` | 19 | Value revised | present | ignore |
+| `URBAN`, `REGULATED`, `TIDE`, `DIFFDATUM`, `OTHERAGENCY`, `OPPORTUNISTIC`, `FORCEINTERPOLATION` | ≤ 7 each | Informational | present | ignore |
+
+Most reliability codes come with a null value, so those readings are already `missing`. The open question, in issue #13's PR, is what to do with the "not mapped yet" codes, and with codes that first appear later. Until that's decided, the adapter must not drop an unrecognized code silently.
 
 ### Quirks
 
-- Readings are typically every 15 minutes, but telemetry delays vary by gauge; some gauges lag by hours.
-- Recent data is **provisional** and can be revised. Preserve qualifiers.
-- In winter, gauges may report ice-affected values or none at all. Treat ice-affected discharge as unreliable and surface the qualifier in the UI.
-- Many gauges do not report water temperature. Check `time-series-metadata` rather than assuming.
-- Trend (rising/falling) needs recent history from `continuous`, not just `latest-continuous`.
+- **Reporting interval:** readings are typically every 15 minutes, but telemetry delays vary by gauge, and some gauges lag by hours.
+- **Revisions:** recent data is provisional and can be revised. Preserve qualifiers.
+- **Winter:** gauges may report ice-affected values or none at all. Ice-affected readings usually come with a null value and the `ICE` qualifier.
+- **Water temperature:** many gauges don't report it. Check `time-series-metadata` rather than assuming. For example, the Connecticut River at Montague City (`USGS-01170500`) reports flow and gauge height but not water temperature, while the gauge near Northfield (`USGS-01161280`), about 10 km upstream, reports all three.
+- **`time-series-metadata` `end` lags.** For Montague City it was about 12 hours behind the latest reading. Use it to see which parameters a gauge reports, not how fresh they are.
+- **Trend:** rising or falling needs recent history from `continuous`, not just `latest-continuous`. At Montague City on October 25, flow fell from 3,370 to 2,120 ft³/s over 5 hours.
 
 ---
 
