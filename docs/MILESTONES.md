@@ -26,9 +26,9 @@ Each milestone is small enough to break into agent tasks. A milestone is done wh
 - Rule set model with user-defined boat classes.
 - `findLimitingFactor` for choosing the default chart metric.
 - Evaluation (`evaluateHour`, `evaluateTimeline`, `findWindows`) per rule set and boat class, with daylight window, forecast vs observed flow, and `unknown` handling.
-- Daylight calculations via `suncalc`.
+- Daylight calculations via `suncalc`, including civil dawn and dusk and per-hour light level.
 
-**Accept when:** unit tests cover every conversion, every evaluation rule, boundaries (value exactly at threshold), missing values, multiple rule sets, and darkness. Coverage of `evaluation/` is near complete.
+**Accept when:** unit tests cover every conversion, every evaluation rule, boundaries (value exactly at threshold), missing values, multiple rule sets, light levels, and darkness with and without a daylight window. Coverage of `evaluation/` is near complete.
 
 ## M2: USGS adapter and gauge search (November)
 
@@ -79,8 +79,8 @@ Each milestone is small enough to break into agent tasks. A milestone is done wh
 
 ## M6: Timeline chart (January)
 
-- Answer-first layout: next window for the selected rule set, then the chart, then daylight periods with reasons.
-- 48-hour visx chart showing the limiting-factor metric by default, with chips to switch (flow, wind and gusts, water temp, air temp, rain chance), the limit line, status strip, and darkness shading.
+- Answer-first layout: next window for the selected rule set, then the chart, then periods from civil dawn to dusk with reasons.
+- 48-hour visx chart showing the limiting-factor metric by default, with chips to switch (flow, wind and gusts, water temp, air temp, rain chance), the limit line, status strip, and light-level shading with text labels.
 - Chart label explains which metric is shown and why; pinned metric preference stored locally.
 - Works at phone widths.
 - Chart components tested with fixture data.

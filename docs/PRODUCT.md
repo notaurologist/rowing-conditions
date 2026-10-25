@@ -55,13 +55,13 @@ Implications for all features and copy:
 
 ### 3. 48-hour timeline
 
-The centerpiece of the product. The main screen leads with the answer (the next window within the selected rule set's limits, and what follows), then the chart, then a plain-language list of daylight periods with reasons.
+The centerpiece of the product. The main screen leads with the answer (the next window within the selected rule set's limits, and what follows), then the chart, then a plain-language list of periods from civil dawn to civil dusk with reasons.
 
 - Hourly wind, gusts, air temperature, and precipitation chance on one chart.
-- Darkness shaded.
+- Light level shaded and labeled (daylight, twilight, dark). Light is context: crews often row before sunrise with lights, so it does not change whether an hour is within limits unless a rule set sets a hard daylight window.
 - Latest flow reading and trend shown alongside.
 - Time windows within each rule set's limits highlighted.
-- **The charted metric follows the limiting factor.** By default the chart shows whichever metric is deciding things for the selected rule set and boat class: the one causing the most daylight hours outside limits, or if none, the one closest to its limit. A label says which metric is shown and why. Chips let the user switch metrics, and the user can pin a preferred default.
+- **The charted metric follows the limiting factor.** By default the chart shows whichever metric is deciding things for the selected rule set and boat class: the one causing the most hours outside limits between civil dawn and dusk (or within the rule set's daylight window), or if none, the one closest to its limit. A label says which metric is shown and why. Chips let the user switch metrics, and the user can pin a preferred default.
 
 ### 4. Rule sets
 
@@ -71,7 +71,7 @@ Rowers often row with more than one club on the same water, and each club has it
 - Each rule set defines its own boat classes, since fleets differ (one club may have nothing larger than a double, another may have eights). Boat classes are user-named, not a fixed list.
 - Limits: max wind, max gusts, max flow, min water temperature, min air temperature, min combined air plus water temperature. Each limit applies to all boat classes in the set or to specific ones.
 - A rule set can name the gauge its flow limit is measured at, since clubs tie flow limits to a specific gauge.
-- Optional daylight window per rule set.
+- Optional daylight window per rule set, only for clubs that forbid rowing outside set hours.
 - Several rule sets can be attached to one location, and the main screen can show each one's status side by side (for example, within one club's limits but outside another's at the same hour).
 - Copy refers to the rule set by name: "within Club A's limits," never "go" or "no go."
 
