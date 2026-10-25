@@ -1,0 +1,11 @@
+#!/bin/sh
+# Runs lint, typecheck, and tests before every push. Local checks replace hosted CI
+# so the project stays off metered services. Skip once with: git push --no-verify
+set -e
+
+if ! command -v pnpm >/dev/null 2>&1; then
+  echo "pre-push: pnpm not found. Install it (npm install -g pnpm@12.15.0) or push with --no-verify." >&2
+  exit 1
+fi
+
+pnpm check

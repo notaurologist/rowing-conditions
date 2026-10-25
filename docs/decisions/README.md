@@ -18,3 +18,4 @@ One file per decision. Format: context, decision, consequences. Never edit a pas
 | 0012 | NWPS flow forecasts in the MVP | Accepted |
 | 0013 | Node 26, Zod 4, and local Postgres via Docker Compose from M4 | Accepted |
 | 0014 | Toolchain versions at M0 | Accepted |
+| 0015 | Free-tier CI plus local pre-push checks | Accepted |

@@ -13,7 +13,7 @@ Each milestone is small enough to break into agent tasks. A milestone is done wh
 - pnpm workspace with `apps/api`, `apps/web`, `packages/core`.
 - TypeScript strict, Biome, Vitest configured at the root; `pnpm lint`, `pnpm test`, `pnpm typecheck`, `pnpm dev` work across all packages.
 - Exact versions pinned. Versions recorded in a decision record.
-- CI runs lint, typecheck, and tests on every push.
+- A local pre-push hook and free-tier CI run lint, typecheck, and tests (decision 0015).
 - `AGENTS.md` commands section matches reality.
 
 **Accept when:** a fresh clone runs `pnpm install && pnpm test && pnpm dev` with no errors.
