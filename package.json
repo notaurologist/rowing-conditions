@@ -14,7 +14,8 @@
     "format": "biome format --write .",
     "check": "pnpm lint && pnpm typecheck && pnpm test",
     "coverage": "vitest run --coverage",
-    "prepare": "git config core.hooksPath .githooks"
+    "prepare": "git config core.hooksPath .githooks",
+    "fixtures:record": "pnpm --filter @rowing/api fixtures:record"
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.3",

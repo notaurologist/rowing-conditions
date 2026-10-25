@@ -1,0 +1,99 @@
+{
+  "url": "https://api.waterdata.usgs.gov/ogcapi/v1/collections/monitoring-locations/items/USGS-01170500?f=json",
+  "recordedAt": "2026-10-25T23:43:09.907Z",
+  "status": 200,
+  "body": {
+    "type": "Feature",
+    "properties": {
+      "id": "USGS-01170500",
+      "agency_code": "USGS",
+      "agency_name": "U.S. Geological Survey",
+      "monitoring_location_number": "01170500",
+      "monitoring_location_name": "CONNECTICUT RIVER AT MONTAGUE CITY, MA",
+      "district_code": "25",
+      "country_code": "US",
+      "country_name": "United States of America",
+      "state_code": "25",
+      "state_name": "Massachusetts",
+      "county_code": "011",
+      "county_name": "Franklin County",
+      "minor_civil_division_code": "42285",
+      "site_type_code": "ST",
+      "site_type": "Stream",
+      "hydrologic_unit_code": "010802010602",
+      "basin_code": null,
+      "altitude": 99.32,
+      "altitude_accuracy": 2.3,
+      "altitude_method_code": "N",
+      "altitude_method_name": "Interpolated from Digital Elevation Model",
+      "vertical_datum": "NAVD88",
+      "vertical_datum_name": "North American Vertical Datum of 1988",
+      "horizontal_positional_accuracy_code": "1",
+      "horizontal_positional_accuracy": "Accurate to + or - .1 sec (Differentially-Corrected GPS).",
+      "horizontal_position_method_code": "N",
+      "horizontal_position_method_name": "Interpolated from Digital MAP.",
+      "original_horizontal_datum": "NAD83",
+      "original_horizontal_datum_name": "North American Datum of 1983",
+      "drainage_area": 7860,
+      "contributing_drainage_area": 7860,
+      "time_zone_abbreviation": "EST",
+      "uses_daylight_savings": "Y",
+      "construction_date": null,
+      "aquifer_code": null,
+      "national_aquifer_code": null,
+      "aquifer_type_code": null,
+      "well_constructed_depth": null,
+      "hole_constructed_depth": null,
+      "depth_source_code": null,
+      "revision_note": "WSP 471: 1904-17. WSP 741: 1930-32. WSP 781: 1928(M). WSP 1051: 1905, 1909-10, 1912-14, 1920, \r\n1922-23, 1925-26, 1928, drainage area at Sunderland. WSP 1301: 1905(M), 1914-19(M), 1930-31(M). WDR MA-RI-84-1: Drainage area. WDR-US-2015: 2015. Daily mean discharges from Jan. 11, 2015 to Mar. 18, 2015, monthly mean discharges for January, February, and March 2015, and the annual mean discharge for the 2015 water year were revised on July 20, 2016 and supersede those values originally published in the 2015 water year. Revisions are based on estimated daily discharges to correct for ice effects.",
+      "revision_created": "2017-11-13T06:00:00+00:00",
+      "revision_modified": null
+    },
+    "id": "USGS-01170500",
+    "geometry": {
+      "type": "Point",
+      "coordinates": [
+        -72.5745,
+        42.5802222222222
+      ]
+    },
+    "links": [
+      {
+        "type": "application/json",
+        "rel": "root",
+        "title": "The landing page of this server as JSON",
+        "href": "https://api.waterdata.usgs.gov/ogcapi/v1?f=json"
+      },
+      {
+        "type": "text/html",
+        "rel": "root",
+        "title": "The landing page of this server as HTML",
+        "href": "https://api.waterdata.usgs.gov/ogcapi/v1?f=html"
+      },
+      {
+        "rel": "self",
+        "type": "application/geo+json",
+        "title": "This document as JSON",
+        "href": "https://api.waterdata.usgs.gov/ogcapi/v1/collections/monitoring-locations/items/USGS-01170500?f=json"
+      },
+      {
+        "rel": "alternate",
+        "type": "application/ld+json",
+        "title": "This document as RDF (JSON-LD)",
+        "href": "https://api.waterdata.usgs.gov/ogcapi/v1/collections/monitoring-locations/items/USGS-01170500?f=jsonld"
+      },
+      {
+        "rel": "alternate",
+        "type": "text/html",
+        "title": "This document as HTML",
+        "href": "https://api.waterdata.usgs.gov/ogcapi/v1/collections/monitoring-locations/items/USGS-01170500?f=html"
+      },
+      {
+        "rel": "collection",
+        "type": "application/json",
+        "title": "Monitoring locations",
+        "href": "https://api.waterdata.usgs.gov/ogcapi/v1/collections/monitoring-locations"
+      }
+    ]
+  }
+}
