@@ -190,11 +190,16 @@ function withFlowFrom(
   });
 }
 
+// The forecast as the rule set sees it: with flow from its named gauge, if it names one.
+export function forecastForRuleSet(input: TimelineInput): ForecastPoint[] {
+  const ref = input.ruleSet.flowGaugeRef;
+  return ref ? withFlowFrom(input.forecast, input.flowByGauge?.[ref]) : input.forecast;
+}
+
 export function evaluateTimeline(input: TimelineInput): TimelineResult {
   const { ruleSet, boatClassId } = input;
   assertBoatClass(ruleSet, boatClassId);
-  const ref = ruleSet.flowGaugeRef;
-  const forecast = ref ? withFlowFrom(input.forecast, input.flowByGauge?.[ref]) : input.forecast;
+  const forecast = forecastForRuleSet(input);
 
   const applicable = ruleSet.thresholds.filter((t) => appliesTo(t, boatClassId));
   // With nothing to compare, every hour would be vacuously within. Return no hours, so no client

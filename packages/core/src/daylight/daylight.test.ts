@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { DaylightTimes, daylightTimes, daylightWindowSpan, hourLightLevel } from './daylight.ts';
+import {
+  DaylightTimes,
+  daylightTimes,
+  daylightWindowSpan,
+  hourLightLevel,
+  hourOverlapsCivilDaylight,
+} from './daylight.ts';
 
 // Reference times from the US Naval Observatory (aa.usno.navy.mil/api/rstt/oneday), UTC,
 // recorded October 2026.
@@ -184,5 +190,36 @@ describe('daylightWindowSpan', () => {
     expect(
       daylightWindowSpan('2026-12-21T22:00:00Z', utqiagvik.lat, utqiagvik.lon, window),
     ).toEqual({ kind: 'none' });
+  });
+});
+
+describe('hourOverlapsCivilDaylight', () => {
+  const { lat, lon } = turnersFalls;
+  const winter = daylightTimes('2026-12-21', lat, lon);
+  const dawn = Date.parse(winter.civilDawn as string);
+  const dusk = Date.parse(winter.civilDusk as string);
+  const hourAt = (ms: number) => new Date(ms).toISOString();
+
+  it('includes midday and excludes the middle of the night', () => {
+    expect(hourOverlapsCivilDaylight('2026-12-21T17:00:00Z', lat, lon)).toBe(true);
+    expect(hourOverlapsCivilDaylight('2026-12-21T05:00:00Z', lat, lon)).toBe(false);
+  });
+
+  it('includes an hour that overlaps civil dawn by any amount, and excludes one ending at it', () => {
+    expect(hourOverlapsCivilDaylight(hourAt(dawn - 59 * MINUTE), lat, lon)).toBe(true);
+    expect(hourOverlapsCivilDaylight(hourAt(dawn - 60 * MINUTE), lat, lon)).toBe(false);
+  });
+
+  it('includes an hour starting before civil dusk, and excludes one starting at it', () => {
+    expect(hourOverlapsCivilDaylight(hourAt(dusk - MINUTE), lat, lon)).toBe(true);
+    expect(hourOverlapsCivilDaylight(hourAt(dusk), lat, lon)).toBe(false);
+  });
+
+  it('handles polar day, white nights, and deep polar night', () => {
+    expect(hourOverlapsCivilDaylight('2026-06-21T10:00:00Z', utqiagvik.lat, utqiagvik.lon)).toBe(
+      true,
+    );
+    expect(hourOverlapsCivilDaylight('2026-06-21T09:00:00Z', 64.84, -147.72)).toBe(true);
+    expect(hourOverlapsCivilDaylight('2026-12-21T12:00:00Z', 85, 0)).toBe(false);
   });
 });

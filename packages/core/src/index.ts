@@ -1,5 +1,6 @@
 export * from './daylight/daylight.ts';
 export * from './evaluation/evaluate.ts';
+export * from './evaluation/limitingFactor.ts';
 export * from './evaluation/windows.ts';
 export * from './types/evaluation.ts';
 export * from './types/location.ts';

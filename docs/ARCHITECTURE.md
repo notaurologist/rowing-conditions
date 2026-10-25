@@ -221,9 +221,14 @@ The code is in `packages/core/src/evaluation/evaluate.ts`.
   - The start is cut by the first hour's solar day and the end by the last hour's.
   - A window that cutting leaves empty is dropped.
   - During polar day nothing is cut.
-- `findLimitingFactor(timeline, forecast, ruleSet, boatClassId, daylightTimes) → { metric, reason: 'mostHoursOutside' | 'leastHeadroom', hoursOutside, headroom } | null`
-  - Considers only metrics that have a limit applying to the boat class, excluding `unavailableMetrics`, and only rowing hours. Rowing hours are those overlapping the rule set's daylight window, or civil dawn to civil dusk if it has none. The default includes pre-sunrise twilight because crews often push off before sunrise with lights.
-  - Picks the metric that causes the most hours to be `outside`. Ties break by least headroom.
+- `findLimitingFactor(input, timeline) → { metric, reason: 'mostHoursOutside' | 'leastHeadroom', hoursOutside, headroom } | null`
+  - It takes the same `input` given to `evaluateTimeline`, plus that call's result. Because of that, it ranks against the same flow series evaluation used, including a rule set's named gauge (`forecastForRuleSet`). It's in `packages/core/src/evaluation/limitingFactor.ts`.
+  - Considers only metrics that have a limit applying to the boat class, excluding `unavailableMetrics`, and only rowing hours. Rowing hours are defined as follows:
+    - With a daylight window: hours not entirely outside the rule set's window, meaning hours without a `daylight` failure.
+    - Without one: hours overlapping civil dawn to civil dusk (`hourOverlapsCivilDaylight`). This includes pre-sunrise twilight, because crews often push off before sunrise with lights.
+  - Picks the metric that causes the most hours to be `outside`, even if another metric is further past its limit. An hour counts once per metric, however many of that metric's limits it fails. Ties break by least headroom.
+  - A metric with several limits (a min and a max, or limits for different classes that both apply) takes the least headroom among them.
+  - A metric with no usable value in any rowing hour has no headroom and isn't considered. That includes unavailable metrics.
   - If no hours are outside, picks the metric with the least headroom (defined below).
   - Returns `null` if no metric qualifies; the UI then falls back to the user's pinned metric or flow.
   - The UI chart defaults to this metric unless the user has pinned one. Tested like the rest of evaluation.
