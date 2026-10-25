@@ -26,11 +26,12 @@ export const maxAgeHours: Record<InputMetric, Record<ValueProvenance['kind'], nu
   precipChance: { observation: 12, forecast: 12 },
 };
 
-// Readings with these qualifiers are shown but never compared against a limit (#41).
+// Readings with these qualifiers are shown but never compared against a limit (#41, #13).
 export const disqualifyingQualifiers: readonly Qualifier[] = [
   'iceAffected',
   'equipmentMalfunction',
   'estimated',
+  'unreliable',
 ];
 
 export interface HourContext {
