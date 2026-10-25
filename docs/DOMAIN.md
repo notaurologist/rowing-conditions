@@ -43,7 +43,7 @@ On regulated rivers, dam releases can raise flow quickly, and drawdowns can leav
 
 ### Daylight and visibility
 
-Clubs restrict outings to daylight or to a window around it (for example, 60 minutes before sunrise to 30 minutes after sunset), and require lights in low light. Fog is called out as a hazard. [2][7][8]
+Clubs restrict outings to daylight or to a window around it (for example, 60 minutes before sunrise to 30 minutes after sunset), and require lights in low light. Fog is called out as a hazard. [2][7][8] In practice, many crews push off before sunrise and row with lights, and do the same in fog, so light is often one factor among several, not a cutoff. [19]
 
 ### Lightning
 
@@ -94,7 +94,7 @@ Real policies combine these patterns:
 ## Implications for the data model
 
 - Limits are grouped into **rule sets** (usually one per club). Each rule set has a name, its own user-defined boat classes, its own limits, an optional daylight window, and an optional named flow gauge.
-- A limit needs: a metric, a comparison (min or max), a value with explicit units, and an optional list of boat classes it applies to (none = all).
+- A limit needs: a metric, a comparison (min or max), whether the limit value itself counts as within, a value with explicit units, the unit the user entered it in, and an optional list of boat classes it applies to (none = all).
 - Combined air plus water temperature is its own computed metric, always in °F.
 - A rule set may reference a specific gauge, not just the nearest one.
 - Flow for each forecast hour comes from the NWPS forecast when available, otherwise from the latest observation, and the source must be visible.
@@ -102,11 +102,60 @@ Real policies combine these patterns:
 - **MVP supports patterns 1 through 5.** Banded zones (6) and directional conditions (7) come later, but the threshold model should be extensible enough to add them without a rewrite.
 - Requirements like launch ratios and coach certification are operational, not conditions. Out of scope.
 
+## How the app applies limits
+
+Club policies are written for people reading a thermometer or a gauge page, so they leave details open that software has to settle. These are the conventions the app uses. The exact rules and constants are in `ARCHITECTURE.md` under "Evaluation."
+
+### A value exactly at the limit
+
+Policies go both ways. "Flow at or below 20 kcfs" [19] and "water at least 39°F" [5] include the limit. "No club singles at 15 mph wind" [8] excludes it. So each limit records which it is, and the rule set editor shows it in words: "at most 15 mph" or "below 15 mph," "at least 39°F" or "above 39°F." The editor preselects the inclusive wording because most policies we found read that way, and the user can change it.
+
+### Comparing what the user sees
+
+A limit entered as 15 mph is compared in mph, rounded to the precision the app displays, not as an unrounded SI value. Otherwise a forecast of 24 km/h (14.9 mph) displays as "15 mph" but is treated as below 15 mph, and the user sees a result that contradicts the number on screen. Values are still stored in SI; the comparison converts both the reading and the limit to the unit the limit was entered in, then rounds both.
+
+Combined air plus water temperature is the sum of the two readings each rounded to a whole °F, so it matches what a rower adds up from the displayed numbers.
+
+### Old readings
+
+A reading that is too old is treated as missing, so the hour shows as unknown, not within. The latest flow observation is carried across all 48 hours when there is no forecast. That is only reasonable while the observation is recent. Gauges lag or go offline, especially in winter.
+
+Starting values (to be tuned during backtesting, M9):
+
+- Flow and gauge height observations: older than 6 hours is stale. Flow can change substantially within a day [13].
+- Water temperature observations: older than 24 hours is stale. Water temperature changes slowly.
+- NWPS flow forecasts: an issue time older than 36 hours is stale. River Forecast Centers usually issue at least daily.
+- NWS weather forecasts: an update time older than 12 hours is stale.
+
+Hours past the end of a flow forecast are unknown for flow. The app does not fall back to the latest observation there, because that would contradict the trend the forecast just showed.
+
+### Flagged readings
+
+USGS marks recent data as provisional. That is normal and does not affect evaluation. Some qualifiers mean the value itself is unreliable: ice-affected discharge and equipment malfunction. Those readings are shown with their qualifier, but evaluation treats them as missing. The exact USGS qualifier codes are confirmed during adapter work (M2). Open question: whether "estimated" values, common during ice periods, should also count as missing.
+
+### Limits the location cannot check
+
+A limit can only be checked if some source reports its metric at that location. For example, a gauge without a water temperature sensor cannot check a water temperature minimum, and a lake in weather-only mode cannot check flow. Every hour is then unknown for that rule set. That is correct: a missing reading is never treated as passing. But the app says so once, in plain words ("Club A's water temperature limit can't be checked here: this gauge doesn't report water temperature"), instead of only showing 48 unknown hours.
+
+### Light
+
+For many crews, light is a factor to weigh, not a cutoff. Crews often push off before sunrise and row with lights, and they do the same in fog [19]. Some clubs do write a hard window (Des Moines: 60 minutes before sunrise to 30 minutes after sunset [8]), but others make it conditional ("sunrise to sunset unless lit" [7]).
+
+So the app treats light as context by default:
+
+- Every hour is labeled with its light level: daylight, twilight (civil twilight, between civil dawn and sunrise or between sunset and civil dusk), or dark. The chart shades each level differently, and the label is shown in words, not shading alone. These are descriptions, never instructions: the app says "before sunrise (twilight)," not "lights required."
+- Light level does not change whether an hour is within a rule set's limits.
+- A rule set's daylight window is optional and meant only for clubs with a hard rule. If one is set, hours entirely outside it are outside that rule set's limits, with darkness given as the reason, and windows that start or end partway through an hour are cut at the exact boundary. The editor describes it that way ("only if your club forbids rowing outside these hours").
+- When the app needs a default span of "hours you might row" (choosing which metric to chart, listing periods within limits), it uses civil dawn to civil dusk, or the rule set's window if it has one. This keeps cold, calm overnight hours from deciding the default chart while still including pre-sunrise outings in twilight.
+
+Open question: fog and visibility. The NWS grid data includes visibility and a weather layer that reports fog. Showing visibility as context, and allowing an optional minimum-visibility limit, would treat fog the same way as light. That would expand the MVP, so it is not in the plan yet.
+
 ## Units
 
 - Store everything in SI: m³/s (flow), m (gauge height), °C (temperature), m/s (wind), with conversion for display.
 - US users expect cfs (often kcfs for large rivers), ft, °F, and mph. UK clubs use m³/s and °C. [13][19]
 - Exception: combined air plus water temperature is computed in °F (see above).
+- Comparisons against a limit happen in the limit's entered unit at display precision (see "Comparing what the user sees").
 
 ## Data sources (summary)
 

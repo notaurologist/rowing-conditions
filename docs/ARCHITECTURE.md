@@ -92,14 +92,37 @@ interface Reading {
   fetchedAt: string;           // ISO 8601, UTC
   source: SourceId;            // e.g. 'usgs', 'nws'
   sourceRef?: string;          // e.g. gauge id 'USGS-01170500'
-  qualifiers?: string[];       // e.g. provisional, ice-affected
+  qualifiers?: Qualifier[];
 }
+
+// Internal qualifier names. Adapters map each source's codes to these.
+type Qualifier =
+  | 'provisional'
+  | 'estimated'
+  | 'iceAffected'
+  | 'equipmentMalfunction';
 
 interface ForecastPoint {
   time: string;                // start of hour, ISO 8601, UTC
   values: Partial<Record<Metric, number | null>>;
-  flowSource?: 'forecast' | 'latestObservation';  // where values.flow came from
+  provenance: Partial<Record<Metric, ValueProvenance>>;  // absent = no source supplies this metric
 }
+
+interface ValueProvenance {
+  kind: 'forecast' | 'observation';  // e.g. flow from NWPS forecast vs latest USGS observation
+  asOf: string;                // forecast issue/update time, or observation time; ISO 8601, UTC
+  source: SourceId;
+  sourceRef?: string;
+  interpolated?: boolean;      // e.g. NWPS 6-hourly steps interpolated to hourly
+  qualifiers?: Qualifier[];
+}
+
+type Unit =
+  | 'm3/s' | 'cfs' | 'kcfs'
+  | 'm' | 'ft'
+  | 'degC' | 'degF'
+  | 'm/s' | 'km/h' | 'mph'
+  | 'percent';
 
 interface BoatClass {
   id: string;
@@ -110,10 +133,13 @@ interface Threshold {
   id: string;
   metric: Metric;
   comparison: 'min' | 'max';
+  boundary: 'inclusive' | 'exclusive';  // inclusive: a value equal to the limit is within
   value: number;               // in the metric's internal unit
+  enteredUnit: Unit;           // unit the user typed it in; comparisons happen in this unit
   boatClassIds?: string[];     // undefined = applies to every class in the rule set
 }
 
+// Optional hard window, only for clubs that forbid rowing outside it. Light is otherwise context, not a limit.
 interface DaylightWindow {
   minutesBeforeSunrise: number;
   minutesAfterSunset: number;
@@ -138,26 +164,117 @@ interface SavedLocation {
 }
 
 type EvaluationStatus = 'within' | 'outside' | 'unknown';
+
+type UnknownReason =
+  | 'missing'      // source supplies the metric but has no value for this hour (null, past forecast horizon)
+  | 'stale'        // value older than the metric's maximum age
+  | 'qualified'    // value carries a qualifier that makes it unreliable
+  | 'noSource';    // no source at this location reports the metric at all
+
+type LightLevel = 'daylight' | 'twilight' | 'dark';  // twilight = civil twilight
+
+interface HourResult {
+  time: string;
+  status: EvaluationStatus;
+  light: LightLevel;           // context only; never affects status
+  failures: Failure[];
+  unknowns: { thresholdId: string; metric: Metric; reason: UnknownReason }[];
+}
+
+type Failure =
+  | { kind: 'limit'; thresholdId: string; metric: Metric; value: number; limit: number; unit: Unit }  // value and limit rounded, in unit
+  | { kind: 'daylight' };      // hour lies entirely outside the rule set's daylight window
 ```
 
 Every type has a matching Zod schema. Schemas are the source of truth; types are inferred from them.
 
 ### Evaluation
 
-- `evaluateHour(point, ruleSet, boatClassId, daylightTimes) → { status, failures[], unknowns[] }`
-- `evaluateTimeline(forecast, ruleSet, boatClassId, ...) → per-hour results`
-- `findWindows(results) → contiguous ranges where status is 'within'`
-- `findLimitingFactor(results, forecast, ruleSet, boatClassId) → { metric, reason: 'mostHoursOutside' | 'leastHeadroom', hoursOutside, headroom }`
-  - Considers only metrics that have a limit applying to the boat class, and only daylight hours.
+The reasoning behind these rules is in `DOMAIN.md` under "How the app applies limits."
+
+- `evaluateHour(point, ruleSet, boatClassId, daylightTimes, now) → HourResult`
+- `evaluateTimeline(forecast, ruleSet, boatClassId, daylightTimes, now) → { hours: HourResult[], unavailableMetrics: Metric[] }`
+  - `unavailableMetrics` lists metrics with an applicable threshold but no provenance at any hour (`noSource`), so the UI can show one notice per rule set instead of 48 unknowns.
+- `findWindows(timeline, daylightTimes) → { start, end }[]` with ISO 8601 UTC times: contiguous runs of `within` hours, with edges cut at the rule set's daylight window boundaries to the minute.
+- `findLimitingFactor(timeline, forecast, ruleSet, boatClassId, daylightTimes) → { metric, reason: 'mostHoursOutside' | 'leastHeadroom', hoursOutside, headroom } | null`
+  - Considers only metrics that have a limit applying to the boat class, excluding `unavailableMetrics`, and only rowing hours. Rowing hours are those overlapping the rule set's daylight window, or civil dawn to civil dusk if it has none. The default includes pre-sunrise twilight because crews often push off before sunrise with lights.
   - Picks the metric that causes the most hours to be `outside`. Ties break by least headroom.
-  - If no hours are outside, picks the metric with the least headroom: `(limit - worst value) / limit` for a max, `(worst value - limit) / limit` for a min.
-  - Returns `null` if the rule set has no applicable limits; the UI then falls back to the user's pinned metric or flow.
+  - If no hours are outside, picks the metric with the least headroom (defined below).
+  - Returns `null` if no metric qualifies; the UI then falls back to the user's pinned metric or flow.
   - The UI chart defaults to this metric unless the user has pinned one. Tested like the rest of evaluation.
 - Evaluation is always per rule set and boat class. The UI may show several rule sets side by side for one location.
-- Rules: any failing threshold makes the hour `outside`. Otherwise, any threshold whose metric is missing makes it `unknown`. Only all-present, all-passing hours are `within`.
-- Flow uses the NWPS forecast for each hour when available (`flowSource: 'forecast'`); otherwise the latest observation applies to all hours (`flowSource: 'latestObservation'`). Water temperature is always the latest observation. The UI must show which applies.
-- If a rule set names a flow gauge, its flow limit is evaluated against that gauge's data, which may differ from the location's display gauge.
+- `now` is passed in, never read from the clock, so evaluation stays pure and testable.
 - Must be thoroughly unit tested. This is the most important logic in the product.
+
+#### Hour status
+
+For each threshold that applies to the boat class, in this order:
+
+1. If the metric has no provenance at any hour: unknown, `noSource`.
+2. If the value is null or absent for this hour: unknown, `missing`.
+3. If the value's provenance carries a disqualifying qualifier (`iceAffected`, `equipmentMalfunction`): unknown, `qualified`. `provisional` and `estimated` do not disqualify (`estimated` is an open question in `DOMAIN.md`).
+4. If `now - asOf` exceeds the maximum age: unknown, `stale`.
+5. Otherwise compare (see "Comparison") and record a `limit` failure if it fails.
+
+Separately, if the rule set has a daylight window and the hour `[time, time + 1h)` lies entirely outside it, add a `daylight` failure. An hour that partly overlaps the window is evaluated normally; `findWindows` trims it. Without a daylight window, light never affects status.
+
+Each hour's `light` is the level at the middle of the hour (`time + 30 min`): `daylight` between sunrise and sunset, `twilight` between civil dawn and sunrise or sunset and civil dusk, `dark` otherwise. UI copy describes it ("before sunrise, twilight") and never turns it into an instruction such as "lights required."
+
+Then: any failure makes the hour `outside`. Otherwise any unknown makes it `unknown`. Only an hour with every applicable threshold present, usable, and passing is `within`. An outside result does not hide unknowns; both lists are returned so the UI can explain both.
+
+For `combinedTempF`, the hour is unknown if either component is unknown, with the component's reason.
+
+#### Maximum ages
+
+Constants in `packages/core`, starting values to tune in M9:
+
+| Metric and kind | Max age of `asOf` |
+|---|---|
+| flow, gaugeHeight, observation | 6 h |
+| waterTemp, observation | 24 h |
+| flow, gaugeHeight, NWPS forecast | 36 h |
+| weather metrics, NWS forecast | 12 h |
+
+Flow for each hour comes from the NWPS forecast when the gauge has one. Hours after the last forecast step have no flow value (`missing`); the latest observation is not used there. Without a forecast, the latest observation is copied to every hour with `kind: 'observation'`. Water temperature is always the latest observation. The UI shows which applies from `provenance`.
+
+If a rule set names a flow gauge, its flow limit is evaluated against that gauge's data, which may differ from the location's display gauge.
+
+#### Comparison
+
+Comparisons happen in the threshold's `enteredUnit`, at display precision, so the result agrees with the numbers on screen:
+
+1. Convert the reading and the threshold value from SI to `enteredUnit`.
+2. Round both to that unit's precision with the same rounding function the UI uses for display.
+3. Compare. Max, inclusive: within if `value <= limit`. Max, exclusive: `value < limit`. Min, inclusive: `value >= limit`. Min, exclusive: `value > limit`.
+
+Precision per unit (one table in `packages/core/units`, used by both evaluation and display):
+
+| Unit | Decimals |
+|---|---|
+| cfs | 0 |
+| kcfs | 1 |
+| m³/s | 1 |
+| ft, m | 2 |
+| °F | 0 |
+| °C | 1 |
+| mph, km/h | 0 |
+| m/s | 1 |
+| percent | 0 |
+
+Rounding is half away from zero. `combinedTempF` is the sum of air and water temperature each converted to °F and rounded to a whole degree, so its `enteredUnit` is always `degF`.
+
+#### Headroom
+
+Headroom is a unitless margin used only to rank metrics in `findLimitingFactor`. It is computed in SI from the worst value over rowing hours (the highest for a max, the lowest for a min), ignoring unknown hours:
+
+- `margin = limit - worst` for a max, `worst - limit` for a min.
+- `headroom = margin / scale`, where `scale` depends on whether the metric has a true zero:
+  - flow, windSpeed, windGust, precipChance: `scale = limit`. The rule set editor rejects limits of zero or less for these.
+  - waterTemp, airTemp: `scale = 10 °C`.
+  - combinedTempF: `scale = 18 °F`.
+  - gaugeHeight: `scale = 1 m`. Gauge height is measured from an arbitrary local datum, so a ratio to the limit is meaningless.
+
+Dividing temperatures by their limit would divide by zero at 0 °C and flip sign below it, so temperatures and gauge height use fixed scales. The fixed scales are starting values to tune in M9.
 
 ### Units
 
@@ -166,7 +283,8 @@ Every type has a matching Zod schema. Schemas are the source of truth; types are
 
 ### Daylight
 
-- Use the `suncalc` library for sunrise and sunset. No external API.
+- Use the `suncalc` library for sunrise, sunset, civil dawn, and civil dusk (suncalc's `dawn` and `dusk`). No external API.
+- Light is context by default. See "Hour status" for how light levels are assigned and when a daylight window affects status.
 
 ## apps/api
 
@@ -194,7 +312,7 @@ Hono on Node. Export the app type so clients use `hono/client` for typed calls. 
   current: Reading[],
   forecast: ForecastPoint[],          // 48 hourly points
   flowSeries: { gaugeRef, points: { time, flow, source: 'observed' | 'forecast' }[] }[],
-  daylight: { date, sunrise, sunset }[],
+  daylight: { date, civilDawn, sunrise, sunset, civilDusk }[],
   alerts: { id, event, headline, severity, onset, ends }[],
   sources: { id, status: 'ok' | 'stale' | 'error', fetchedAt, message? }[]
 }
