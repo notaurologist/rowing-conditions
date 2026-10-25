@@ -7,6 +7,7 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { gaugeUrl, nearbyGaugesUrl, stageFlowUrl } from '../src/adapters/nwps/requests.ts';
 import {
   historyUrl,
   latestReadingsUrl,
@@ -34,6 +35,11 @@ const fixtures: Record<string, string> = {
   'usgs/latest-montague': latestReadingsUrl([MONTAGUE]),
   'usgs/latest-northfield': latestReadingsUrl([NORTHFIELD]),
   'usgs/latest-ice': latestReadingsUrl([ICE_GAUGE]),
+  'nwps/nearby-turners-falls': nearbyGaugesUrl([-72.7, 42.45, -72.4, 42.75]),
+  'nwps/gauge-mntm3': gaugeUrl('MNTM3'), // has a forecast
+  'nwps/gauge-by-usgs-01161280': gaugeUrl('01161280'), // Northfield, looked up by USGS number
+  'nwps/stageflow-mntm3': stageFlowUrl('MNTM3'),
+  'nwps/stageflow-nfdm3': stageFlowUrl('NFDM3'), // no forecast: sentinel issuedTime, -999 flows
   'usgs/history-montague-flow': historyUrl(
     MONTAGUE,
     usgsParameterCodes.flow,
@@ -41,6 +47,22 @@ const fixtures: Record<string, string> = {
     now.toISOString(),
   ),
 };
+
+// Fixtures trimmed to keep the repo small. The trim is recorded in the fixture, so it's never
+// mistaken for the full response. NWPS stageflow returns about 30 days of 15-minute observations.
+const OBSERVED_POINTS_KEPT = 96; // 24 hours
+const trims: Record<string, { note: string; apply: (body: unknown) => unknown }> = {};
+for (const name of ['nwps/stageflow-mntm3', 'nwps/stageflow-nfdm3']) {
+  trims[name] = {
+    note: `observed.data trimmed to the last ${OBSERVED_POINTS_KEPT} points`,
+    apply: (body) => {
+      const b = body as { observed?: { data?: unknown[] } };
+      if (Array.isArray(b.observed?.data))
+        b.observed.data = b.observed.data.slice(-OBSERVED_POINTS_KEPT);
+      return b;
+    },
+  };
+}
 
 const filter = process.argv[2];
 const selected = Object.entries(fixtures).filter(([name]) => !filter || name.startsWith(filter));
@@ -66,7 +88,14 @@ for (const [name, url] of selected) {
   }
   const file = join(fixturesDir, `${name}.json`);
   await mkdir(dirname(file), { recursive: true });
-  const record = { url, recordedAt: new Date().toISOString(), status: response.status, body };
+  const trim = trims[name];
+  const record = {
+    url,
+    recordedAt: new Date().toISOString(),
+    status: response.status,
+    ...(trim ? { trimmed: trim.note } : {}),
+    body: trim ? trim.apply(body) : body,
+  };
   await writeFile(file, `${JSON.stringify(record, null, 2)}\n`);
   console.log(`recorded ${name}`);
 }
