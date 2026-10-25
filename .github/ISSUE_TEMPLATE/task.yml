@@ -1,0 +1,29 @@
+name: Task
+description: A milestone task, small enough for one branch and one PR.
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What this task delivers.
+    validations:
+      required: true
+  - type: input
+    id: read
+    attributes:
+      label: Read first
+      description: Docs to read before starting, for example docs/ARCHITECTURE.md (Evaluation).
+  - type: textarea
+    id: done
+    attributes:
+      label: Done when
+      description: Acceptance criteria as a checklist.
+      value: |
+        - [ ]
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
+      description: Dependencies (Blocked by #n), open questions, links.
