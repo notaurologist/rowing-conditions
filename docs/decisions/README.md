@@ -16,4 +16,5 @@ One file per decision. Format: context, decision, consequences. Never edit a pas
 | 0010 | Web PWA first, architected for a native app | Accepted |
 | 0011 | Limits organized as per-club rule sets | Accepted |
 | 0012 | NWPS flow forecasts in the MVP | Accepted |
-| 0013 | Node 26, Zod 4, and local Postgres via Docker Compose from M4 | Proposed |
+| 0013 | Node 26, Zod 4, and local Postgres via Docker Compose from M4 | Accepted |
+| 0014 | Toolchain versions at M0 | Accepted |

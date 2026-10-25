@@ -1,6 +1,6 @@
 # 0013: Node 26, Zod 4, and local Postgres via Docker Compose from M4
 
-Status: Proposed (October 2026). Awaiting the owner's decision.
+Status: Accepted (October 2026)
 
 ## Context
 M0 needs three choices before scaffolding (issue #2). Facts as of October 25, 2026:

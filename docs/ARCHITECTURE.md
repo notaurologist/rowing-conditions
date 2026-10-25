@@ -48,7 +48,8 @@ Read `PRODUCT.md` and `DOMAIN.md` first. Decisions behind the choices here are r
 │   │   │   ├── services/    # Orchestration: cache lookup, adapter calls, merging
 │   │   │   ├── adapters/    # One folder per source (usgs/, nws/, ...)
 │   │   │   ├── db/          # Drizzle schema, migrations, queries
-│   │   │   └── index.ts
+│   │   │   ├── app.ts       # Hono app and exported AppType; no server, so tests call app.request()
+│   │   │   └── index.ts     # Starts the Node server
 │   │   └── test/
 │   │       └── fixtures/    # Recorded external API responses
 │   └── web/
