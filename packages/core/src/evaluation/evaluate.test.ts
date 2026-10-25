@@ -579,4 +579,37 @@ describe('evaluateTimeline', () => {
       true,
     );
   });
+
+  it('returns no hours when there are no limits, so nothing can show as within', () => {
+    const forecast = [point(MIDDAY, calm), point('2026-04-15T17:00:00Z', calm)];
+    const base = { forecast, lat, lon, now: NOW };
+    const scoped = ruleSet([limit('windSpeed', 'max', 10, 'mph', { boatClassIds: ['small'] })]);
+
+    expect(evaluateTimeline({ ...base, ruleSet: ruleSet([]), boatClassId: 'small' })).toEqual({
+      hours: [],
+      unavailableMetrics: [],
+      hasLimits: false,
+    });
+    expect(evaluateTimeline({ ...base, ruleSet: scoped, boatClassId: 'large' }).hours).toEqual([]);
+    expect(evaluateTimeline({ ...base, ruleSet: scoped, boatClassId: 'small' }).hours).toHaveLength(
+      2,
+    );
+  });
+
+  it('evaluates gauge height at the display gauge even when the rule set names a flow gauge', () => {
+    const maxHeight = limit('gaugeHeight', 'max', 3, 'm');
+    const forecast = [point(MIDDAY, { gaugeHeight: 2, flow: toSI(10, 'kcfs') })];
+    const named = [point(MIDDAY, { flow: toSI(10, 'kcfs') })];
+    const result = evaluateTimeline({
+      forecast,
+      ruleSet: ruleSet([maxHeight], { flowGaugeRef: 'nwps:MNTM3' }),
+      boatClassId: 'small',
+      lat,
+      lon,
+      now: NOW,
+      flowByGauge: { 'nwps:MNTM3': named },
+    });
+    expect(result.hours[0]?.status).toBe('within');
+    expect(result.unavailableMetrics).toEqual([]);
+  });
 });

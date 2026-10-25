@@ -163,8 +163,8 @@ export interface TimelineInput extends Omit<HourContext, 'unavailableMetrics'> {
 export interface TimelineResult {
   hours: HourResult[];
   unavailableMetrics: Metric[];
-  // False when the rule set has no limits for the boat class and no daylight window; the UI
-  // shows its empty state instead of hours that are vacuously within.
+  // False when the rule set has no limits for the boat class and no daylight window. Hours is
+  // then empty, and the UI shows its empty state.
   hasLimits: boolean;
 }
 
@@ -197,6 +197,12 @@ export function evaluateTimeline(input: TimelineInput): TimelineResult {
   const forecast = ref ? withFlowFrom(input.forecast, input.flowByGauge?.[ref]) : input.forecast;
 
   const applicable = ruleSet.thresholds.filter((t) => appliesTo(t, boatClassId));
+  // With nothing to compare, every hour would be vacuously within. Return no hours, so no client
+  // can show "within Club A's limits" for a club that has none.
+  if (applicable.length === 0 && ruleSet.daylight === undefined) {
+    return { hours: [], unavailableMetrics: [], hasLimits: false };
+  }
+
   const unavailableMetrics: Metric[] = [];
   for (const metric of applicable.flatMap(inputsOf)) {
     const supplied = forecast.some((p) => p.provenance[metric] !== undefined);
@@ -204,6 +210,5 @@ export function evaluateTimeline(input: TimelineInput): TimelineResult {
   }
 
   const hours = forecast.map((point) => evaluateHour(point, { ...input, unavailableMetrics }));
-  const hasLimits = applicable.length > 0 || ruleSet.daylight !== undefined;
-  return { hours, unavailableMetrics, hasLimits };
+  return { hours, unavailableMetrics, hasLimits: true };
 }
