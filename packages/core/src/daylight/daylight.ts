@@ -82,3 +82,16 @@ export function daylightWindowSpan(
     end: new Date(times.sunset.getTime() + window.minutesAfterSunset * 60_000).toISOString(),
   };
 }
+
+// Whether the hour [hourStart, hourStart + 1h) overlaps civil dawn to civil dusk: the default
+// rowing hours, which include pre-sunrise twilight.
+export function hourOverlapsCivilDaylight(hourStart: string, lat: number, lon: number): boolean {
+  const start = Date.parse(UtcTime.parse(hourStart));
+  const middle = new Date(start + HOUR / 2);
+  const times = getTimes(middle, lat, lon);
+  if (times.dawn && times.dusk) {
+    return start < times.dusk.getTime() && start + HOUR > times.dawn.getTime();
+  }
+  // The Sun never crosses -6° today (polar day, white nights, or deep polar night).
+  return getPosition(middle, lat, lon).altitude > -6;
+}
