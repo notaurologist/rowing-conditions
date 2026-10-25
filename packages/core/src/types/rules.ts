@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { fromInternal, roundHalfAwayFromZero, unitDecimals } from '../units/units.ts';
 import { GaugeRef, Id, Metric, metricUnits, ratioScaleMetrics, Unit } from './measurement.ts';
 
 export const BoatClass = z.object({
@@ -24,6 +25,18 @@ export const Threshold = z
         path: ['enteredUnit'],
         message: `${t.metric} limits cannot be entered in ${t.enteredUnit}`,
       });
+    } else {
+      // Limits are compared at display precision, so a more precise limit would be rounded,
+      // and a max of 15.5 mph would quietly become 16.
+      const entered = fromInternal(t.metric, t.value, t.enteredUnit);
+      const rounded = roundHalfAwayFromZero(entered, unitDecimals[t.enteredUnit]);
+      if (Math.abs(rounded - entered) > 1e-9 * Math.max(1, Math.abs(entered))) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['value'],
+          message: `More precise than ${t.enteredUnit} is shown (${unitDecimals[t.enteredUnit]} decimals)`,
+        });
+      }
     }
     if (ratioScaleMetrics.includes(t.metric) && t.value <= 0) {
       ctx.addIssue({ code: 'custom', path: ['value'], message: 'Must be greater than zero' });

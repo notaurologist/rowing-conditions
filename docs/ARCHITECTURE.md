@@ -210,7 +210,7 @@ The code is in `packages/core/src/evaluation/evaluate.ts`.
 
 - `evaluateHour(point, { ruleSet, boatClassId, lat, lon, now, unavailableMetrics? }) → HourResult`
   - Called on a single hour without `unavailableMetrics`, it can't distinguish `noSource` from `missing`, so an absent value is reported as `missing`. `evaluateTimeline` passes the list in.
-  - Throws if the rule set has no such boat class.
+  - Throws if the rule set has no such boat class, if `now` isn't a valid UTC time, or if the point fails the `ForecastPoint` schema (for example a time that isn't on the hour). Each of these would otherwise make every value look fresh or misplace the hour. `evaluateTimeline` checks the boat class even when the forecast is empty.
 - `evaluateTimeline({ forecast, ruleSet, boatClassId, lat, lon, now, flowByGauge? }) → { hours: HourResult[], unavailableMetrics: Metric[], hasLimits: boolean }`
   - `unavailableMetrics` lists metrics with an applicable threshold but no provenance at any hour (`noSource`), so the UI can show one notice per rule set instead of 48 unknowns. For a combined temperature limit, it lists the part with no source (for example `waterTemp`).
   - `flowByGauge` holds flow series by gauge ref. If the rule set names a flow gauge, each hour's flow is replaced with that gauge's flow for the same hour. If the gauge has no data, flow is `noSource`. It never falls back to the location's display gauge.
@@ -233,7 +233,7 @@ For each threshold that applies to the boat class, in this order:
 1. If the metric has no provenance at any hour: unknown, `noSource`.
 2. If the value is null or absent for this hour: unknown, `missing`.
 3. If the value's provenance carries a disqualifying qualifier (`iceAffected`, `equipmentMalfunction`, `estimated`): unknown, `qualified`. `provisional` does not disqualify.
-4. If `now - asOf` exceeds the maximum age: unknown, `stale`.
+4. If `now - asOf` exceeds the maximum age: unknown, `stale`. So is a value dated more than 1 hour after `now` (`futureToleranceHours`), which points to a clock or adapter error rather than unusually fresh data.
 5. Otherwise compare (see "Comparison") and record a `limit` failure if it fails.
 
 Separately, if the rule set has a daylight window and the hour `[time, time + 1h)` lies entirely outside it, add a `daylight` failure. An hour that partly overlaps the window is evaluated normally; `findWindows` trims it. Without a daylight window, light never affects status.
@@ -264,6 +264,8 @@ Flow for each hour comes from the NWPS forecast when the gauge has one. Hours af
 If a rule set names a flow gauge, its flow limit is evaluated against that gauge's data, which may differ from the location's display gauge.
 
 #### Comparison
+
+Limits are stored at display precision. The `Threshold` schema rejects a value that, converted to its `enteredUnit`, has more decimals than that unit shows, so 15.5 mph is rejected. Rounding such a limit would loosen a maximum: 15.5 would become 16 and let 15.8 through.
 
 Comparisons happen in the threshold's `enteredUnit`, at display precision, so the result agrees with the numbers on screen:
 
@@ -348,7 +350,7 @@ Hono on Node. Export the app type so clients use `hono/client` for typed calls. 
   gauge?: { id, name, lat, lon },
   current: Reading[],
   forecast: ForecastPoint[],          // 48 hourly points
-  flowSeries: { gaugeRef, points: { time, flow, source: 'observed' | 'forecast' }[] }[],
+  flowSeries: { gaugeRef, points: ForecastPoint[] }[],  // flow values with full provenance (asOf, kind, qualifiers), so stale and qualifier checks work for rule-set gauges
   daylight: { date, civilDawn, sunrise, sunset, civilDusk }[],
   alerts: { id, event, headline, severity, onset, ends }[],
   sources: { id, status: 'ok' | 'stale' | 'error', fetchedAt, message? }[]

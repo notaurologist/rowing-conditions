@@ -1,11 +1,15 @@
 import { daylightWindowSpan, hourLightLevel } from '../daylight/daylight.ts';
 import type { Failure, HourResult, UnknownReason } from '../types/evaluation.ts';
-import type { Metric, Qualifier } from '../types/measurement.ts';
-import type { ForecastPoint, ValueProvenance } from '../types/readings.ts';
+import { type Metric, type Qualifier, UtcTime } from '../types/measurement.ts';
+import { ForecastPoint, type ValueProvenance } from '../types/readings.ts';
 import type { RuleSet, Threshold } from '../types/rules.ts';
 import { combinedTempF, displayValue } from '../units/units.ts';
 
 const HOUR = 3_600_000;
+
+// A value dated more than this after `now` points to a clock or adapter error, so it is
+// treated as stale rather than as perfectly fresh.
+export const futureToleranceHours = 1;
 
 type InputMetric = Exclude<Metric, 'combinedTempF'>;
 
@@ -54,7 +58,11 @@ function usable(point: ForecastPoint, metric: InputMetric, ctx: HourContext): Us
     return { ok: false, metric, reason: 'qualified' };
   }
   const age = Date.parse(ctx.now) - Date.parse(provenance.asOf);
-  if (age > maxAgeHours[metric][provenance.kind] * HOUR) {
+  if (
+    !Number.isFinite(age) ||
+    age > maxAgeHours[metric][provenance.kind] * HOUR ||
+    age < -futureToleranceHours * HOUR
+  ) {
     return { ok: false, metric, reason: 'stale' };
   }
   return { ok: true, value };
@@ -80,15 +88,27 @@ function outsideDaylightWindow(point: ForecastPoint, ctx: HourContext): boolean 
   const span = daylightWindowSpan(point.time, ctx.lat, ctx.lon, window);
   if (span.kind === 'allDay') return false;
   if (span.kind === 'none') return true;
-  const start = Date.parse(point.time);
-  return start + HOUR <= Date.parse(span.start) || start >= Date.parse(span.end);
+  return hourOutsideSpan(Date.parse(point.time), span.start, span.end);
 }
 
-export function evaluateHour(point: ForecastPoint, ctx: HourContext): HourResult {
-  const { ruleSet, boatClassId } = ctx;
+// The hour [start, start + 1h) lies entirely outside [spanStart, spanEnd).
+export function hourOutsideSpan(hourStartMs: number, spanStart: string, spanEnd: string): boolean {
+  return hourStartMs + HOUR <= Date.parse(spanStart) || hourStartMs >= Date.parse(spanEnd);
+}
+
+function assertBoatClass(ruleSet: RuleSet, boatClassId: string): void {
   if (!ruleSet.boatClasses.some((c) => c.id === boatClassId)) {
     throw new Error(`Rule set ${ruleSet.id} has no boat class ${boatClassId}`);
   }
+}
+
+// Throws on an invalid `now` or point (for example a time that isn't on the hour), which would
+// otherwise make every value look fresh.
+export function evaluateHour(point: ForecastPoint, ctx: HourContext): HourResult {
+  const { ruleSet, boatClassId } = ctx;
+  assertBoatClass(ruleSet, boatClassId);
+  UtcTime.parse(ctx.now);
+  ForecastPoint.parse(point);
 
   const failures: Failure[] = [];
   const unknowns: HourResult['unknowns'] = [];
@@ -172,6 +192,7 @@ function withFlowFrom(
 
 export function evaluateTimeline(input: TimelineInput): TimelineResult {
   const { ruleSet, boatClassId } = input;
+  assertBoatClass(ruleSet, boatClassId);
   const ref = ruleSet.flowGaugeRef;
   const forecast = ref ? withFlowFrom(input.forecast, input.flowByGauge?.[ref]) : input.forecast;
 

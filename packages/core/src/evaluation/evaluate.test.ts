@@ -4,7 +4,13 @@ import type { Metric, Qualifier, Unit } from '../types/measurement.ts';
 import type { ForecastPoint, ValueProvenance } from '../types/readings.ts';
 import type { RuleSet, Threshold } from '../types/rules.ts';
 import { toSI } from '../units/units.ts';
-import { evaluateHour, evaluateTimeline } from './evaluate.ts';
+import {
+  evaluateHour,
+  evaluateTimeline,
+  futureToleranceHours,
+  hourOutsideSpan,
+  maxAgeHours,
+} from './evaluate.ts';
 
 const lat = 42.6;
 const lon = -72.55;
@@ -274,6 +280,13 @@ describe('combined air plus water temperature', () => {
       { thresholdId: minCombined90.id, metric: 'waterTemp', reason: 'missing' },
     ]);
   });
+
+  it('names air temperature when both parts are unusable', () => {
+    const p = point(MIDDAY, { airTemp: null, waterTemp: 20 }, { waterTemp: { asOf: ago(30) } });
+    expect(hour(p, ruleSet([minCombined90])).unknowns).toEqual([
+      { thresholdId: minCombined90.id, metric: 'airTemp', reason: 'missing' },
+    ]);
+  });
 });
 
 describe('daylight window and light level', () => {
@@ -287,13 +300,19 @@ describe('daylight window and light level', () => {
     expect(r.light).toBe('dark');
   });
 
-  it('evaluates an hour that partly overlaps the window normally', () => {
-    // The window opens 60 minutes before sunrise; this hour starts 20 minutes before that.
-    const start = new Date(Date.parse(today.sunrise as string) - 80 * 60_000);
-    start.setUTCSeconds(0, 0);
-    const r = hour(point(start.toISOString(), calm), ruleSet([maxWind15], { daylight: window }));
+  it('evaluates an hour that partly overlaps the window normally, and the hour before as outside', () => {
+    // The window opens 60 minutes before sunrise, partway through this hour.
+    const opens = Date.parse(today.sunrise as string) - 60 * 60_000;
+    const overlapping = Math.floor(opens / HOUR) * HOUR;
+    expect(overlapping).toBeLessThan(opens);
+    const rs = ruleSet([maxWind15], { daylight: window });
+
+    const r = hour(point(new Date(overlapping).toISOString(), calm), rs);
     expect(r.failures).toEqual([]);
     expect(r.status).toBe('within');
+
+    const before = hour(point(new Date(overlapping - HOUR).toISOString(), calm), rs);
+    expect(before.failures).toEqual([{ kind: 'daylight' }]);
   });
 
   it('never lets light change the status without a window', () => {
@@ -313,6 +332,101 @@ describe('daylight window and light level', () => {
     expect(night.failures).toEqual([{ kind: 'daylight' }]);
     const midnightSun = evaluateHour(point('2026-06-21T10:00:00Z', calm), { ...ctx, ruleSet: rs });
     expect(midnightSun.failures).toEqual([]);
+  });
+});
+
+describe('hourOutsideSpan', () => {
+  const start = '2026-04-15T10:00:00Z';
+  const end = '2026-04-15T20:00:00Z';
+  const at = (iso: string, deltaMs = 0) => hourOutsideSpan(Date.parse(iso) + deltaMs, start, end);
+
+  it('counts an hour ending exactly at the span start as outside, and one ending later as inside', () => {
+    expect(at('2026-04-15T09:00:00Z')).toBe(true);
+    expect(at('2026-04-15T09:00:00Z', 1)).toBe(false);
+  });
+
+  it('counts an hour starting exactly at the span end as outside, and one starting earlier as inside', () => {
+    expect(at('2026-04-15T20:00:00Z')).toBe(true);
+    expect(at('2026-04-15T20:00:00Z', -1)).toBe(false);
+  });
+});
+
+describe('maximum ages', () => {
+  // The table in ARCHITECTURE.md ("Maximum ages"), every metric and kind.
+  const spec: [Exclude<Metric, 'combinedTempF'>, 'observation' | 'forecast', number][] = [
+    ['flow', 'observation', 6],
+    ['gaugeHeight', 'observation', 6],
+    ['waterTemp', 'observation', 24],
+    ['flow', 'forecast', 36],
+    ['gaugeHeight', 'forecast', 36],
+    ['waterTemp', 'forecast', 24],
+    ['airTemp', 'forecast', 12],
+    ['airTemp', 'observation', 12],
+    ['windSpeed', 'forecast', 12],
+    ['windSpeed', 'observation', 12],
+    ['windGust', 'forecast', 12],
+    ['windGust', 'observation', 12],
+    ['windDirection', 'forecast', 12],
+    ['windDirection', 'observation', 12],
+    ['precipChance', 'forecast', 12],
+    ['precipChance', 'observation', 12],
+  ];
+
+  it('matches the spec table exactly', () => {
+    expect(spec).toHaveLength(16);
+    for (const [metric, kind, hours] of spec) {
+      expect(maxAgeHours[metric][kind], `${metric} ${kind}`).toBe(hours);
+    }
+  });
+
+  // Wind direction can't have a limit, so the table check above is its only coverage.
+  const unitFor: Partial<Record<Metric, Unit>> = {
+    flow: 'm3/s',
+    gaugeHeight: 'm',
+    waterTemp: 'degC',
+    airTemp: 'degC',
+    windSpeed: 'm/s',
+    windGust: 'm/s',
+    precipChance: 'percent',
+  };
+  const limited = spec.filter(([m]) => m !== 'windDirection');
+
+  it.each(limited)(
+    'accepts %s %s at exactly %d hours, and marks it stale just after',
+    (m, kind, h) => {
+      const t = limit(m, 'max', 1, unitFor[m] as Unit);
+      const reason = (age: number) =>
+        hour(point(MIDDAY, { [m]: 0.2 }, { [m]: { kind, asOf: ago(age) } }), ruleSet([t]))
+          .unknowns[0]?.reason;
+      expect(reason(h)).toBeUndefined();
+      expect(reason(h + 0.01)).toBe('stale');
+    },
+  );
+});
+
+describe('invalid and future times', () => {
+  const maxFlow = limit('flow', 'max', 20, 'kcfs');
+  const p = point(MIDDAY, { flow: toSI(10, 'kcfs') });
+
+  it('throws for an invalid now rather than treating every value as fresh', () => {
+    const ctx = { ruleSet: ruleSet([maxFlow]), boatClassId: 'small', lat, lon };
+    expect(() => evaluateHour(p, { ...ctx, now: '' })).toThrow();
+    expect(() => evaluateHour(p, { ...ctx, now: 'garbage' })).toThrow();
+  });
+
+  it('throws for a point whose time is not on the hour', () => {
+    expect(() => hour(point('2026-04-15T16:37:00Z', calm), ruleSet([maxWind15]))).toThrow();
+  });
+
+  it('marks a value dated more than the tolerance after now as stale', () => {
+    const at = (hoursAhead: number) =>
+      hour(
+        point(MIDDAY, { flow: toSI(10, 'kcfs') }, { flow: { asOf: ago(-hoursAhead) } }),
+        ruleSet([maxFlow]),
+      ).unknowns[0]?.reason;
+    expect(at(futureToleranceHours)).toBeUndefined();
+    expect(at(futureToleranceHours + 0.01)).toBe('stale');
+    expect(at(240)).toBe('stale');
   });
 });
 
@@ -430,6 +544,19 @@ describe('evaluateTimeline', () => {
     });
     expect(clubA.hours[0]?.status).toBe('within');
     expect(clubB.hours[0]?.status).toBe('outside');
+  });
+
+  it('throws for an unknown boat class even with no hours to evaluate', () => {
+    expect(() =>
+      evaluateTimeline({
+        forecast: [],
+        ruleSet: ruleSet([maxWind15]),
+        boatClassId: 'eights',
+        lat,
+        lon,
+        now: NOW,
+      }),
+    ).toThrow();
   });
 
   it('says whether the rule set has any limits for the boat class', () => {
