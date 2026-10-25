@@ -14,7 +14,7 @@ const clubA = {
       metric: 'flow',
       comparison: 'max',
       boundary: 'inclusive',
-      value: 566.34,
+      value: 566.33693184, // 20 kcfs
       enteredUnit: 'kcfs',
     },
     {
@@ -124,5 +124,29 @@ describe('Threshold', () => {
     expect(Threshold.safeParse({ ...threshold, value: Number.POSITIVE_INFINITY }).success).toBe(
       false,
     );
+  });
+});
+
+describe('Threshold precision', () => {
+  const base = { ...threshold, metric: 'windSpeed', comparison: 'max', enteredUnit: 'mph' };
+
+  it('accepts limits at the precision their unit is shown', () => {
+    expect(Threshold.safeParse({ ...base, value: 15 * 0.44704 }).success).toBe(true);
+    expect(Threshold.safeParse({ ...threshold, value: 566.33693184 }).success).toBe(true);
+  });
+
+  it('rejects a limit more precise than its unit is shown, which rounding would loosen', () => {
+    expect(Threshold.safeParse({ ...base, value: 15.5 * 0.44704 }).success).toBe(false);
+    const rain = { ...base, metric: 'precipChance', enteredUnit: 'percent' };
+    expect(Threshold.safeParse({ ...rain, value: 0.405 }).success).toBe(false);
+    const combined = { ...base, metric: 'combinedTempF', comparison: 'min', enteredUnit: 'degF' };
+    expect(Threshold.safeParse({ ...combined, value: 89.5 }).success).toBe(false);
+    expect(Threshold.safeParse({ ...combined, value: 90 }).success).toBe(true);
+  });
+
+  it('allows one decimal in units shown with one', () => {
+    const water = { ...base, metric: 'waterTemp', comparison: 'min', enteredUnit: 'degC' };
+    expect(Threshold.safeParse({ ...water, value: 4.5 }).success).toBe(true);
+    expect(Threshold.safeParse({ ...water, value: 4.55 }).success).toBe(false);
   });
 });

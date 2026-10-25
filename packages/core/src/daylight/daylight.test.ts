@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DaylightTimes, daylightTimes, hourLightLevel } from './daylight.ts';
+import { DaylightTimes, daylightTimes, daylightWindowSpan, hourLightLevel } from './daylight.ts';
 
 // Reference times from the US Naval Observatory (aa.usno.navy.mil/api/rstt/oneday), UTC,
 // recorded October 2026.
@@ -148,5 +148,41 @@ describe('daylightTimes date selection', () => {
       const localSolar = new Date(Date.parse(sunrise as string) + (lon / 15) * 3_600_000);
       expect(localSolar.toISOString().slice(0, 10), `${date} sunrise ${sunrise}`).toBe(date);
     }
+  });
+});
+
+describe('daylightWindowSpan', () => {
+  const { lat, lon } = turnersFalls;
+  const window = { minutesBeforeSunrise: 60, minutesAfterSunset: 30 };
+
+  it('runs from the offset before sunrise to the offset after sunset of that solar day', () => {
+    const t = daylightTimes('2026-12-21', lat, lon);
+    const span = daylightWindowSpan('2026-12-21T17:00:00Z', lat, lon, window);
+    expect(span).toEqual({
+      kind: 'span',
+      start: new Date(Date.parse(t.sunrise as string) - 60 * MINUTE).toISOString(),
+      end: new Date(Date.parse(t.sunset as string) + 30 * MINUTE).toISOString(),
+    });
+  });
+
+  it('accepts negative offsets, for windows that start after sunrise', () => {
+    const t = daylightTimes('2026-12-21', lat, lon);
+    const span = daylightWindowSpan('2026-12-21T17:00:00Z', lat, lon, {
+      minutesBeforeSunrise: -30,
+      minutesAfterSunset: 0,
+    });
+    expect(span).toMatchObject({
+      start: new Date(Date.parse(t.sunrise as string) + 30 * MINUTE).toISOString(),
+      end: t.sunset,
+    });
+  });
+
+  it('covers the whole day during polar day and none of it during polar night', () => {
+    expect(
+      daylightWindowSpan('2026-06-21T10:00:00Z', utqiagvik.lat, utqiagvik.lon, window),
+    ).toEqual({ kind: 'allDay' });
+    expect(
+      daylightWindowSpan('2026-12-21T22:00:00Z', utqiagvik.lat, utqiagvik.lon, window),
+    ).toEqual({ kind: 'none' });
   });
 });
