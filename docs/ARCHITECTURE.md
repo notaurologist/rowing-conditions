@@ -187,7 +187,20 @@ type Failure =
   | { kind: 'daylight' };      // hour lies entirely outside the rule set's daylight window
 ```
 
-Every type has a matching Zod schema. Schemas are the source of truth; types are inferred from them.
+Every type has a matching Zod schema. Schemas are the source of truth; types are inferred from them. They live in `packages/core/src/types/`, and the schema and its type share a name (`RuleSet` is both).
+
+`SourceId` is `'usgs' | 'nwps' | 'nws'`. A gauge ref is `usgs:<id>` or `nwps:<id>`.
+
+The schemas also enforce these rules:
+
+- **Times** are ISO 8601 written with `Z`. Offsets such as `-04:00` are rejected, so adapters convert to UTC.
+- **`ForecastPoint.time`** must be the start of an hour.
+- **Provenance:** every metric present in `ForecastPoint.values` needs a matching `provenance` entry.
+- **Value ranges** apply to readings and forecast values. Flow, wind speed and gusts can't be negative, rain chance runs from 0 to 1, and wind direction from 0 to below 360.
+- **A threshold's `enteredUnit`** must be one of its metric's units (`metricUnits`). Wind direction has no units, so it can't have a limit until directional rules arrive. Combined temperature is entered only in °F.
+- **Threshold values:** limits on flow, wind and rain chance must be greater than zero, and rain chance must be at most 1.
+- **Boat class scope:** `boatClassIds` is either omitted (every class) or non-empty.
+- **Rule sets:** boat class and threshold ids are unique within a rule set, and every scoped threshold names a boat class the rule set has.
 
 ### Evaluation
 
