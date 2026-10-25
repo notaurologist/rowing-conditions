@@ -1,9 +1,20 @@
 name: CI
 
+# Changes that touch only these paths can't affect lint, typecheck, or tests, so they skip CI.
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      - "LICENSE"
+      - ".github/ISSUE_TEMPLATE/**"
   pull_request:
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      - "LICENSE"
+      - ".github/ISSUE_TEMPLATE/**"
 
 permissions:
   contents: read
