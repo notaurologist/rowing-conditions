@@ -261,7 +261,7 @@ Comparisons happen in the threshold's `enteredUnit`, at display precision, so th
 2. Round both to that unit's precision with the same rounding function the UI uses for display.
 3. Compare. Max, inclusive: within if `value <= limit`. Max, exclusive: `value < limit`. Min, inclusive: `value >= limit`. Min, exclusive: `value > limit`.
 
-Precision per unit (one table in `packages/core/units`, used by both evaluation and display):
+Precision per unit (`unitDecimals` in `packages/core/src/units/units.ts`, used by both evaluation and display):
 
 | Unit | Decimals |
 |---|---|
@@ -275,7 +275,7 @@ Precision per unit (one table in `packages/core/units`, used by both evaluation 
 | m/s | 1 |
 | percent | 0 |
 
-Rounding is half away from zero. `combinedTempF` is the sum of air and water temperature each converted to °F and rounded to a whole degree, so its `enteredUnit` is always `degF`.
+Rounding is half away from zero (`roundHalfAwayFromZero`). Values are first trimmed to 12 significant digits, so floating-point noise can't push a value across a rounding boundary: 2.675 is stored as 2.67499999… but still rounds to 2.68. `combinedTempF` is the sum of air and water temperature each converted to °F and rounded to a whole degree, so its `enteredUnit` is always `degF`.
 
 #### Headroom
 
@@ -292,8 +292,12 @@ Dividing temperatures by their limit would divide by zero at 0 °C and flip sign
 
 ### Units
 
-- Explicit conversion functions per unit pair, no general-purpose library needed.
-- Display preferences: `'us'` (cfs, ft, °F, mph) and `'metric'` (m³/s, m, °C, km/h). Store the preference, convert at render.
+- Explicit conversion functions per unit pair, no general-purpose library needed. They live in `packages/core/src/units/units.ts`.
+- **Conversion functions:**
+  - `fromSI` and `toSI` convert between SI and a unit.
+  - `fromInternal`, `toInternal` and `displayValue` take the metric as well. Use them for any metric's value: `combinedTempF` is stored in °F, not SI, so these leave it unchanged, and they throw if asked for it in any unit other than °F.
+  - `displayValue` returns a value as it appears on screen. Evaluation compares against the same number.
+- Display preferences: `'us'` (cfs, ft, °F, mph) and `'metric'` (m³/s, m, °C, km/h). Combined temperature stays in °F in both, and rain chance is always a percent. The mapping is `displayUnits`. Store the preference, convert at render.
 
 ### Daylight
 
