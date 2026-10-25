@@ -55,3 +55,14 @@ pnpm fixtures:record  # manual only, never in CI
 - No `any` without a comment explaining why.
 - Update the relevant doc in the same change when behavior or decisions change.
 - Times are ISO 8601 UTC internally; convert to the location's timezone for display.
+
+## Tracking work
+
+Work is tracked in GitHub issues, grouped into milestones that match `docs/MILESTONES.md`.
+
+- Pick up the lowest-numbered open issue in the earliest open milestone that is not labeled `blocked`. Issue bodies list docs to read and acceptance criteria.
+- Issues labeled `decision` need the owner's call. Research and propose; do not decide.
+- Issues labeled `spike` mean verify against official docs before building.
+- Open questions are labeled `question` and have no milestone until answered.
+- Reference the issue in the PR with `Closes #n` and fill in the PR template checklist.
+- If work turns up a new task or question, open an issue for it instead of expanding the current PR.
