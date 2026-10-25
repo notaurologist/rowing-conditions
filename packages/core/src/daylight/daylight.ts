@@ -2,6 +2,7 @@ import { getPosition, getTimes, type SunTimes } from 'suncalc';
 import { z } from 'zod';
 import type { LightLevel } from '../types/evaluation.ts';
 import { UtcTime } from '../types/measurement.ts';
+import type { DaylightWindow } from '../types/rules.ts';
 
 export const DaylightTimes = z.object({
   date: z.iso.date(), // the location's local date
@@ -57,4 +58,27 @@ export function hourLightLevel(hourStart: string, lat: number, lon: number): Lig
   // The Sun never crosses -6° today: it stays above (white nights) or below (deep polar night).
   // suncalc's position altitude includes refraction, which is near zero this far below the horizon.
   return getPosition(new Date(t), lat, lon).altitude > -6 ? 'twilight' : 'dark';
+}
+
+export type DaylightWindowSpan =
+  | { kind: 'span'; start: string; end: string }
+  | { kind: 'allDay' } // polar day: the window has no sunrise or sunset to measure from
+  | { kind: 'none' }; // polar night
+
+// A rule set's daylight window for the solar day containing the middle of the hour.
+export function daylightWindowSpan(
+  hourStart: string,
+  lat: number,
+  lon: number,
+  window: DaylightWindow,
+): DaylightWindowSpan {
+  const t = Date.parse(UtcTime.parse(hourStart)) + HOUR / 2;
+  const times = getTimes(new Date(t), lat, lon);
+  if (times.alwaysUp) return { kind: 'allDay' };
+  if (!times.sunrise || !times.sunset) return { kind: 'none' };
+  return {
+    kind: 'span',
+    start: new Date(times.sunrise.getTime() - window.minutesBeforeSunrise * 60_000).toISOString(),
+    end: new Date(times.sunset.getTime() + window.minutesAfterSunset * 60_000).toISOString(),
+  };
 }

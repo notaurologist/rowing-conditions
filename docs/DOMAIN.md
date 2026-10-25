@@ -131,7 +131,7 @@ Hours past the end of a flow forecast are unknown for flow. The app does not fal
 
 ### Flagged readings
 
-USGS marks recent data as provisional. That is normal and does not affect evaluation. Some qualifiers mean the value itself is unreliable: ice-affected discharge and equipment malfunction. Those readings are shown with their qualifier, but evaluation treats them as missing. The exact USGS qualifier codes are confirmed during adapter work (M2). Open question: whether "estimated" values, common during ice periods, should also count as missing.
+USGS marks recent data as provisional. That is normal and does not affect evaluation. Some qualifiers mean the value itself is unreliable: ice-affected discharge, equipment malfunction, and estimated values. Estimated values are common during ice periods. Those readings are shown with their qualifier, but evaluation treats them as unknown. While a gauge reports estimates, a flow limit can stay unknown for weeks in winter; revisit this during backtesting (M9) if that turns out to hide too much. The exact USGS qualifier codes are confirmed during adapter work (M2). (Decided in issue #41, October 2026.)
 
 ### Limits the location cannot check
 

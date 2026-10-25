@@ -1,4 +1,5 @@
 export * from './daylight/daylight.ts';
+export * from './evaluation/evaluate.ts';
 export * from './types/evaluation.ts';
 export * from './types/location.ts';
 export * from './types/measurement.ts';

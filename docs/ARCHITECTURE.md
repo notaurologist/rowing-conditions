@@ -206,9 +206,15 @@ The schemas also enforce these rules:
 
 The reasoning behind these rules is in `DOMAIN.md` under "How the app applies limits."
 
-- `evaluateHour(point, ruleSet, boatClassId, daylightTimes, now) → HourResult`
-- `evaluateTimeline(forecast, ruleSet, boatClassId, daylightTimes, now) → { hours: HourResult[], unavailableMetrics: Metric[] }`
-  - `unavailableMetrics` lists metrics with an applicable threshold but no provenance at any hour (`noSource`), so the UI can show one notice per rule set instead of 48 unknowns.
+The code is in `packages/core/src/evaluation/evaluate.ts`.
+
+- `evaluateHour(point, { ruleSet, boatClassId, lat, lon, now, unavailableMetrics? }) → HourResult`
+  - Called on a single hour without `unavailableMetrics`, it can't distinguish `noSource` from `missing`, so an absent value is reported as `missing`. `evaluateTimeline` passes the list in.
+  - Throws if the rule set has no such boat class.
+- `evaluateTimeline({ forecast, ruleSet, boatClassId, lat, lon, now, flowByGauge? }) → { hours: HourResult[], unavailableMetrics: Metric[], hasLimits: boolean }`
+  - `unavailableMetrics` lists metrics with an applicable threshold but no provenance at any hour (`noSource`), so the UI can show one notice per rule set instead of 48 unknowns. For a combined temperature limit, it lists the part with no source (for example `waterTemp`).
+  - `flowByGauge` holds flow series by gauge ref. If the rule set names a flow gauge, each hour's flow is replaced with that gauge's flow for the same hour. If the gauge has no data, flow is `noSource`. It never falls back to the location's display gauge.
+  - `hasLimits` is false when the rule set has no thresholds for the boat class and no daylight window. Every hour would then be vacuously `within`, so the UI shows its empty state ("enter your or your club's limits") instead.
 - `findWindows(timeline, daylightTimes) → { start, end }[]` with ISO 8601 UTC times: contiguous runs of `within` hours, with edges cut at the rule set's daylight window boundaries to the minute.
 - `findLimitingFactor(timeline, forecast, ruleSet, boatClassId, daylightTimes) → { metric, reason: 'mostHoursOutside' | 'leastHeadroom', hoursOutside, headroom } | null`
   - Considers only metrics that have a limit applying to the boat class, excluding `unavailableMetrics`, and only rowing hours. Rowing hours are those overlapping the rule set's daylight window, or civil dawn to civil dusk if it has none. The default includes pre-sunrise twilight because crews often push off before sunrise with lights.
@@ -226,17 +232,19 @@ For each threshold that applies to the boat class, in this order:
 
 1. If the metric has no provenance at any hour: unknown, `noSource`.
 2. If the value is null or absent for this hour: unknown, `missing`.
-3. If the value's provenance carries a disqualifying qualifier (`iceAffected`, `equipmentMalfunction`): unknown, `qualified`. `provisional` and `estimated` do not disqualify (`estimated` is an open question in `DOMAIN.md`).
+3. If the value's provenance carries a disqualifying qualifier (`iceAffected`, `equipmentMalfunction`, `estimated`): unknown, `qualified`. `provisional` does not disqualify.
 4. If `now - asOf` exceeds the maximum age: unknown, `stale`.
 5. Otherwise compare (see "Comparison") and record a `limit` failure if it fails.
 
 Separately, if the rule set has a daylight window and the hour `[time, time + 1h)` lies entirely outside it, add a `daylight` failure. An hour that partly overlaps the window is evaluated normally; `findWindows` trims it. Without a daylight window, light never affects status.
 
+The window is measured from the sunrise and sunset of the solar day containing the middle of the hour (`daylightWindowSpan`). During polar day the window covers the whole day. During polar night there's no sunrise to measure from, so every hour is outside the window.
+
 Each hour's `light` is the level at the middle of the hour (`time + 30 min`): `daylight` between sunrise and sunset, `twilight` between civil dawn and sunrise or sunset and civil dusk, `dark` otherwise. UI copy describes it ("before sunrise, twilight") and never turns it into an instruction such as "lights required."
 
 Then: any failure makes the hour `outside`. Otherwise any unknown makes it `unknown`. Only an hour with every applicable threshold present, usable, and passing is `within`. An outside result does not hide unknowns; both lists are returned so the UI can explain both.
 
-For `combinedTempF`, the hour is unknown if either component is unknown, with the component's reason.
+For `combinedTempF`, the hour is unknown if either component is unknown. The unknown entry names the component's metric (for example `waterTemp`) and its reason, so the UI can say which reading is the problem. If both are unusable, it names air temperature.
 
 #### Maximum ages
 
@@ -248,6 +256,8 @@ Constants in `packages/core`, starting values to tune in M9:
 | waterTemp, observation | 24 h |
 | flow, gaugeHeight, NWPS forecast | 36 h |
 | weather metrics, NWS forecast | 12 h |
+| weather metrics, observation | 12 h (no agreed limit yet; same as the forecast) |
+| waterTemp, forecast | 24 h (no source forecasts it today) |
 
 Flow for each hour comes from the NWPS forecast when the gauge has one. Hours after the last forecast step have no flow value (`missing`); the latest observation is not used there. Without a forecast, the latest observation is copied to every hour with `kind: 'observation'`. Water temperature is always the latest observation. The UI shows which applies from `provenance`.
 
