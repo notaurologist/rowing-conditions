@@ -44,7 +44,7 @@ pnpm typecheck
 pnpm lint           # Biome check
 pnpm format         # Biome format
 pnpm db:migrate     # apply Drizzle migrations
-pnpm fixtures:record  # manual only, never in CI
+pnpm fixtures:record  # manual only, never in the pre-push check or CI
 ```
 
 ## Conventions
