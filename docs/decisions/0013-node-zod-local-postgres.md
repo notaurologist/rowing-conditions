@@ -1,6 +1,6 @@
 # 0013: Node 26, Zod 4, and local Postgres via Docker Compose from M4
 
-Status: Accepted (October 2026). The test-database part is superseded by 0016: tests use PGlite, not Docker or a CI service container.
+Status: Accepted (October 2026). The test-database part is superseded by 0016: tests use PGlite, not Docker or a CI service container. The Node 26 part is superseded by 0017: the workspace uses Node 24 because Vercel Functions offer nothing newer.
 
 ## Context
 M0 needs three choices before scaffolding (issue #2). Facts as of October 25, 2026:
