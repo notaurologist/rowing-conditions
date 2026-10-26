@@ -1,0 +1,209 @@
+{
+  "url": "https://api.water.noaa.gov/nwps/v1/gauges?bbox.xmin=-72.7&bbox.ymin=42.45&bbox.xmax=-72.4&bbox.ymax=42.75&srid=EPSG_4326",
+  "recordedAt": "2026-10-25T23:54:11.759Z",
+  "status": 200,
+  "body": {
+    "gauges": [
+      {
+        "lid": "CRNM3",
+        "name": "Green River at Colrain",
+        "rfc": {
+          "abbreviation": "NERFC",
+          "name": "Northeast River Forecast Center"
+        },
+        "wfo": {
+          "abbreviation": "BOX",
+          "name": "Norton"
+        },
+        "state": {
+          "abbreviation": "MA",
+          "name": "Massachusetts"
+        },
+        "latitude": 42.70341695,
+        "longitude": -72.67064738,
+        "pedts": {
+          "observed": "HGIRG",
+          "forecast": "HGIFF"
+        },
+        "status": {
+          "observed": {
+            "primary": 2.72,
+            "primaryUnit": "ft",
+            "secondary": 0.023,
+            "secondaryUnit": "kcfs",
+            "floodCategory": "no_flooding",
+            "validTime": "2026-10-25T23:00:00Z"
+          },
+          "forecast": {
+            "primary": -999,
+            "primaryUnit": "",
+            "secondary": -999,
+            "secondaryUnit": "",
+            "floodCategory": "fcst_not_current",
+            "validTime": "0001-01-01T00:00:00Z"
+          }
+        }
+      },
+      {
+        "lid": "EROM3",
+        "name": "Millers River at Erving",
+        "rfc": {
+          "abbreviation": "NERFC",
+          "name": "Northeast River Forecast Center"
+        },
+        "wfo": {
+          "abbreviation": "BOX",
+          "name": "Norton"
+        },
+        "state": {
+          "abbreviation": "MA",
+          "name": "Massachusetts"
+        },
+        "latitude": 42.5975,
+        "longitude": -72.438611111111,
+        "pedts": {
+          "observed": "HGIRG",
+          "forecast": ""
+        },
+        "status": {
+          "observed": {
+            "primary": 2.12,
+            "primaryUnit": "ft",
+            "secondary": 0.188,
+            "secondaryUnit": "kcfs",
+            "floodCategory": "no_flooding",
+            "validTime": "2026-10-25T23:00:00Z"
+          },
+          "forecast": {
+            "primary": -999,
+            "primaryUnit": "",
+            "secondary": -999,
+            "secondaryUnit": "",
+            "floodCategory": "fcst_not_current",
+            "validTime": "0001-01-01T00:00:00Z"
+          }
+        }
+      },
+      {
+        "lid": "MNTM3",
+        "name": "Connecticut River at Montague",
+        "rfc": {
+          "abbreviation": "NERFC",
+          "name": "Northeast River Forecast Center"
+        },
+        "wfo": {
+          "abbreviation": "BOX",
+          "name": "Norton"
+        },
+        "state": {
+          "abbreviation": "MA",
+          "name": "Massachusetts"
+        },
+        "latitude": 42.5802222,
+        "longitude": -72.5745,
+        "pedts": {
+          "observed": "HGIRG",
+          "forecast": "HGIFF"
+        },
+        "status": {
+          "observed": {
+            "primary": 8.11,
+            "primaryUnit": "ft",
+            "secondary": 4.89,
+            "secondaryUnit": "kcfs",
+            "floodCategory": "no_flooding",
+            "validTime": "2026-10-25T22:30:00Z"
+          },
+          "forecast": {
+            "primary": 7.2,
+            "primaryUnit": "ft",
+            "secondary": 3.38,
+            "secondaryUnit": "kcfs",
+            "floodCategory": "no_flooding",
+            "validTime": "2026-10-26T00:00:00Z"
+          }
+        }
+      },
+      {
+        "lid": "NFDM3",
+        "name": "Connecticut River near Northfield",
+        "rfc": {
+          "abbreviation": "NERFC",
+          "name": "Northeast River Forecast Center"
+        },
+        "wfo": {
+          "abbreviation": "BOX",
+          "name": "Norton"
+        },
+        "state": {
+          "abbreviation": "MA",
+          "name": "Massachusetts"
+        },
+        "latitude": 42.6833,
+        "longitude": -72.4719,
+        "pedts": {
+          "observed": "HGIRG",
+          "forecast": ""
+        },
+        "status": {
+          "observed": {
+            "primary": 11.9,
+            "primaryUnit": "ft",
+            "secondary": -999,
+            "secondaryUnit": "kcfs",
+            "floodCategory": "not_defined",
+            "validTime": "2026-10-25T23:05:00Z"
+          },
+          "forecast": {
+            "primary": -999,
+            "primaryUnit": "",
+            "secondary": -999,
+            "secondaryUnit": "",
+            "floodCategory": "fcst_not_current",
+            "validTime": "0001-01-01T00:00:00Z"
+          }
+        }
+      },
+      {
+        "lid": "WDEM3",
+        "name": "Deerfield River at West Deerfield",
+        "rfc": {
+          "abbreviation": "NERFC",
+          "name": "Northeast River Forecast Center"
+        },
+        "wfo": {
+          "abbreviation": "BOX",
+          "name": "Norton"
+        },
+        "state": {
+          "abbreviation": "MA",
+          "name": "Massachusetts"
+        },
+        "latitude": 42.53591957,
+        "longitude": -72.65342328,
+        "pedts": {
+          "observed": "HGIRG",
+          "forecast": "HGIFF"
+        },
+        "status": {
+          "observed": {
+            "primary": 2.14,
+            "primaryUnit": "ft",
+            "secondary": 0.309,
+            "secondaryUnit": "kcfs",
+            "floodCategory": "no_flooding",
+            "validTime": "2026-10-25T22:30:00Z"
+          },
+          "forecast": {
+            "primary": 2.4,
+            "primaryUnit": "ft",
+            "secondary": 0.477,
+            "secondaryUnit": "kcfs",
+            "floodCategory": "no_flooding",
+            "validTime": "2026-10-26T06:00:00Z"
+          }
+        }
+      }
+    ]
+  }
+}

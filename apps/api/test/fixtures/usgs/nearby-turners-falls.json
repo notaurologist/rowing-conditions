@@ -1,0 +1,1020 @@
+{
+  "url": "https://api.waterdata.usgs.gov/ogcapi/v1/collections/monitoring-locations/items?f=json&bbox=-72.7%2C42.45%2C-72.4%2C42.75&site_type_code=ST&properties=monitoring_location_name%2Csite_type_code%2Cstate_name&limit=500",
+  "recordedAt": "2026-10-25T23:43:09.775Z",
+  "status": 200,
+  "body": {
+    "type": "FeatureCollection",
+    "features": [
+      {
+        "type": "Feature",
+        "properties": {
+          "monitoring_location_name": "CONNECTICUT RIVER AT NORTHFIELD, MA",
+          "site_type_code": "ST",
+          "state_name": "Massachusetts"
+        },
+        "id": "USGS-01161200",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -72.4534209779963,
+            42.7123059982264
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "monitoring_location_name": "MILL BROOK AT NORTHFIELD, MA",
+          "site_type_code": "ST",
+          "state_name": "Massachusetts"
+        },
+        "id": "USGS-01161250",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -72.4473096577314,
+            42.6950841566151
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "monitoring_location_name": "CONNECTICUT RIVER NEAR NORTHFIELD, MA",
+          "site_type_code": "ST",
+          "state_name": "Massachusetts"
+        },
+        "id": "USGS-01161280",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -72.47194444444445,
+            42.68333333333333
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "monitoring_location_name": "MILLERS BROOK AT NORTHFIELD, MA",
+          "site_type_code": "ST",
+          "state_name": "Massachusetts"
+        },
+        "id": "USGS-01161300",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -72.4525874714086,
+            42.6853621135968
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "monitoring_location_name": "WEST WAIT BROOK NEAR NORTHFIELD, MA",
+          "site_type_code": "ST",
+          "state_name": "Massachusetts"
+        },
+        "id": "USGS-01161310",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -72.4920327048922,
+            42.7009171854156
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "monitoring_location_name": "DRY BROOK AT GILL, MA",
+          "site_type_code": "ST",
+          "state_name": "Massachusetts"
+        },
+        "id": "USGS-01161320",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -72.4975879890987,
+            42.6420295088704
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "monitoring_location_name": "FOURMILE BROOK NEAR NORTHFIELD, MA",
+          "site_type_code": "ST",
+          "state_name": "Massachusetts"
+        },
+        "id": "USGS-01161340",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -72.4703651687763,
+            42.6203633928315
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "monitoring_location_name": "MILLERS RIVER AT ERVING, MA",
+          "site_type_code": "ST",
+          "state_name": "Massachusetts"
+        },
+        "id": "USGS-01166500",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -72.4378644860859,
+            42.5975861976781
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "monitoring_location_name": "MORMON HOLLOW BROOK NEAR FARLEY, MA",
+          "site_type_code": "ST",
+          "state_name": "Massachusetts"
+        },
+        "id": "USGS-01166600",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -72.4314753397609,
+            42.5711978710561
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "monitoring_location_name": "MILLERS RIVER AT BRIDGE STREET, MILLERS FALLS, MA",
+          "site_type_code": "ST",
+          "state_name": "Massachusetts"
+        },
+        "id": "USGS-01166630",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -72.4968611111111,
+            42.5801861111111
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "monitoring_location_name": "CONNECTICUT R AT FRENCH KING ROCK NR TURNERS FALLS",
+          "site_type_code": "ST",
+          "state_name": "Massachusetts"
+        },
+        "id": "USGS-01166950",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -72.489167,
+            42.604972
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "monitoring_location_name": "CONNECTICUT RIVER AT TURNERS FALLS, MA",
+          "site_type_code": "ST",
+          "state_name": "Massachusetts"
+        },
+        "id": "USGS-01167000",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -72.555088841483,
+            42.6111965856088
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "monitoring_location_name": "COUCH BROOK NEAR NORTH BERNARDSTON, MA",
+          "site_type_code": "ST",
+          "state_name": "Massachusetts"
+        },
+        "id": "USGS-01167100",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -72.5645341580018,
+            42.7042503632535
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "monitoring_location_name": "FALL RIVER AT BERNARDSTON, MA",
+          "site_type_code": "ST",
+          "state_name": "Massachusetts"
+        },
+        "id": "USGS-01167200",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -72.5448114223486,
+            42.6875840362416
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "monitoring_location_name": "FALL RIVER 0.25 MI SOUTHEAST OF BERNARDSTON, MA",
+          "site_type_code": "ST",
+          "state_name": "Massachusetts"
+        },
+        "id": "USGS-01167250",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -72.5464779802082,
+            42.6678621927836
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "monitoring_location_name": "FALL RIVER NEAR GREENFIELD, MA",
+          "site_type_code": "ST",
+          "state_name": "Massachusetts"
+        },
+        "id": "USGS-01167300",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -72.5520332585395,
+            42.6150854127543
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "monitoring_location_name": "CONNECTICUT RIVER @ MAIN STREET, NR GREENFIELD, MA",
+          "site_type_code": "ST",
+          "state_name": "Massachusetts"
+        },
+        "id": "USGS-01167305",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -72.5797222222222,
+            42.5805555555556
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "monitoring_location_name": "EAST BRANCH NORTH RIVER AT COLRAIN, MA",
+          "site_type_code": "ST",
+          "state_name": "Massachusetts"
+        },
+        "id": "USGS-01168780",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -72.6956475959642,
+            42.6748062219832
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "monitoring_location_name": "EAST BR NORTH RIVER BEL. TRIB AT COLRAIN, MA",
+          "site_type_code": "ST",
+          "state_name": "Massachusetts"
+        },
+        "id": "USGS-01168782",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -72.6981476361846,
+            42.6739728955643
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "monitoring_location_name": "DRAGON BROOK AT SHELBURNE, MA",
+          "site_type_code": "ST",
+          "state_name": "Massachusetts"
+        },
+        "id": "USGS-01169650",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -72.6845353173794,
+            42.5775854238028
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "monitoring_location_name": "SOUTH RIVER NEAR CONWAY, MA",
+          "site_type_code": "ST",
+          "state_name": "Massachusetts"
+        },
+        "id": "USGS-01169900",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -72.69368022985395,
+            42.541922810530366
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "monitoring_location_name": "DEERFIELD RIVER NEAR WEST DEERFIELD, MA",
+          "site_type_code": "ST",
+          "state_name": "Massachusetts"
+        },
+        "id": "USGS-01170000",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -72.6534232753959,
+            42.535919570257
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "monitoring_location_name": "DEERFIELD RIVER AT WEST DEERFIELD, MA",
+          "site_type_code": "ST",
+          "state_name": "Massachusetts"
+        },
+        "id": "USGS-01170005",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -72.6339784328777,
+            42.5278642777637
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "monitoring_location_name": "DEERFIELD R, STILLWATER BR, AT WEST DEERFIELD, MA",
+          "site_type_code": "ST",
+          "state_name": "Massachusetts"
+        },
+        "id": "USGS-01170006",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -72.6325895110638,
+            42.5267531945856
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "monitoring_location_name": "DEERFIELD R BL STILLWATER BRDG AT W. DEERFIELD, MA",
+          "site_type_code": "ST",
+          "state_name": "Massachusetts"
+        },
+        "id": "USGS-01170007",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -72.6314783668218,
+            42.5250865630317
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "monitoring_location_name": "GREEN RIVER ABOVE ROARING BROOK NR GREEN RIVER VT",
+          "site_type_code": "ST",
+          "state_name": "Vermont"
+        },
+        "id": "USGS-01170055",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -72.6736111111111,
+            42.7408333333333
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "monitoring_location_name": "ROARING BROOK AT RIVER ROAD, NEAR GREEN RIVER, VT",
+          "site_type_code": "ST",
+          "state_name": "Vermont"
+        },
+        "id": "USGS-01170057",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -72.6738888888889,
+            42.7408333333333
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "monitoring_location_name": "GREEN RIVER AT MA./VT BORDER",
+          "site_type_code": "ST",
+          "state_name": "Massachusetts"
+        },
+        "id": "USGS-01170060",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -72.6762033353238,
+            42.7331387328541
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "monitoring_location_name": "GREEN RIVER NEAR LEYDEN, MA",
+          "site_type_code": "ST",
+          "state_name": "Massachusetts"
+        },
+        "id": "USGS-01170070",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -72.6750921453423,
+            42.7273054854559
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "monitoring_location_name": "GREEN RIVER AT STEWARTVILLE, MA",
+          "site_type_code": "ST",
+          "state_name": "Massachusetts"
+        },
+        "id": "USGS-01170095",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -72.6695277777778,
+            42.7162777777778
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "monitoring_location_name": "GREEN RIVER NEAR COLRAIN, MA",
+          "site_type_code": "ST",
+          "state_name": "Massachusetts"
+        },
+        "id": "USGS-01170100",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -72.6706473825731,
+            42.7034169531944
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "monitoring_location_name": "GREEN RIVER AT EAST COLRAIN, MA",
+          "site_type_code": "ST",
+          "state_name": "Massachusetts"
+        },
+        "id": "USGS-01170103",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -72.665091682021,
+            42.6998059015201
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "monitoring_location_name": "STAFFORD BROOK NEAR COLRAIN, MA",
+          "site_type_code": "ST",
+          "state_name": "Massachusetts"
+        },
+        "id": "USGS-01170120",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -72.653702382304,
+            42.6798062233837
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "monitoring_location_name": "GREEN RIVER 0.4 MI BELOW STAFFORD BK NR COLRAIN MA",
+          "site_type_code": "ST",
+          "state_name": "Massachusetts"
+        },
+        "id": "USGS-01170121",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -72.6523134560909,
+            42.6786951319479
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "monitoring_location_name": "GREEN RIVER AB WORKMAN BK NEAR GREENFIELD, MA",
+          "site_type_code": "ST",
+          "state_name": "Massachusetts"
+        },
+        "id": "USGS-01170140",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -72.6253682764537,
+            42.6545289117909
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "monitoring_location_name": "GREEN RIVER BELOW WORKMAN BK NR GREENFIELD MA",
+          "site_type_code": "ST",
+          "state_name": "Massachusetts"
+        },
+        "id": "USGS-01170141",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -72.6250904837562,
+            42.6534178197797
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "monitoring_location_name": "GREEN RIVER NEAR GREENFIELD, MA",
+          "site_type_code": "ST",
+          "state_name": "Massachusetts"
+        },
+        "id": "USGS-01170150",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -72.6203681168732,
+            42.6470290501048
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "monitoring_location_name": "GLEN BROOK NEAR LEYDEN, MA",
+          "site_type_code": "ST",
+          "state_name": "Massachusetts"
+        },
+        "id": "USGS-01170160",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -72.6278685977,
+            42.6859172781161
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "monitoring_location_name": "PUNCH BROOK NEAR GREENFIELD, MA",
+          "site_type_code": "ST",
+          "state_name": "Massachusetts"
+        },
+        "id": "USGS-01170180",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -72.625090206976,
+            42.6214739036709
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "monitoring_location_name": "ALLEN BROOK NEAR SHELBURNE FALLS, MA",
+          "site_type_code": "ST",
+          "state_name": "Massachusetts"
+        },
+        "id": "USGS-01170200",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -72.6667575601307,
+            42.6128627649846
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "monitoring_location_name": "GREEN RIVER ABOVE MUNICIPAL POOL AT GREENFIELD, MA",
+          "site_type_code": "ST",
+          "state_name": "Massachusetts"
+        },
+        "id": "USGS-01170230",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -72.6206455519176,
+            42.6064741708985
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "monitoring_location_name": "MILL BROOK NEAR BERNARDSTON, MA",
+          "site_type_code": "ST",
+          "state_name": "Massachusetts"
+        },
+        "id": "USGS-01170240",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -72.5712006138467,
+            42.6592511878794
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "monitoring_location_name": "MILL BROOK LOG PLAIN RD, NEAR GREENFIELD, MA",
+          "site_type_code": "ST",
+          "state_name": "Massachusetts"
+        },
+        "id": "USGS-01170250",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -72.5837007305055,
+            42.6436958819799
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "monitoring_location_name": "MILL BROOK NEAR GREENFIELD, MA",
+          "site_type_code": "ST",
+          "state_name": "Massachusetts"
+        },
+        "id": "USGS-01170280",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -72.6073119974633,
+            42.6089741853935
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "monitoring_location_name": "GREEN RIVER BELOW STP, GREENFIELD, MA",
+          "site_type_code": "ST",
+          "state_name": "Massachusetts"
+        },
+        "id": "USGS-01170485",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -72.6014782612243,
+            42.5728637263596
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "monitoring_location_name": "DEERFIELD RIVER AT US 5, NEAR DEERFIELD, MA",
+          "site_type_code": "ST",
+          "state_name": "Massachusetts"
+        },
+        "id": "USGS-01170490",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -72.5922222222222,
+            42.5697222222222
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "monitoring_location_name": "CONNECTICUT RIVER AT MONTAGUE CITY, MA",
+          "site_type_code": "ST",
+          "state_name": "Massachusetts"
+        },
+        "id": "USGS-01170500",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -72.5745,
+            42.5802222222222
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "monitoring_location_name": "CONNECTICUT RIVER TRIBUTARY NEAR MONTAGUE, MA",
+          "site_type_code": "ST",
+          "state_name": "Massachusetts"
+        },
+        "id": "USGS-01170510",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -72.5492549798941,
+            42.5528643980185
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "monitoring_location_name": "RED BROOK NEAR NORTH LEVERETT, MA",
+          "site_type_code": "ST",
+          "state_name": "Massachusetts"
+        },
+        "id": "USGS-01170550",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -72.4473085444993,
+            42.5042547559707
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "monitoring_location_name": "SAWMILL BROOK NEAR MONTAGUE, MA",
+          "site_type_code": "ST",
+          "state_name": "Massachusetts"
+        },
+        "id": "USGS-01170575",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -72.5395323815949,
+            42.5231428178655
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "monitoring_location_name": "SAWMILL RIVER AT MEADOW ROAD, AT MONTAGUE, MA",
+          "site_type_code": "ST",
+          "state_name": "Massachusetts"
+        },
+        "id": "USGS-01170580",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -72.5394444444444,
+            42.5391666666667
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "monitoring_location_name": "CRANBERRY POND BROOK NEAR SUNDERLAND, MA",
+          "site_type_code": "ST",
+          "state_name": "Massachusetts"
+        },
+        "id": "USGS-01170590",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -72.5248097818634,
+            42.5034210988305
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "monitoring_location_name": "LONG PLAIN BROOK NEAR LEVERETT, MA",
+          "site_type_code": "ST",
+          "state_name": "Massachusetts"
+        },
+        "id": "USGS-01170600",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -72.5225874783568,
+            42.4578663019514
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "monitoring_location_name": "MILL RIVER NEAR DEERFIELD, MA",
+          "site_type_code": "ST",
+          "state_name": "Massachusetts"
+        },
+        "id": "USGS-01170895",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -72.6470339789827,
+            42.5028645791923
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "monitoring_location_name": "MILL RIVER NEAR SOUTH DEERFIELD, MA",
+          "site_type_code": "ST",
+          "state_name": "Massachusetts"
+        },
+        "id": "USGS-01170900",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -72.6414784404054,
+            42.4692540361079
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "monitoring_location_name": "BLOODY BROOK NEAR SOUTH DEERFIELD, MA",
+          "site_type_code": "ST",
+          "state_name": "Massachusetts"
+        },
+        "id": "USGS-01170902",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -72.6334227217569,
+            42.4750873445152
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "monitoring_location_name": "ROARING BROOK NEAR CONWAY, MA",
+          "site_type_code": "ST",
+          "state_name": "Massachusetts"
+        },
+        "id": "USGS-01170905",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -72.6720345118807,
+            42.4720315209224
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "monitoring_location_name": "WEST WHATELY BROOK NR WHATELY, MA",
+          "site_type_code": "ST",
+          "state_name": "Massachusetts"
+        },
+        "id": "USGS-01171005",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -72.68771402645704,
+            42.456756755024706
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "monitoring_location_name": "HANNEGAN BROOK NEAR LAKE PLEASANT, MA",
+          "site_type_code": "ST",
+          "state_name": "Massachusetts"
+        },
+        "id": "USGS-423331072303901",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -72.5108333333333,
+            42.5586111111111
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "monitoring_location_name": "HANNEGAN BROOK HEADWATERS NEAR LAKE PLEASANT, MA",
+          "site_type_code": "ST",
+          "state_name": "Massachusetts"
+        },
+        "id": "USGS-423335072293501",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -72.4930555555556,
+            42.5597222222222
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "monitoring_location_name": "HANNEGAN BROOK AT RT 63 NEAR MONTAGUE, MA",
+          "site_type_code": "ST",
+          "state_name": "Massachusetts"
+        },
+        "id": "USGS-423341072301701",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -72.5042542638575,
+            42.5614756091317
+          ]
+        }
+      }
+    ],
+    "numberReturned": 61,
+    "links": [
+      {
+        "type": "application/geo+json",
+        "rel": "self",
+        "title": "This document as GeoJSON",
+        "href": "https://api.waterdata.usgs.gov/ogcapi/v1/collections/monitoring-locations/items?f=json&bbox=-72.7,42.45,-72.4,42.75&site_type_code=ST&properties=monitoring_location_name,site_type_code,state_name&limit=500"
+      },
+      {
+        "rel": "alternate",
+        "type": "application/ld+json",
+        "title": "This document as RDF (JSON-LD)",
+        "href": "https://api.waterdata.usgs.gov/ogcapi/v1/collections/monitoring-locations/items?f=jsonld&bbox=-72.7,42.45,-72.4,42.75&site_type_code=ST&properties=monitoring_location_name,site_type_code,state_name&limit=500"
+      },
+      {
+        "type": "text/html",
+        "rel": "alternate",
+        "title": "This document as HTML",
+        "href": "https://api.waterdata.usgs.gov/ogcapi/v1/collections/monitoring-locations/items?f=html&bbox=-72.7,42.45,-72.4,42.75&site_type_code=ST&properties=monitoring_location_name,site_type_code,state_name&limit=500"
+      },
+      {
+        "type": "text/csv; charset=utf-8",
+        "rel": "alternate",
+        "title": "This document as CSV",
+        "href": "https://api.waterdata.usgs.gov/ogcapi/v1/collections/monitoring-locations/items?f=csv&bbox=-72.7,42.45,-72.4,42.75&site_type_code=ST&properties=monitoring_location_name,site_type_code,state_name&limit=500"
+      },
+      {
+        "type": "application/json",
+        "title": "Monitoring locations",
+        "rel": "collection",
+        "href": "https://api.waterdata.usgs.gov/ogcapi/v1/collections/monitoring-locations"
+      }
+    ],
+    "timeStamp": "2026-10-25T23:43:09.710313Z"
+  }
+}

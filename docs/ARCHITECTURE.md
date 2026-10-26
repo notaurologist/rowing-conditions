@@ -347,9 +347,11 @@ Hono on Node. Export the app type so clients use `hono/client` for typed calls. 
 | Method | Path | Purpose |
 |---|---|---|
 | GET | `/health` | Liveness check |
-| GET | `/gauges/nearby?lat&lon&radiusKm` | Gauges near a point, with which metrics each reports and whether a flow forecast exists |
-| GET | `/gauges/:ref` | Gauge metadata (`usgs:` or `nwps:` ref) |
+| GET | `/gauges/nearby?lat&lon&radiusKm` | `{ gauges: NearbyGauge[] }`, nearest first, each with the metrics it reports. `radiusKm` defaults to 25, max 100. Whether a flow forecast exists is added with the NWPS adapter (#18). |
+| GET | `/gauges/:ref` | `{ gauge, latest: Reading[], sources }` for a `usgs:` ref. Returns 404 if there's no such gauge. If the readings fail, it still returns the gauge, with that source marked `error`. `nwps:` refs get 501 until #18. |
 | GET | `/conditions?lat&lon&gaugeRef?&flowGaugeRefs?` | Current readings plus 48-hour hourly forecast (including forecast flow where available) and daylight data. `flowGaugeRefs` adds flow series for gauges named by rule sets. |
+
+Routes validate input with `@hono/zod-validator` and answer 400 on invalid input. An adapter failure becomes 502 with `{ error: { source, kind, message } }`. `createApp(deps)` takes the adapters, so route tests pass in fake ones.
 
 `/conditions` returns raw normalized data. It does not evaluate rule sets, because rule sets live on the device in the MVP. Clients call `packages/core` evaluation locally. When accounts and notifications arrive, the server runs the same core functions.
 
@@ -372,18 +374,27 @@ Partial success is normal. If NWS fails but USGS succeeds, return what is availa
 
 ### Adapters
 
+Every adapter method returns a `SourceResult<T>` and never throws:
+
 ```ts
+type SourceResult<T> = { ok: true; data: T } | { ok: false; error: SourceError };
+interface SourceError { source: SourceId; kind: 'timeout' | 'network' | 'http' | 'parse'; message: string; status?: number }
+
+// apps/api/src/adapters/types.ts. Implemented by apps/api/src/adapters/usgs/usgs.ts.
 interface FlowSource {
   id: SourceId;
-  findNearby(lat: number, lon: number, radiusKm: number): Promise<Gauge[]>;
-  getLatest(gaugeId: string): Promise<Reading[]>;
-  getHistory(gaugeId: string, from: string, to: string): Promise<Reading[]>;
+  findNearby(lat: number, lon: number, radiusKm: number): Promise<SourceResult<NearbyGauge[]>>;  // nearest first
+  getGauge(gaugeId: string): Promise<SourceResult<Gauge | null>>;   // null when the gauge doesn't exist
+  getLatest(gaugeId: string): Promise<SourceResult<Reading[]>>;
+  getHistory(gaugeId: string, metric: Metric, from: string, to: string): Promise<SourceResult<Reading[]>>;  // one metric per request
 }
 
+// Implemented by apps/api/src/adapters/nwps/nwps.ts.
 interface FlowForecastSource {
   id: SourceId;                // 'nwps'
-  findForecastPoint(lat: number, lon: number, usgsId?: string): Promise<Gauge | null>;
-  getStageFlow(gaugeRef: string): Promise<{ observed: Reading[]; forecast: ForecastPoint[]; issuedAt?: string }>;
+  findNearby(lat: number, lon: number, radiusKm: number): Promise<SourceResult<NearbyGauge[]>>;  // each with hasFlowForecast
+  getGauge(identifier: string): Promise<SourceResult<Gauge | null>>;  // NWS location ID, or a bare USGS site number to find its forecast point
+  getStageFlow(lid: string): Promise<SourceResult<{ observed: Reading[]; forecast: ForecastPoint[]; issuedAt: string | null }>>;
 }
 
 interface WeatherSource {
@@ -396,7 +407,11 @@ interface WeatherSource {
 
 Adapter rules:
 
-- Parse every response with a Zod schema. On parse failure, log the raw payload shape and return an error status, never throw raw errors upward.
+- Parse every response with a Zod schema. On parse failure, log the raw payload shape and return an error status, never throw raw errors upward. `fetchJson` in `apps/api/src/adapters/http.ts` does this for every adapter: it handles timeouts, network and HTTP errors, and schema mismatches. It logs only the payload's shape (keys and types), never its values.
+- Adapters take `fetch`, `logger` and `now` as options. Tests inject a `routedFetch` (`apps/api/test/fixtures.ts`) that serves recorded fixtures and fails on any request it doesn't expect, so no test can reach the network.
+- `Gauge` and `NearbyGauge` (a gauge plus `distanceKm`) are Zod schemas in `packages/core/src/types/gauge.ts`. `distanceKm` and `boundingBox` are in `packages/core/src/geo/geo.ts`.
+- A reading the core `Reading` schema rejects, for example a negative discharge, is kept with a null value and logged. That makes it `missing`, never dropped silently.
+- **NWPS forecast:** `getStageFlow` turns the 6-hourly forecast into hourly `ForecastPoint`s with `interpolateHourly` (`packages/core/src/series/interpolate.ts`). It's linear between steps and never extrapolates. An hour next to a missing step is null. Hours between steps carry `interpolated: true`, and every hour's provenance `asOf` is the forecast issue time. A gauge without a forecast returns `forecast: []` and `issuedAt: null`.
 - Convert to SI inside the adapter. Nothing outside an adapter knows a source's native units.
 - Set timeouts on every request (default 10 s).
 - Send required headers (NWS requires a `User-Agent` with contact info).
