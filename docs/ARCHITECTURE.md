@@ -54,7 +54,7 @@ Read `PRODUCT.md` and `DOMAIN.md` first. Decisions behind the choices here are r
 │   │       └── fixtures/    # Recorded external API responses
 │   └── web/
 │       └── src/
-│           ├── features/    # location-setup/, conditions/, timeline/, thresholds/
+│           ├── features/    # location-setup/, conditions/, summary/, timeline/, rules/
 │           ├── components/  # Shared UI
 │           ├── lib/         # API client, storage, formatting
 │           └── main.tsx
@@ -64,6 +64,7 @@ Read `PRODUCT.md` and `DOMAIN.md` first. Decisions behind the choices here are r
 │           ├── types/       # Domain types and Zod schemas
 │           ├── units/       # Conversion functions
 │           ├── evaluation/  # Threshold evaluation (pure functions)
+│           ├── rules/       # Limits as entered (wording, number, unit) to and from thresholds
 │           └── daylight/    # Sunrise/sunset and darkness windows
 └── docs/
 ```
@@ -557,6 +558,13 @@ No secrets in code or fixtures.
   - **Readout:** a pointer layer and a range input (for keyboard and touch) choose the hour. It starts at the next window.
   - **Hourly values** table: every readout, for screen readers.
   - **Rule set:** the chart uses the location's first attached rule set and its first boat class until rule set selection arrives (#30).
+- **Rule set editor** (`src/features/rules/`): name, boat classes, limits, an optional daylight window and an optional flow gauge.
+  - Each limit reads as the club words it: metric, wording ("at most", "below", "at least", "above"), number and unit. The unit defaults to the display units and can be any unit in `metricUnits`; it is kept as `enteredUnit`. `thresholdFromEntry` and `entryFromThreshold` (`packages/core/src/rules/entry.ts`) convert between what was typed and a `Threshold`, so a saved limit opens again exactly as entered.
+  - `ruleSetDraft.ts` holds the form as strings and `checkDraft` turns it into a `RuleSet` or plain-language errors keyed by field: a missing number, more precision than the unit shows ("mph limits are whole numbers"), zero or less for flow, wind and rain chance, rain chance over 100%. The `RuleSet` schema is still parsed last as a backstop.
+  - No limit values are prefilled. A new rule set starts with one "All boats" class and an empty-state prompt for the user's or club's limits.
+  - The flow gauge choice appears only with a flow limit, listing `/gauges/nearby`. When a rule set names one, the web client sends it as `flowGaugeRefs`.
+  - Saving a new rule set attaches it to the current location. Deleting one detaches it from every location first.
+  - Reached from the summary's empty state ("Enter your club's limits") and the location bar ("Enter limits" or "Edit limits").
 - Map with Leaflet (react-leaflet), OpenStreetMap tiles, respecting the tile usage policy and attribution. The tile URL is configurable (`VITE_TILE_URL`), as the policy asks, and Leaflet loads lazily because it needs `window`.
 - **Location setup** (`src/features/location-setup/`): pick a point on the map or use the browser's location, then choose a gauge from `/gauges/nearby`. `defaultGauge` (`packages/core/src/geo/defaultGauge.ts`) suggests the nearest gauge reporting flow, else gauge height, else water temperature; with none, the suggestion is weather-only. The user can pick any listed gauge or weather-only. Each gauge shows its distance and what it reports. Saving waits for the gauge list, so the saved choice is one the user saw.
 - PWA via `vite-plugin-pwa`. Offline: show last loaded conditions clearly marked with their age.
