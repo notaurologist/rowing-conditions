@@ -1,4 +1,4 @@
-import { CHART_METRICS, Id, RuleSet, SavedLocation } from '@rowing/core';
+import { Id, RuleSet, SavedLocation } from '@rowing/core';
 import { z } from 'zod';
 
 // The one module that touches localStorage. Each kind of data has its own key, so rule sets
@@ -22,7 +22,6 @@ type StorageKey = keyof typeof STORAGE_KEYS;
 export const Preferences = z.object({
   units: z.enum(['us', 'metric']),
   selectedLocationId: Id.optional(),
-  pinnedChartMetric: z.enum(CHART_METRICS).optional(), // the timeline's default, when pinned
 });
 export type Preferences = z.infer<typeof Preferences>;
 

@@ -1,5 +1,4 @@
 export * from './daylight/daylight.ts';
-export * from './evaluation/chartMetric.ts';
 export * from './evaluation/evaluate.ts';
 export * from './evaluation/limitingFactor.ts';
 export * from './evaluation/periods.ts';

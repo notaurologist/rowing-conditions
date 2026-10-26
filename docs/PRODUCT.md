@@ -55,13 +55,18 @@ Implications for all features and copy:
 
 ### 3. 48-hour timeline
 
-The centerpiece of the product. The main screen leads with the answer (the next window within the selected rule set's limits, and what follows), then the chart, then a plain-language list of periods from civil dawn to civil dusk with reasons.
+The centerpiece of the product. The main screen leads with the answer (the next window within the selected rule set's limits, and what follows), then the chart, then a plain-language summary of each day from civil dawn to civil dusk with reasons.
 
-- Hourly wind, gusts, air temperature, and precipitation chance on one chart.
-- Light level shaded and labeled (daylight, twilight, dark). Light is context: crews often row before sunrise with lights, so it does not change whether an hour is within limits unless a rule set sets a hard daylight window.
-- Latest flow reading and trend shown alongside.
-- Time windows within each rule set's limits highlighted.
-- **The charted metric follows the limiting factor.** By default the chart shows whichever metric is deciding things for the selected rule set and boat class: the one causing the most hours outside limits between civil dawn and dusk (or within the rule set's daylight window), or if none, the one closest to its limit. A label says which metric is shown and why. Chips let the user switch metrics, and the user can pin a preferred default.
+The chart is a **rowing meteogram**: every element on one shared time axis, each in its customary form, so nothing has to be switched on to be seen (decided in #77, October 2026).
+
+- **River flow** as a hydrograph, wind as a band from sustained speed to gusts with direction arrows, air and water temperature as lines, and rain chance as bars.
+- **Limits:** each limit is a line on its row, and the space between the forecast and the limit is filled: a light tint for the room left, red where the forecast is past it.
+- **Status:** a strip above the rows shows each span within, outside or unknown, in words.
+- **Windows** within the rule set's limits are bracketed above the rows and carried down through them.
+- **Latest measurements** are shown as dots against the forecast lines, so a forecast that has drifted from what's measured is visible. A measurement far off the forecast's scale sits at the row's edge with an arrow.
+- **Light level** is shaded (twilight, night) from the exact civil dawn, sunrise, sunset and civil dusk. Light is context: crews often row before sunrise with lights, so it does not change whether an hour is within limits unless a rule set sets a hard daylight window.
+- **Readout:** one readout line shows every row's value and its margin to the limit at any hour, by pointer or by slider. Every value is also in an hourly table.
+- **Missing rows:** a metric the location can't report (water temperature at a gauge without a sensor, or flow at a weather-only location) gets a row that says so.
 
 ### 4. Rule sets
 

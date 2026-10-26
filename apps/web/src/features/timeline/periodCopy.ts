@@ -1,9 +1,23 @@
-import type { EvaluationStatus, Period, PeriodReason, UnknownReason } from '@rowing/core';
+import type {
+  EvaluationStatus,
+  Period,
+  PeriodReason,
+  Threshold,
+  UnknownReason,
+} from '@rowing/core';
 import { formatNumber, metricName, unitSymbol } from '../../lib/format.ts';
-import { limitWording } from './timelineModel.ts';
 
 // Plain-language copy for periods and the answer. Neutral wording only: "within" or
 // "outside" a named rule set's limits, never a verdict.
+
+/** How club policies word a limit: "at most 15 mph", "below 15 mph", "at least 39 °F". */
+export function limitWording(
+  comparison: Threshold['comparison'],
+  boundary: Threshold['boundary'],
+): string {
+  if (comparison === 'max') return boundary === 'inclusive' ? 'at most' : 'below';
+  return boundary === 'inclusive' ? 'at least' : 'above';
+}
 
 const UNKNOWN_WORDS: Record<UnknownReason, (name: string) => string> = {
   missing: (name) => `no ${name} value`,

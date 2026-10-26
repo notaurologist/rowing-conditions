@@ -123,14 +123,14 @@ describe('createStorage', () => {
     expect(storage.loadRuleSets()).toEqual([ruleSet]);
   });
 
-  it('reads preferences saved before the pinned chart metric existed', () => {
+  it('drops the pinned chart metric that earlier versions saved', () => {
     const storage = createStorage(
-      memoryStore({ [STORAGE_KEYS.preferences]: envelope({ units: 'metric' }) }),
+      memoryStore({
+        [STORAGE_KEYS.preferences]: envelope({ units: 'metric', pinnedChartMetric: 'wind' }),
+      }),
       silentLogger(),
     );
     expect(storage.loadPreferences()).toEqual({ units: 'metric' });
-    storage.savePreferences({ units: 'metric', pinnedChartMetric: 'wind' });
-    expect(storage.loadPreferences().pinnedChartMetric).toBe('wind');
   });
 
   it('falls back to default preferences when they are invalid', () => {

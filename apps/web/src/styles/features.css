@@ -271,183 +271,6 @@
   margin-bottom: 8px;
 }
 
-.timeline h2 {
-  margin-bottom: 8px;
-}
-
-.tl-explanation {
-  margin: 10px 0 2px;
-}
-
-.tl-chart {
-  margin: 8px 0 4px;
-  width: 100%;
-}
-
-.timeline-chart {
-  display: block;
-  overflow: visible;
-}
-
-.tl-band-daylight {
-  fill: var(--daylight);
-  background: var(--daylight);
-}
-
-.tl-band-twilight {
-  fill: var(--twilight);
-  background: var(--twilight);
-}
-
-.tl-band-dark {
-  fill: var(--night);
-  background: var(--night);
-}
-
-.tl-band-label,
-.tl-limit-label {
-  font-size: 11px;
-  fill: var(--muted);
-}
-
-.tl-limit-label {
-  fill: var(--ink);
-  font-weight: 600;
-  paint-order: stroke;
-  stroke: var(--paper);
-  stroke-width: 3px;
-}
-
-.tl-limit-line {
-  stroke: var(--ink);
-  stroke-width: 1.5;
-}
-
-.tl-line {
-  fill: none;
-}
-
-.tl-series-0 .tl-line {
-  stroke: var(--water);
-}
-
-.tl-series-0 .tl-point {
-  fill: var(--water);
-}
-
-.tl-series-1 .tl-line {
-  stroke: var(--gust-edge);
-}
-
-.tl-series-1 .tl-point {
-  fill: var(--gust-edge);
-}
-
-.tl-status-within {
-  fill: var(--within);
-}
-
-.tl-status-outside {
-  fill: var(--over-fill);
-}
-
-.tl-hatch-line {
-  stroke: var(--over);
-}
-
-.tl-status-unknown {
-  fill: var(--unknown-bg);
-}
-
-.tl-dot {
-  fill: var(--unknown);
-}
-
-.tl-axis line,
-.tl-axis path,
-.tl-tick line {
-  stroke: var(--hair);
-}
-
-.tl-tick text,
-.tl-axis text {
-  fill: var(--muted);
-  font-size: 11px;
-}
-
-.tl-legend {
-  list-style: none;
-  padding: 0;
-  margin: 4px 0 8px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 14px;
-  font-size: 0.85rem;
-  color: var(--muted);
-}
-
-.tl-legend li {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.tl-key-line {
-  display: inline-block;
-  width: 18px;
-  border-top: 2px solid var(--water);
-}
-
-.tl-key-series-1 {
-  border-top: 2px dashed var(--gust-edge);
-}
-
-.tl-key-limit {
-  border-top: 2px dashed var(--ink);
-}
-
-.tl-key-swatch {
-  display: inline-block;
-  width: 14px;
-  height: 12px;
-  border: 1px solid var(--hair);
-}
-
-.tl-key-within {
-  background: var(--within);
-}
-
-.tl-key-outside {
-  background: repeating-linear-gradient(45deg, var(--over) 0 2px, var(--over-fill) 2px 5px);
-}
-
-.tl-key-unknown {
-  background: radial-gradient(var(--unknown) 1px, var(--unknown-bg) 1.5px) 0 0 / 5px 5px;
-}
-
-.tl-table summary {
-  cursor: pointer;
-  color: var(--accent);
-}
-
-.tl-table table {
-  border-collapse: collapse;
-  font-size: 0.85rem;
-  margin-top: 8px;
-  width: 100%;
-}
-
-.tl-table th,
-.tl-table td {
-  text-align: left;
-  padding: 3px 8px 3px 0;
-  border-bottom: 1px solid var(--hair);
-}
-
-.timeline {
-  margin-bottom: 24px;
-}
-
 .answer {
   margin: var(--space-2) 0 var(--space-5);
   padding: var(--space-4) var(--space-5);
@@ -562,5 +385,458 @@
 
   .period .reasons {
     grid-column: 1;
+  }
+}
+
+/* The meteogram (features/timeline/Meteogram.tsx). Row labels sit in a left column on wide
+   screens and above their rows on phones; the plot keeps the full width either way. */
+.meteogram {
+  container-type: inline-size;
+  --lw: 156px;
+  margin-top: var(--space-4);
+}
+
+.mg-chart {
+  position: relative;
+}
+
+.mg-row {
+  display: grid;
+  grid-template-columns: var(--lw) minmax(0, 1fr);
+}
+
+.mg-data-row {
+  margin-top: var(--space-3);
+}
+
+.mg-label {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding-right: var(--space-3);
+}
+
+.mg-name {
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+.mg-sub {
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
+.mg-axis,
+.mg-windows {
+  position: relative;
+  height: 22px;
+}
+
+.mg-windows {
+  height: 28px;
+}
+
+.mg-day {
+  position: absolute;
+  top: 2px;
+  margin-left: var(--space-1);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+
+.mg-sel-time {
+  position: absolute;
+  top: 1px;
+  transform: translateX(-50%);
+  padding: 0 6px;
+  border-radius: var(--radius-sm);
+  background: var(--ink);
+  color: var(--paper);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  white-space: nowrap;
+  z-index: 3;
+}
+
+.mg-window {
+  position: absolute;
+  bottom: 2px;
+  height: 7px;
+  border: 1.5px solid var(--within);
+  border-bottom: 0;
+  border-radius: 3px 3px 0 0;
+}
+
+.mg-window-label {
+  position: absolute;
+  bottom: 8px;
+  left: 0;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--within-ink);
+  white-space: nowrap;
+}
+
+.mg-window-label-end {
+  left: auto;
+  right: 0;
+}
+
+.mg-status {
+  display: flex;
+  gap: 2px;
+  min-height: 26px;
+}
+
+.mg-status > div {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  overflow: hidden;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.mg-status-within {
+  background: var(--within-bg);
+  color: var(--within-ink);
+}
+
+.mg-status-outside {
+  background: var(--outside-bg);
+  color: var(--outside-ink);
+}
+
+.mg-status-unknown {
+  background: var(--unknown-bg);
+  color: var(--ink-2);
+}
+
+.mg-short {
+  display: none;
+}
+
+.mg-plot {
+  position: relative;
+  border-bottom: 1px solid var(--hair);
+}
+
+.mg-light,
+.mg-midnight,
+.mg-window-edge {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+}
+
+.mg-twilight {
+  background: var(--twilight);
+}
+
+.mg-night {
+  background: var(--night);
+}
+
+.mg-midnight {
+  border-left: 1px solid var(--hair);
+}
+
+.mg-window-edge {
+  border-left: 1px solid var(--within);
+  opacity: 0.55;
+}
+
+.mg-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.mg-svg path,
+.mg-svg rect {
+  vector-effect: non-scaling-stroke;
+}
+
+.mg-line {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 2px;
+  stroke-linejoin: round;
+}
+
+.mg-line-flow,
+.mg-line-gaugeHeight {
+  stroke: var(--water);
+  stroke-width: 2.2px;
+}
+
+.mg-line-wind {
+  stroke: var(--wind);
+}
+
+.mg-line-gust {
+  stroke: var(--gust-edge);
+  stroke-width: 1.2px;
+}
+
+.mg-gust-band {
+  fill: var(--gust-fill);
+}
+
+.mg-room {
+  fill: var(--room);
+}
+
+.mg-over {
+  fill: var(--over-fill);
+}
+
+.mg-bar {
+  fill: var(--rain);
+}
+
+.mg-limit {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-top: 1px solid var(--ink);
+}
+
+.mg-limit-label {
+  position: absolute;
+  right: 0;
+  bottom: 2px;
+  padding-left: 6px;
+  background: var(--paper);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.mg-scale {
+  position: absolute;
+  right: calc(100% + 8px);
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.mg-scale-bottom {
+  transform: translateY(-100%);
+}
+
+.mg-arrow {
+  position: absolute;
+  top: 3px;
+  width: 15px;
+  height: 15px;
+  margin-left: -7.5px;
+  fill: none;
+  stroke: var(--wind);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.mg-dot {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  margin: -4.5px 0 0 -4.5px;
+  border-radius: 999px;
+  background: var(--ink);
+  box-shadow: 0 0 0 2px var(--paper);
+  z-index: 1;
+}
+
+.mg-dot-label {
+  position: absolute;
+  margin-left: 10px;
+  transform: translateY(-50%);
+  padding: 0 4px;
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+  z-index: 1;
+}
+
+.mg-sel {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-left: 1px solid var(--ink);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.mg-readout {
+  position: absolute;
+  transform: translate(8px, -120%);
+  padding: 0 5px;
+  border: 1px solid var(--hair);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.mg-readout-left {
+  transform: translate(calc(-100% - 8px), -120%);
+}
+
+.mg-readout-below {
+  transform: translate(8px, 20%);
+}
+
+.mg-readout-left.mg-readout-below {
+  transform: translate(calc(-100% - 8px), 20%);
+}
+
+.mg-readout-middle {
+  transform: translate(8px, -50%);
+}
+
+.mg-readout-left.mg-readout-middle {
+  transform: translate(calc(-100% - 8px), -50%);
+}
+
+.mg-message {
+  margin: 0;
+  position: absolute;
+  top: 50%;
+  left: var(--space-2);
+  transform: translateY(-50%);
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+
+.mg-tick {
+  position: absolute;
+  top: 2px;
+  transform: translateX(-50%);
+  font-size: var(--text-xs);
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.mg-pointer {
+  position: absolute;
+  top: 0;
+  bottom: 22px;
+  left: var(--lw);
+  right: 0;
+  z-index: 4;
+  touch-action: pan-y;
+}
+
+.mg-scrub-row {
+  margin-top: var(--space-3);
+}
+
+.mg-scrub {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--ink-2);
+}
+
+.mg-scrub input {
+  flex: 1;
+  min-width: 0;
+  accent-color: var(--ink);
+}
+
+.mg-scrub-time {
+  min-width: 8em;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.mg-notes {
+  margin-top: var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+
+.mg-notes p {
+  margin: 0 0 var(--space-1);
+}
+
+.mg-table {
+  margin-top: var(--space-3);
+}
+
+.mg-table summary {
+  cursor: pointer;
+  color: var(--accent);
+}
+
+.mg-table-scroll {
+  overflow-x: auto;
+}
+
+.mg-table table {
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+  margin-top: var(--space-2);
+  min-width: 100%;
+}
+
+.mg-table th,
+.mg-table td {
+  text-align: left;
+  padding: 3px var(--space-3) 3px 0;
+  border-bottom: 1px solid var(--hair);
+  white-space: nowrap;
+}
+
+.timeline {
+  margin-bottom: var(--space-6);
+}
+
+@container (max-width: 600px) {
+  .meteogram {
+    --lw: 0px;
+  }
+
+  .mg-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .mg-label {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: flex-start;
+    gap: 0 var(--space-2);
+    padding: var(--space-2) 0 var(--space-1);
+  }
+
+  .mg-empty,
+  .mg-scale,
+  .mg-sel-time,
+  .mg-hide-sm,
+  .mg-long {
+    display: none;
+  }
+
+  .mg-short {
+    display: inline;
+  }
+
+  .mg-data-row {
+    margin-top: var(--space-1);
   }
 }

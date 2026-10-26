@@ -221,15 +221,6 @@ importers:
       '@tanstack/react-query':
         specifier: 5.104.5
         version: 5.104.5(@types/react@19.3.0)(react@19.3.1)
-      '@visx/axis':
-        specifier: 4.0.0
-        version: 4.0.0(@types/react@19.3.0)(react@19.3.1)
-      '@visx/group':
-        specifier: 4.0.0
-        version: 4.0.0(@types/react@19.3.0)(react@19.3.1)
-      '@visx/responsive':
-        specifier: 4.0.0
-        version: 4.0.0(@types/react@19.3.0)(react@19.3.1)
       '@visx/scale':
         specifier: 4.0.0
         version: 4.0.0
@@ -1155,15 +1146,6 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@visx/axis@4.0.0':
-    resolution: {integrity: sha512-cSPNO9Aic2UX49AmIeJJ9TQrrAkvUHpHOGqimUAXhbg07VI3HoHDKcXZdrjvQz+g0LhubrUkjj8Gwju2WZ3dtg==}
-    peerDependencies:
-      '@types/react': ^18.0.0 || ^19.0.0
-      react: ^18.0.0 || ^19.0.0
-    peerDependenciesMeta:
-      '@types/react':
-        optional: true
-
   '@visx/curve@4.0.0':
     resolution: {integrity: sha512-bXrOSd2BzVCxR7kBE7gPTSU4plxzYN75w7erdHYabwn3vzP+xFk1o0gg3NOHEPJzt5tXqf0Ecm5YqHACOnipTA==}
 
@@ -1176,32 +1158,11 @@ packages:
       '@types/react':
         optional: true
 
-  '@visx/point@4.0.0':
-    resolution: {integrity: sha512-hwJ9UlIjg3iV4iiJ3RN5SNTXama+zGaNe57sXSrSvPiqhkDXypsYBdDSlAnHmKbMzHP0zFmgB1UJciB/QUyigw==}
-
-  '@visx/responsive@4.0.0':
-    resolution: {integrity: sha512-MGPK8AeiBIhzz34o9TNJIyUDQIdWEj5mt+U/Je4qVRRXpXSMhor1IE7v71czAS5b90OrFxC9L3w27AV+szG25w==}
-    peerDependencies:
-      '@types/react': ^18.0.0 || ^19.0.0
-      react: ^18.0.0 || ^19.0.0
-    peerDependenciesMeta:
-      '@types/react':
-        optional: true
-
   '@visx/scale@4.0.0':
     resolution: {integrity: sha512-Q3VaSLKlsrxxSl9CwS2D3Mvz4/4kIp/6NMKRY8Im0Au1hrQh2egU806p0+JwN0ccuGGDe03jyAxX4BSRAH8Plg==}
 
   '@visx/shape@4.0.0':
     resolution: {integrity: sha512-X0FP3OFjQhc5/6Vj2aY7cK2JwKYI0H0hQM7cdNRWy/ZMMlrh5KpEdqx0HVo0KoTeTlkUvO+kydMLnAuuCRFIFw==}
-    peerDependencies:
-      '@types/react': ^18.0.0 || ^19.0.0
-      react: ^18.0.0 || ^19.0.0
-    peerDependenciesMeta:
-      '@types/react':
-        optional: true
-
-  '@visx/text@4.0.0':
-    resolution: {integrity: sha512-39f2goSaKy5Mqn89lRDGSJ1IMr49wplkbIFHsFI8cPnAPbguiJxYZ+ulizd7Vcsq2z/hytuGv3Lmk165zUiUYQ==}
     peerDependencies:
       '@types/react': ^18.0.0 || ^19.0.0
       react: ^18.0.0 || ^19.0.0
@@ -1265,12 +1226,6 @@ packages:
 
   ast-v8-to-istanbul@1.0.7:
     resolution: {integrity: sha512-kFL68AG6ajd8fg248zwM9GQrUWEp79gsmjum34OEXjs4yHuUMZfYKwOLW9GMmB4oNvVrj+EAGxsP7ye2UR9UlA==}
-
-  balanced-match@0.4.2:
-    resolution: {integrity: sha512-STw03mQKnGUYtoNjmowo4F2cRmIIxYEGiMsjjwla/u5P1lxadj/05WkNaFjNiKTgJkj8KiXbgAiRTmcQRwQNtg==}
-
-  balanced-match@1.0.2:
-    resolution: {integrity: sha512-3oSeUO0TMV67hN1AmbXsK4yaqU7tjiHlbxRDZOpH0KW9+CeX4bRAaX0Anxt0tx2MrpRpWwQaPwIlISEJhYU5Pw==}
 
   buffer-from@1.1.2:
     resolution: {integrity: sha512-E+XQCRwSbaaiChtv6k6Dwgc+bx+Bs6vuKJHHl5kox/BaKbhiXzqQOwK4cO22yElGp2OCmjwVhT3HmxgyPGnJfQ==}
@@ -1571,9 +1526,6 @@ packages:
   magicast@0.5.5:
     resolution: {integrity: sha512-UicdXN8zQ3JHlxVq+28afMXPr1z7WNY6+7EJnzTdQWkTAlMLF5fNCCKxJHBQwGaNGR11581EiQmQzx73+MvszA==}
 
-  math-expression-evaluator@1.4.0:
-    resolution: {integrity: sha512-4vRUvPyxdO8cWULGTh9dZWL2tZK6LDBvj+OGHBER7poH9Qdt7kXEoj20wiz4lQUbUXQZFjPbe5mVDo9nutizCw==}
-
   nanoid@3.3.20:
     resolution: {integrity: sha512-uKdg2G3GNCKQn9byYOpxbGqrT2fGO5KRt5J/8b3pok8rT6qxGWF6hxMyJiEYtAf+FVyYuD9hRaDqX5uPFYJ4ZQ==}
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
@@ -1613,12 +1565,6 @@ packages:
   react@19.3.1:
     resolution: {integrity: sha512-QNhWdt7nrgVWWQG58QuGsAR3jv3Hbe4mb4vz7w2csnHavciZJgda1CPNaldF6eVxv90ud3jUXpKlHL69gO38yw==}
     engines: {node: '>=0.10.0'}
-
-  reduce-css-calc@1.3.0:
-    resolution: {integrity: sha512-0dVfwYVOlf/LBA2ec4OwQ6p3X9mYxn/wOl2xTcLwjnPYrkgEfPx3VI4eGCH3rQLlPISG5v9I9bkZosKsNRTRKA==}
-
-  reduce-function-call@1.0.3:
-    resolution: {integrity: sha512-Hl/tuV2VDgWgCSEeWMLwxLZqX7OK59eU1guxXsRKTAyeYimivsKdtcV4fu3r710tpG5GmDKDhQ0HSZLExnNmyQ==}
 
   resolve-pkg-maps@1.0.0:
     resolution: {integrity: sha512-seS2Tj26TBVOC2NIc2rOe2y2ZO7efxITtLZcGSOnHHNOQ7CkiUBfw0Iw2ck6xkIhPwLhKNLS8BO+hEpngQlqzw==}
@@ -2267,18 +2213,6 @@ snapshots:
   '@typescript/typescript-win32-x64@7.0.2':
     optional: true
 
-  '@visx/axis@4.0.0(@types/react@19.3.0)(react@19.3.1)':
-    dependencies:
-      '@visx/group': 4.0.0(@types/react@19.3.0)(react@19.3.1)
-      '@visx/point': 4.0.0
-      '@visx/scale': 4.0.0
-      '@visx/shape': 4.0.0(@types/react@19.3.0)(react@19.3.1)
-      '@visx/text': 4.0.0(@types/react@19.3.0)(react@19.3.1)
-      classnames: 2.5.1
-      react: 19.3.1
-    optionalDependencies:
-      '@types/react': 19.3.0
-
   '@visx/curve@4.0.0':
     dependencies:
       '@visx/vendor': 4.0.0
@@ -2286,14 +2220,6 @@ snapshots:
   '@visx/group@4.0.0(@types/react@19.3.0)(react@19.3.1)':
     dependencies:
       classnames: 2.5.1
-      react: 19.3.1
-    optionalDependencies:
-      '@types/react': 19.3.0
-
-  '@visx/point@4.0.0': {}
-
-  '@visx/responsive@4.0.0(@types/react@19.3.0)(react@19.3.1)':
-    dependencies:
       react: 19.3.1
     optionalDependencies:
       '@types/react': 19.3.0
@@ -2310,14 +2236,6 @@ snapshots:
       '@visx/vendor': 4.0.0
       classnames: 2.5.1
       react: 19.3.1
-    optionalDependencies:
-      '@types/react': 19.3.0
-
-  '@visx/text@4.0.0(@types/react@19.3.0)(react@19.3.1)':
-    dependencies:
-      classnames: 2.5.1
-      react: 19.3.1
-      reduce-css-calc: 1.3.0
     optionalDependencies:
       '@types/react': 19.3.0
 
@@ -2388,10 +2306,6 @@ snapshots:
       '@jridgewell/trace-mapping': 0.3.31
       estree-walker: 3.0.3
       js-tokens: 10.0.0
-
-  balanced-match@0.4.2: {}
-
-  balanced-match@1.0.2: {}
 
   buffer-from@1.1.2: {}
 
@@ -2630,8 +2544,6 @@ snapshots:
       '@babel/types': 7.29.11
       source-map-js: 1.2.2
 
-  math-expression-evaluator@1.4.0: {}
-
   nanoid@3.3.20: {}
 
   obug@3.0.0: {}
@@ -2661,16 +2573,6 @@ snapshots:
       react-dom: 19.3.1(react@19.3.1)
 
   react@19.3.1: {}
-
-  reduce-css-calc@1.3.0:
-    dependencies:
-      balanced-match: 0.4.2
-      math-expression-evaluator: 1.4.0
-      reduce-function-call: 1.0.3
-
-  reduce-function-call@1.0.3:
-    dependencies:
-      balanced-match: 1.0.2
 
   resolve-pkg-maps@1.0.0: {}
 

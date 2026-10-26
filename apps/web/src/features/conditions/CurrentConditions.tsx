@@ -1,4 +1,4 @@
-import type { ChartMetric, DisplaySystem, GaugeRef, RuleSet, SavedLocation } from '@rowing/core';
+import type { DisplaySystem, GaugeRef, RuleSet, SavedLocation } from '@rowing/core';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { api, apiErrorMessage, fetchConditions } from '../../lib/api.ts';
@@ -25,14 +25,10 @@ export function CurrentConditions({
   location,
   units,
   ruleSet,
-  pinned,
-  onPin,
 }: {
   location: SavedLocation;
   units: DisplaySystem;
   ruleSet: RuleSet | undefined;
-  pinned: ChartMetric | undefined;
-  onPin: (metric: ChartMetric | undefined) => void;
 }) {
   const now = useNow();
   const query = useQuery({
@@ -69,8 +65,6 @@ export function CurrentConditions({
         location={location}
         evaluated={evaluated}
         units={units}
-        pinned={pinned}
-        onPin={onPin}
         now={now}
       />
       <PeriodList evaluated={evaluated} now={now} timeZone={query.data.location.timezone} />
