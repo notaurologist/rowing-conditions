@@ -1,5 +1,4 @@
 import { Hono } from 'hono';
-import { consoleLogger } from './adapters/http.ts';
 import { createNominatimAdapter } from './adapters/nominatim/nominatim.ts';
 import { NOMINATIM_MIN_INTERVAL_MS } from './adapters/nominatim/requests.ts';
 import { createNwpsAdapter } from './adapters/nwps/nwps.ts';
@@ -9,6 +8,7 @@ import { createApp } from './app.ts';
 import { type Config, loadConfig } from './config.ts';
 import { type ConnectionOptions, createDatabase } from './db/client.ts';
 import { getConditions } from './services/conditions.ts';
+import { createErrorLog } from './services/errorLog.ts';
 import { createPlaceSearch } from './services/places.ts';
 import { createDatabaseGate } from './services/requestGate.ts';
 import { createSourceCache } from './services/sourceCache.ts';
@@ -28,15 +28,22 @@ export function loadConfigOrReport(env: Record<string, string | undefined>): Con
 // The API with its real adapters, cache, and database.
 export function createApi(config: Config, connection: ConnectionOptions = {}) {
   const { db } = createDatabase(config.databaseUrl, connection);
-  const usgs = createUsgsAdapter(config.usgsApiKey ? { apiKey: config.usgsApiKey } : {});
-  const nwps = createNwpsAdapter();
-  const nws = createNwsAdapter({ userAgent: config.nwsUserAgent });
-  const cache = createSourceCache({ db, logger: consoleLogger });
+  // Every warning the API logs is also recorded in error_events (decision 0018).
+  const errorLog = createErrorLog({ db });
+  const { logger } = errorLog;
+  const usgs = createUsgsAdapter({
+    logger,
+    ...(config.usgsApiKey ? { apiKey: config.usgsApiKey } : {}),
+  });
+  const nwps = createNwpsAdapter({ logger });
+  const nws = createNwsAdapter({ userAgent: config.nwsUserAgent, logger });
+  const cache = createSourceCache({ db, logger });
   const now = () => new Date();
 
   // Nominatim asks for a User-Agent that identifies the app; NWS_USER_AGENT already does.
   const geocoder = createNominatimAdapter({
     userAgent: config.nwsUserAgent,
+    logger,
     gate: createDatabaseGate({ db, name: 'nominatim', minIntervalMs: NOMINATIM_MIN_INTERVAL_MS }),
   });
 
@@ -44,6 +51,7 @@ export function createApi(config: Config, connection: ConnectionOptions = {}) {
     usgs,
     conditions: (input) => getConditions(input, { usgs, nwps, nws, cache, now }),
     ...(config.geocodingEnabled ? { searchPlaces: createPlaceSearch({ geocoder, cache }) } : {}),
+    errorLog,
   });
 }
 

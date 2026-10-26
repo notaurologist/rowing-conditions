@@ -264,3 +264,71 @@ describe('GET /places/search', () => {
     });
   });
 });
+
+describe('errors', () => {
+  const fakeErrorLog = () => {
+    const events: unknown[] = [];
+    let flushed = 0;
+    return {
+      events,
+      flushed: () => flushed,
+      record: vi.fn((event: unknown) => {
+        events.push(event);
+      }),
+      flush: vi.fn(async () => {
+        flushed += 1;
+      }),
+    };
+  };
+
+  it('records an unhandled exception with the route pattern and answers 500 without details', async () => {
+    const errorLog = fakeErrorLog();
+    const conditions = vi.fn(async () => {
+      throw new TypeError('boom at 42.6,-72.55');
+    });
+    const res = await createApp({ usgs: fakeUsgs(), conditions, errorLog }).request(
+      '/conditions?lat=42.6&lon=-72.55',
+    );
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({ error: { message: 'Something went wrong on the server.' } });
+    expect(errorLog.events).toEqual([
+      {
+        level: 'error',
+        message: 'unhandled exception',
+        route: '/conditions',
+        details: { name: 'TypeError', message: 'boom at 42.6,-72.55', stack: expect.any(String) },
+      },
+    ]);
+    expect(errorLog.flushed()).toBe(1);
+  });
+
+  it('records nothing for a bad request, and still flushes', async () => {
+    const errorLog = fakeErrorLog();
+    const res = await createApp({
+      usgs: fakeUsgs(),
+      conditions: fakeConditions(),
+      errorLog,
+    }).request('/conditions?lat=north');
+    expect(res.status).toBe(400);
+    expect(errorLog.events).toEqual([]);
+    expect(errorLog.flushed()).toBe(1);
+  });
+
+  it('waits for recorded events to be written before responding', async () => {
+    let release: () => void = () => {};
+    const written = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let responded = false;
+    const errorLog = { record: vi.fn(), flush: vi.fn(() => written) };
+    const app = createApp({ usgs: fakeUsgs(), conditions: fakeConditions(), errorLog });
+    const pending = Promise.resolve(app.request('/health')).then(() => {
+      responded = true;
+    });
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(responded).toBe(false);
+    release();
+    await pending;
+    expect(responded).toBe(true);
+  });
+});

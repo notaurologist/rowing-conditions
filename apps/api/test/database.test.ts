@@ -8,6 +8,7 @@ describe('createTestDatabase', () => {
       "select tablename from pg_tables where schemaname = 'public' order by 1",
     );
     expect(tables.rows.map((r) => r.tablename)).toEqual([
+      'error_events',
       'gauges',
       'request_gates',
       'source_cache',
