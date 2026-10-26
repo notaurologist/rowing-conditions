@@ -442,7 +442,14 @@ MVP tables:
 - `source_cache`: `key` (pk), `payload` (jsonb, normalized data), `fetched_at`, `expires_at`.
 - `gauges`: `ref` (pk, e.g. `usgs:USGS-01170500`, `nwps:MNTM3`), `source`, `name`, `lat`, `lon`, `metrics` (text[]), `has_flow_forecast` (bool), `linked_ref` (the matching gauge in the other source, when known), `updated_at`. Populated lazily from nearby searches.
 
-Migrations via `drizzle-kit`, committed to the repo.
+Migrations via `drizzle-kit`, committed to the repo:
+
+- **Schema:** `apps/api/src/db/schema.ts`. Migrations go in `apps/api/drizzle/`, and Biome skips that generated folder.
+- **Driver:** postgres.js (`postgres`).
+- **Check constraints:** `gauges.source` is `usgs` or `nwps`, `ref` starts with its source, latitude and longitude are in range, and `source_cache.expires_at >= fetched_at`.
+- **`has_flow_forecast`** is nullable: null means NWPS hasn't been checked yet.
+- **Local database:** `docker-compose.yml` runs `postgres:18` (decision 0013). `drizzle.config.ts` falls back to that container's URL when `DATABASE_URL` is unset.
+- **Migrating:** `pnpm db:migrate` applies migrations. Re-running it is a no-op.
 
 ### Configuration
 

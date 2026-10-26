@@ -3,3 +3,8 @@ packages:
   - packages/*
 
 saveExact: true
+
+# esbuild (via drizzle-kit) ships its binary as an optional dependency, so its install
+# script is not needed. Listed so pnpm stops asking.
+allowBuilds:
+  esbuild: false

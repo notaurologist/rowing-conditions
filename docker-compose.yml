@@ -1,0 +1,22 @@
+# Local Postgres for development (decision 0013). Credentials are for this local container only.
+#   docker compose up -d     start it
+#   pnpm db:migrate          apply migrations
+services:
+  postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: rowing
+      POSTGRES_PASSWORD: rowing
+      POSTGRES_DB: rowing
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rowing -d rowing"]
+      interval: 2s
+      timeout: 5s
+      retries: 15
+
+volumes:
+  postgres-data:
