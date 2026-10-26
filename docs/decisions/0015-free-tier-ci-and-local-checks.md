@@ -13,4 +13,4 @@ The owner will not pay for hosted services, and has hit GitHub Actions free-tier
 ## Consequences
 - Pushing requires pnpm on the PATH. The hook fails with an install hint if pnpm is missing.
 - Changes that can end free-tier status must be raised with the owner before they happen. Examples: making the repository private (Actions minutes become metered), commercial use (for example Open-Meteo's non-commercial terms), or usage growth. If Actions stops being free, remove the workflow and rely on the hook.
-- M4's Postgres-backed route tests may use a service container in Actions (0013) only while Actions is free. They must also run locally against Docker Compose.
+- ~~M4's Postgres-backed route tests may use a service container in Actions (0013) only while Actions is free. They must also run locally against Docker Compose.~~ Superseded by 0016: database tests use PGlite, so CI needs no database service.

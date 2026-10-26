@@ -431,9 +431,23 @@ Adapter rules:
 Fetch on demand, cache in Postgres. No scheduled jobs in the MVP.
 
 - Cache key: source plus request identity (for example `usgs:latest:USGS-01170500`, `nws:forecast:BOX/64,56`).
-- TTL per source type (starting points, tune later): USGS latest 10 min, NWPS stage/flow 30 min, NWS hourly forecast 30 min, NWS alerts 5 min, NWS points lookup 30 days, gauge metadata 7 days.
-- On upstream failure, serve the last cached value marked `stale` if one exists.
-- Deduplicate concurrent fetches for the same key in process.
+- **TTL per source type** (starting points, tune later; `cacheTtlMs`):
+  - USGS latest and history: 10 min
+  - NWPS stage/flow: 30 min
+  - NWS hourly forecast: 30 min
+  - NWS current observations: 10 min
+  - NWS alerts: 5 min
+  - NWS points lookup: 30 days
+  - Gauge metadata: 7 days
+- **On upstream failure**, serve the last cached value marked `stale` if one exists.
+- **Concurrent fetches** for the same key are deduplicated in process.
+- **Implementation:** `createSourceCache({ db, logger, now })` in `apps/api/src/services/sourceCache.ts`. `cache.get(key, ttlMs, schema, fetch)` returns one of three results:
+  - `{ status: 'ok', data, fetchedAt, cached }`: a fresh stored result, or a new fetch.
+  - `{ status: 'stale', data, fetchedAt, error }`: the source failed after expiry, so the last result is served.
+  - `{ status: 'error', error }`: the source failed and nothing is cached.
+- **Expiry:** a stored result is fresh until strictly before `expires_at`, and a failed refetch keeps the old row.
+- **Stored payloads** are re-parsed with the schema on read. A payload from an older shape is treated as a miss and logged.
+- **The cache is an optimization:** a database read or write failure is logged and the request goes to the source directly.
 
 ### Database (Drizzle, Postgres)
 
@@ -478,7 +492,7 @@ No secrets in code or fixtures.
 
 ## Testing
 
-Test files sit next to the code they test as `*.test.ts` or `*.test.tsx`. `pnpm test` runs every package as a Vitest project from the root config. Biome lints and formats code and config, but not Markdown.
+Test files sit next to the code they test as `*.test.ts` or `*.test.tsx`. `pnpm test` runs every package as a Vitest project from the root config. Biome lints and formats code and config, but not Markdown. Database tests use PGlite (decision 0016): `createTestDatabase()` in `apps/api/test/database.ts` gives a fresh in-memory Postgres with the committed migrations applied, so no test needs Docker.
 
 - **core:** unit tests for every conversion and evaluation rule, including edge cases (missing values, boundaries, boat class scoping, multiple rule sets, forecast vs observed flow, darkness).
 - **adapters:** tests against recorded fixtures in `apps/api/test/fixtures/`. No live network calls in tests, the pre-push check, or CI.
