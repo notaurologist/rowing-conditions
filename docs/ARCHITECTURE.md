@@ -615,3 +615,10 @@ Test files sit next to the code they test as `*.test.ts` or `*.test.tsx`. `pnpm 
 ## Hosting (MVP)
 
 Decision 0017: one Vercel project (Hobby plan) with the web build at `/` and the API as Vercel Functions at `/api/*`, and Postgres 18 on Neon's free plan.
+
+- **Project config:** `vercel.json` defines two services. `web` builds `apps/web` with Vite and serves `dist`. `api` runs `apps/api/src/vercel.ts` as Vercel Functions. Requests to `/api/*` go to `api`, and everything else to `web`, so the browser sees one origin and the API needs no CORS.
+- **Entry points:** `apps/api/src/bootstrap.ts` builds the app. `index.ts` serves it with `@hono/node-server` for local development. `vercel.ts` exports it for Vercel, mounted under `/api` because Vercel passes the prefix through (the Vite dev proxy strips it).
+- **Configuration:** both entry points validate the environment the same way and log each problem by variable name, never its value. Locally the process exits. On Vercel the function fails to start, so it serves nothing.
+- **Database connection:** the deployed API uses Neon's pooled connection string (the host with `-pooler`), with prepared statements off and at most 5 connections per function instance (`POOLED_CONNECTION` in `bootstrap.ts`). Create the Neon project in AWS `us-east-1`, near Vercel's default function region (Washington, D.C.).
+- **Environment (Vercel project settings):** `DATABASE_URL` (pooled), `NWS_USER_AGENT`, and optionally `USGS_API_KEY` and `GEOCODING_ENABLED`. Never in the repository.
+- **Migrations:** run from a machine with the repository, against Neon's direct (unpooled) connection string, because Neon advises against schema changes through the pooler: `DATABASE_URL='<direct URL>' pnpm db:migrate`. Run them before deploying code that needs them. Re-running is a no-op.
