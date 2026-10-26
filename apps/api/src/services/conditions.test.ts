@@ -180,8 +180,9 @@ describe('getConditions when every source answers', () => {
     const r = await conditions();
     expect(r.forecast).toHaveLength(FORECAST_HOURS);
     expect(r.forecast[0]?.time).toBe(at(0));
-    expect(r.forecast[0]?.values).toMatchObject({ windSpeed: 3, flow: toSI(3.4, 'kcfs') });
-    expect(r.forecast[0]?.provenance.flow).toMatchObject({ kind: 'forecast', source: 'nwps' });
+    // Hour 0 takes the latest measurements (below); later hours are the forecasts.
+    expect(r.forecast[1]?.values).toMatchObject({ windSpeed: 3, flow: toSI(3.4, 'kcfs') });
+    expect(r.forecast[1]?.provenance.flow).toMatchObject({ kind: 'forecast', source: 'nwps' });
     // The NWPS forecast covers 30 hours; after it, flow is missing.
     expect(r.forecast[35]?.values.flow).toBeNull();
   });
@@ -231,8 +232,9 @@ describe('getConditions when every source answers', () => {
       }),
     );
     const r = await conditions({ flowGaugeRefs: ['nwps:WDEM3'] });
-    expect(r.flowSeries[0]?.points[0]?.values.flow).toBe(toSI(1.1, 'kcfs'));
-    expect(r.forecast[0]?.values.flow).toBe(toSI(3.4, 'kcfs'));
+    // Hour 1: hour 0 takes the latest measurements.
+    expect(r.flowSeries[0]?.points[1]?.values.flow).toBe(toSI(1.1, 'kcfs'));
+    expect(r.forecast[1]?.values.flow).toBe(toSI(3.4, 'kcfs'));
   });
 
   it('adds flow series for gauges rule sets name, which evaluation can use', async () => {
@@ -272,6 +274,116 @@ describe('getConditions when every source answers', () => {
   });
 });
 
+describe('getConditions: the current hour uses the latest measurements (#75)', () => {
+  it('replaces the forecast flow for the current hour with a newer gauge reading', async () => {
+    const r = await conditions();
+    expect(r.forecast[0]?.values.flow).toBe(toSI(5060, 'cfs'));
+    expect(r.forecast[0]?.provenance.flow).toEqual({
+      kind: 'observation',
+      asOf: '2026-10-26T11:45:00.000Z',
+      source: 'usgs',
+      sourceRef: 'USGS-01170500',
+      qualifiers: ['provisional'],
+    });
+  });
+
+  it('keeps the forecast for every later hour, even with a reading from this hour', async () => {
+    vi.mocked(deps.usgs.getLatest).mockResolvedValue(
+      ok([{ ...(usgsLatest[0] as Reading), observedAt: '2026-10-26T12:10:00.000Z' }]),
+    );
+    const r = await conditions();
+    expect(r.forecast[0]?.values.flow).toBe(toSI(5060, 'cfs'));
+    expect(r.forecast.slice(1, 30).every((p) => p.values.flow === toSI(3.4, 'kcfs'))).toBe(true);
+    expect(r.forecast.slice(1).every((p) => p.values.windSpeed === 3)).toBe(true);
+  });
+
+  it('replaces forecast weather for the current hour with a newer station reading', async () => {
+    const r = await conditions();
+    expect(r.forecast[0]?.values.windSpeed).toBe(2);
+    expect(r.forecast[0]?.provenance.windSpeed).toMatchObject({
+      kind: 'observation',
+      source: 'nws',
+      sourceRef: 'KORE',
+    });
+    expect(r.forecast[0]?.values.airTemp).toBe(10); // the station reported none
+  });
+
+  it('keeps the forecast when the station reports no value, such as no gust', async () => {
+    vi.mocked(deps.nws.getCurrent).mockResolvedValue(
+      ok({
+        basis: 'station' as const,
+        station: { id: 'KORE', name: 'Orange Municipal Airport', distanceKm: 21.8 },
+        readings: [
+          {
+            metric: 'windSpeed' as const,
+            value: null,
+            observedAt: '2026-10-26T11:52:00.000Z',
+            fetchedAt: T0,
+            source: 'nws' as const,
+            sourceRef: 'KORE',
+          },
+        ],
+      }),
+    );
+    const r = await conditions();
+    expect(r.forecast[0]?.values.windSpeed).toBe(3);
+    expect(r.forecast[0]?.provenance.windSpeed?.kind).toBe('forecast');
+  });
+
+  it('does not treat forecast-based current weather as a measurement', async () => {
+    vi.mocked(deps.nws.getCurrent).mockResolvedValue(
+      ok({
+        basis: 'forecast' as const,
+        readings: [
+          {
+            metric: 'windSpeed' as const,
+            value: 9,
+            observedAt: '2026-10-26T12:00:00.000Z',
+            fetchedAt: T0,
+            source: 'nws' as const,
+          },
+        ],
+      }),
+    );
+    expect((await conditions()).forecast[0]?.values.windSpeed).toBe(3);
+  });
+
+  it('keeps a forecast issued after the reading', async () => {
+    // A recent reading (11:45), but NWPS issued its forecast at 12:10.
+    vi.mocked(deps.nwps.getStageFlow).mockResolvedValue(
+      ok({
+        observed: [],
+        forecast: flowForecast.map((p) => ({
+          ...p,
+          provenance: {
+            flow: {
+              ...(p.provenance.flow as NonNullable<typeof p.provenance.flow>),
+              asOf: '2026-10-26T12:10:00.000Z',
+            },
+          },
+        })),
+        issuedAt: '2026-10-26T12:10:00.000Z',
+      }),
+    );
+    const r = await conditions();
+    expect(r.forecast[0]?.values.flow).toBe(toSI(3.4, 'kcfs'));
+  });
+
+  it('ignores a reading from before the previous hour, which may no longer hold', async () => {
+    clock = new Date('2026-10-26T14:20:00.000Z'); // the readings are from 11:45 and 11:52
+    const r = await conditions();
+    expect(r.forecast[0]?.time).toBe('2026-10-26T14:00:00.000Z');
+    expect(r.forecast[0]?.values.windSpeed).toBe(3);
+    expect(r.forecast[0]?.values.flow).toBe(toSI(3.4, 'kcfs'));
+  });
+
+  it('applies to the flow series of a gauge a rule set names, too', async () => {
+    const r = await conditions({ flowGaugeRefs: ['usgs:USGS-01170500'] });
+    expect(r.flowSeries[0]?.points[0]?.values.flow).toBe(toSI(5060, 'cfs'));
+    expect(r.flowSeries[0]?.points[1]?.values.flow).toBe(toSI(3.4, 'kcfs'));
+  });
+});
+
 describe('getConditions with failures', () => {
   it('returns what is available when one source fails, reporting it', async () => {
     vi.mocked(deps.nws.getHourlyForecast).mockResolvedValue(fail('nws'));
@@ -286,7 +398,7 @@ describe('getConditions with failures', () => {
     expect(r.sources.find((s) => s.id === 'usgs')?.status).toBe('ok');
     expect(r.forecast).toHaveLength(FORECAST_HOURS);
     expect(r.forecast[0]?.values).not.toHaveProperty('windSpeed');
-    expect(r.forecast[0]?.values.flow).toBe(toSI(3.4, 'kcfs'));
+    expect(r.forecast[1]?.values.flow).toBe(toSI(3.4, 'kcfs'));
   });
 
   it('serves cached data marked stale when every source fails after it expires', async () => {

@@ -279,6 +279,14 @@ Constants in `packages/core`, starting values to tune in M9:
 
 Flow for each hour comes from the NWPS forecast when the gauge has one. Hours after the last forecast step have no flow value (`missing`); the latest observation is not used there. Without a forecast, the latest observation is copied to every hour with `kind: 'observation'`. Water temperature is always the latest observation. The UI shows which applies from `provenance`.
 
+The current hour is the exception (#75): `withLatestMeasurements` (`apps/api/src/services/latestMeasurements.ts`) replaces each value in `/conditions`' first hour, and in the first hour of each `flowSeries`, with the latest measurement of that metric. The measurement comes from the USGS gauge, or from the NWS station when current weather has `basis: 'station'`, never a forecast-based "current". It applies only if the measurement:
+- has a value (a station's missing gust leaves the forecast)
+- is newer than the value's `asOf`
+- was taken in the current hour or the one before
+- is for a metric the hour already has
+
+The replaced value carries `kind: 'observation'` with the reading's qualifiers, so freshness and qualifier checks apply to it.
+
 If a rule set names a flow gauge, its flow limit is evaluated against that gauge's data, which may differ from the location's display gauge.
 
 #### Comparison
