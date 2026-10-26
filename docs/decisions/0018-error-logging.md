@@ -1,6 +1,6 @@
 # 0018: Record API errors in Postgres
 
-Status: Proposed (October 2026)
+Status: Accepted (October 2026)
 
 ## Context
 M8 needs basic error logging with no secrets in logs (#34). Vercel's Hobby plan keeps runtime logs for one hour, and log drains are paid only (0017), so `console` output alone is gone before anyone looks. Issue #99.
@@ -38,4 +38,8 @@ Free-tier terms as of October 26, 2026, from each provider's own pages:
 - No new dependency, account, or secret. The work is one table, one logger, and an `onError` handler (#34).
 - **Gaps.** Errors while the database is down reach only the console, kept one hour; Vercel Observability still shows the error rate. Nobody is notified. Someone has to look.
 - **Staying free.** Rows are small and kept 30 days, far below Neon's 1 GB. If errors ever arrive at a rate that matters for storage, that's a problem to fix in itself.
-- **Revisit** for Sentry if testers report problems this can't explain, or once there are enough users that alerts matter. That would add a dependency and needs the owner's call.
+- **Revisit** for Sentry if testers report problems this can't explain, or once there are enough users that alerts matter. That would add a dependency and needs the owner's call. The owner has used Sentry and hit its limits on other apps. Points to carry into that decision, checked October 26, 2026:
+  - The Developer plan has no per-key rate limit (Business and Enterprise only). Over quota, the server answers 429 and events are dropped, so volume has to be limited in code.
+  - Send only unhandled exceptions, at most one per distinct error per instance per hour. Warnings such as an unknown unit can fire on every request for a gauge and would use up 5,000 events a month.
+  - The Hono integration collects IP addresses, request bodies, and URL query strings by default. Here the query strings are rowers' coordinates and place searches, so all three must be turned off. Tracing, profiling, Sentry logs, and console capture stay off.
+  - `@sentry/node` sets up OpenTelemetry instrumentation, which may add to cold starts. Measure before adopting.
