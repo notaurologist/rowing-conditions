@@ -1,6 +1,7 @@
 import type { Conditions } from '../../lib/api.ts';
+import { tidyGaugeName } from '../../lib/format.ts';
 import type { LocationEvaluation } from '../timeline/evaluateLocation.ts';
-import { summaryModel, tidyGaugeName } from './summaryModel.ts';
+import { summaryModel } from './summaryModel.ts';
 
 // The top of the main screen: the answer as the page's heading, why and how sure, and each day
 // from dawn to dusk. Beside each other on wide screens, stacked on phones.
@@ -18,7 +19,10 @@ export function Summary({
   onEditLimits: () => void;
 }) {
   const summary = summaryModel({ conditions, evaluated, alongside, now });
-  const place = conditions.gauge ? tidyGaugeName(conditions.gauge.name) : 'Weather only, no gauge';
+  // Where the answer's flow comes from: the rule set's own gauge, else the location's.
+  const place =
+    evaluated?.flowGauge?.name ??
+    (conditions.gauge ? tidyGaugeName(conditions.gauge.name) : 'Weather only, no gauge');
   const rules = evaluated ? `${evaluated.ruleSet.name}, ${evaluated.boatClassName}` : null;
 
   return (

@@ -61,7 +61,10 @@ export const ConditionsResponse = z.object({
   currentBasis: z.enum(['station', 'forecast']).optional(),
   station: z.object({ id: z.string(), name: z.string(), distanceKm: z.number() }).optional(),
   forecast: ForecastPoints, // FORECAST_HOURS hourly points from the current hour
-  flowSeries: z.array(z.object({ gaugeRef: z.string(), points: ForecastPoints })),
+  // Flow from gauges named by rule sets. name is absent when the gauge's metadata didn't load.
+  flowSeries: z.array(
+    z.object({ gaugeRef: z.string(), name: z.string().optional(), points: ForecastPoints }),
+  ),
   daylight: z.array(DaylightTimes),
   alerts: z.array(Alert),
   sources: z.array(SourceStatus),
@@ -213,6 +216,7 @@ export async function getConditions(
     const hours = riverHours(times, data?.forecast ?? [], data?.latest ?? []);
     return {
       gaugeRef,
+      ...(data?.gauge ? { name: data.gauge.name } : {}),
       points: times.map((time, h) => {
         const hour = hours[h];
         const flow = hour?.provenance.flow;

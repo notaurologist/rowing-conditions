@@ -12,10 +12,9 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { type FormEvent, useId, useState } from 'react';
 import { api, apiErrorMessage, fetchNearbyGauges } from '../../lib/api.ts';
-import { metricName, unitSymbol } from '../../lib/format.ts';
+import { metricName, tidyGaugeName, unitSymbol } from '../../lib/format.ts';
 import { useAppStorage, useStoredData } from '../../lib/useStoredData.ts';
 import { newId } from '../location-setup/newLocation.ts';
-import { tidyGaugeName } from '../summary/summaryModel.ts';
 import { selectRuleSet } from './ruleSetChoice.ts';
 import {
   addLimit,

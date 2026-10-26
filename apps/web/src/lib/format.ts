@@ -112,3 +112,31 @@ export function formatTime(time: string, now: string, timeZone: string | null): 
   });
   return day(time) === day(now) ? clock : `${day(time)}, ${clock}`;
 }
+
+const SMALL = new Set([
+  'at',
+  'near',
+  'below',
+  'above',
+  'of',
+  'the',
+  'and',
+  'in',
+  'on',
+  'nr',
+  'abv',
+  'blw',
+]);
+
+/** "CONNECTICUT RIVER AT MONTAGUE CITY, MA" → "Connecticut River at Montague City, MA". */
+export function tidyGaugeName(name: string): string {
+  if (name !== name.toUpperCase()) return name;
+  const words = name.replace(/\.$/, '').toLowerCase().split(' ');
+  return words
+    .map((w, i) => {
+      if (/^[a-z]{2}$/.test(w) && i === words.length - 1) return w.toUpperCase();
+      if (i > 0 && SMALL.has(w)) return w;
+      return w.charAt(0).toUpperCase() + w.slice(1);
+    })
+    .join(' ');
+}

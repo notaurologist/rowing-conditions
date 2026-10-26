@@ -227,7 +227,10 @@ function hourLight(spans: readonly { from: number; to: number; light: Light }[],
 export function meteogramModel(input: MeteogramInput): MeteogramModel {
   const { conditions, location, units, now, evaluated } = input;
   const alongside = input.alongside ?? (evaluated ? [evaluated] : []);
-  const forecast = conditions.forecast;
+  // Flow comes from the selected rule set's gauge when it names one, the same series it is
+  // evaluated against. Every other metric is the same in both.
+  const forecast = evaluated?.forecast ?? conditions.forecast;
+  const flowGauge = evaluated?.flowGauge ?? null;
   const timeZone = conditions.location.timezone;
   const n = forecast.length;
   const start = n > 0 ? Date.parse(forecast[0]?.time ?? now) : Date.parse(now);
@@ -286,7 +289,18 @@ export function meteogramModel(input: MeteogramInput): MeteogramModel {
   });
 
   const nowAt = Math.max(0, at(now));
-  const current = (metric: Metric) => conditions.current.find((r) => r.metric === metric);
+  const current = (metric: Metric) => {
+    // A named gauge's latest measurement is in its first hour (withLatestMeasurements).
+    if (metric === 'flow' && flowGauge) {
+      const first = forecast[0];
+      const provenance = first?.provenance.flow;
+      const value = first?.values.flow;
+      return provenance?.kind === 'observation' && typeof value === 'number'
+        ? { metric, value, observedAt: provenance.asOf }
+        : undefined;
+    }
+    return conditions.current.find((r) => r.metric === metric);
+  };
 
   const rows: MeteogramRow[] = specs.map((spec) => {
     const unit = displayUnits[units][spec.unitMetric];
@@ -299,7 +313,7 @@ export function meteogramModel(input: MeteogramInput): MeteogramModel {
       unit: symbol,
     };
 
-    if (spec.id === 'flow' && !hasGauge) {
+    if (spec.id === 'flow' && !hasGauge && !flowGauge) {
       return {
         ...empty,
         id: spec.id,
@@ -311,7 +325,11 @@ export function meteogramModel(input: MeteogramInput): MeteogramModel {
     }
     if (!spec.metrics.some((m) => hasValues(forecast, m))) {
       const message =
-        spec.id === 'waterTemp' ? 'Not measured at this gauge.' : 'No forecast values.';
+        spec.id === 'waterTemp'
+          ? 'Not measured at this gauge.'
+          : spec.id === 'flow' && flowGauge
+            ? `No flow values from ${flowGauge.name}.`
+            : 'No forecast values.';
       return { ...empty, id: spec.id, label: spec.label, sub: '', kind: 'message', message };
     }
 
@@ -424,7 +442,7 @@ export function meteogramModel(input: MeteogramInput): MeteogramModel {
           : 'percent, no limit'
         : spec.id === 'wind'
           ? `${symbol}, sustained to gusts${words ? `; ${words}` : ''}`
-          : `${symbol}${words ? `, ${words}` : ''}`;
+          : `${symbol}${words ? `, ${words}` : ''}${spec.id === 'flow' && flowGauge ? ` · gauge: ${flowGauge.name}` : ''}`;
 
     return {
       id: spec.id,

@@ -1,9 +1,10 @@
 import { type RuleSet, type SavedLocation, toInternal } from '@rowing/core';
 import { describe, expect, it } from 'vitest';
 import montague from '../../../test/fixtures/conditions-montague.json' with { type: 'json' };
+import { NAMED_GAUGE, withNamedGauge } from '../../../test/namedGauge.ts';
 import type { Conditions } from '../../lib/api.ts';
 import { evaluateLocation } from '../timeline/evaluateLocation.ts';
-import { summaryModel, tidyGaugeName } from './summaryModel.ts';
+import { summaryModel } from './summaryModel.ts';
 
 const NOW = '2026-10-26T12:35:00.000Z'; // 8:35 AM in Turners Falls
 const location: SavedLocation = {
@@ -120,6 +121,17 @@ describe('summaryModel detail', () => {
     ]);
   });
 
+  it('reads flow from the gauge the rule set names, without the location gauge’s measurement', () => {
+    const conditions = withNamedGauge(structuredClone(montague) as Conditions);
+    const detail = summary({ ...clubA, flowGaugeRef: NAMED_GAUGE }, { conditions }).detail;
+    // Twice the location's flow is past the limit for more hours than the location's 6.
+    const hours = Number(
+      /^Flow is past its limit for (\d+) rowing hours/.exec(detail[0] ?? '')?.[1],
+    );
+    expect(hours).toBeGreaterThan(6);
+    expect(detail.some((d) => d.startsWith('The river measured'))).toBe(false);
+  });
+
   it('leaves out the measurement note when it agrees with the forecast', () => {
     const conditions = structuredClone(montague) as Conditions;
     const flow = conditions.current.find((r) => r.metric === 'flow');
@@ -169,16 +181,6 @@ describe('summaryModel days', () => {
       .join(' ')
       .toLowerCase();
     expect(all).not.toMatch(/\bsafe\b|\bunsafe\b|go out|no go|good to go|row now/);
-  });
-});
-
-describe('tidyGaugeName', () => {
-  it('turns USGS capitals into a readable name', () => {
-    expect(tidyGaugeName('CONNECTICUT RIVER AT MONTAGUE CITY, MA')).toBe(
-      'Connecticut River at Montague City, MA',
-    );
-    expect(tidyGaugeName('FARMINGTON R AT RAINBOW, CT.')).toBe('Farmington R at Rainbow, CT');
-    expect(tidyGaugeName('McDowell Creek at Oak, NC')).toBe('McDowell Creek at Oak, NC');
   });
 });
 

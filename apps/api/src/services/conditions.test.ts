@@ -242,6 +242,7 @@ describe('getConditions when every source answers', () => {
     expect(r.flowSeries).toHaveLength(1);
     const series = r.flowSeries[0];
     expect(series?.gaugeRef).toBe('nwps:MNTM3');
+    expect(series?.name).toBe('Connecticut River at Montague');
     expect(series?.points).toHaveLength(FORECAST_HOURS);
     expect(series?.points[0]?.values).toEqual({ flow: toSI(3.4, 'kcfs') });
 

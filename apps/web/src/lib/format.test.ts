@@ -6,6 +6,7 @@ import {
   formatNumber,
   formatTime,
   listMetrics,
+  tidyGaugeName,
 } from './format.ts';
 
 describe('listMetrics', () => {
@@ -78,5 +79,15 @@ describe('formatTime', () => {
     expect(formatTime('2026-10-26T02:00:00.000Z', now, 'America/New_York')).toBe(
       'Oct 25, 10:00 PM',
     );
+  });
+});
+
+describe('tidyGaugeName', () => {
+  it('turns USGS capitals into a readable name', () => {
+    expect(tidyGaugeName('CONNECTICUT RIVER AT MONTAGUE CITY, MA')).toBe(
+      'Connecticut River at Montague City, MA',
+    );
+    expect(tidyGaugeName('FARMINGTON R AT RAINBOW, CT.')).toBe('Farmington R at Rainbow, CT');
+    expect(tidyGaugeName('McDowell Creek at Oak, NC')).toBe('McDowell Creek at Oak, NC');
   });
 });
