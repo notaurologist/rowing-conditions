@@ -198,6 +198,16 @@ export function attachRuleSet(
   );
 }
 
+export function detachRuleSet(
+  locations: readonly SavedLocation[],
+  locationId: string,
+  ruleSetId: string,
+): SavedLocation[] {
+  return locations.map((l) =>
+    l.id === locationId ? { ...l, ruleSetIds: l.ruleSetIds.filter((id) => id !== ruleSetId) } : l,
+  );
+}
+
 export function removeRuleSet(
   ruleSets: readonly RuleSet[],
   locations: readonly SavedLocation[],

@@ -172,7 +172,7 @@ describe('meteogramModel limits', () => {
   it('has no limits, status or windows without a rule set', () => {
     const m = model({ ruleSet: { ...clubA, boatClasses: [] } });
     expect(m.rows.every((r) => r.limits.length === 0)).toBe(true);
-    expect(m.status).toBeNull();
+    expect(m.statuses).toEqual([]);
     expect(m.windows).toEqual([]);
   });
 
@@ -244,11 +244,60 @@ describe('meteogramModel measurements and readouts', () => {
 
 describe('meteogramModel status and windows', () => {
   it('turns hourly statuses into spans', () => {
-    expect(model().status).toEqual([
+    expect(model().statuses[0]?.spans).toEqual([
       { from: 0, to: 6, status: 'outside' },
       { from: 6, to: 37, status: 'within' },
       { from: 37, to: 48, status: 'outside' },
     ]);
+  });
+
+  it('gives each attached rule set its own strip, and draws only the selected one’s limits', () => {
+    // A second club on the same water: one class, and a flow limit of 20 kcfs instead of 3,100 cfs.
+    const clubB: RuleSet = {
+      id: 'rs-b',
+      name: 'Club B',
+      boatClasses: [{ id: 'all', name: 'All boats' }],
+      thresholds: [
+        {
+          id: 'flow-b',
+          metric: 'flow',
+          comparison: 'max',
+          boundary: 'inclusive',
+          value: toInternal('flow', 20, 'kcfs'),
+          enteredUnit: 'kcfs',
+        },
+      ],
+    };
+    const conditions = data();
+    const a = evaluateLocation(conditions, location, clubA, NOW);
+    const b = evaluateLocation(conditions, location, clubB, NOW);
+    if (!a || !b) throw new Error('expected evaluations');
+    const m = meteogramModel({
+      conditions,
+      location,
+      units: 'us',
+      now: NOW,
+      evaluated: b,
+      alongside: [a, b],
+    });
+
+    expect(m.statuses.map((s) => [s.name, s.sub, s.selected])).toEqual([
+      ['Club A', '1x and 2x', false],
+      ['Club B', 'all limits', true],
+    ]);
+    // Club A is outside early on (flow over 3,100 cfs); Club B is within for every hour.
+    expect(m.statuses[0]?.spans[0]).toEqual({ from: 0, to: 6, status: 'outside' });
+    expect(m.statuses[1]?.spans).toEqual([{ from: 0, to: 48, status: 'within' }]);
+    expect(row(m, 'flow').limits.map((l) => l.value)).toEqual([20000]);
+    expect(row(m, 'wind').limits).toEqual([]);
+  });
+
+  it('evaluates the chosen boat class, falling back to the first', () => {
+    const conditions = data();
+    expect(evaluateLocation(conditions, location, clubA, NOW, 'big')?.boatClassName).toBe('8+');
+    expect(evaluateLocation(conditions, location, clubA, NOW, 'gone')?.boatClassName).toBe(
+      '1x and 2x',
+    );
   });
 
   it('marks windows within the limits, the next one first and named', () => {

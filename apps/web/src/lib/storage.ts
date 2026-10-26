@@ -22,6 +22,10 @@ type StorageKey = keyof typeof STORAGE_KEYS;
 export const Preferences = z.object({
   units: z.enum(['us', 'metric']),
   selectedLocationId: Id.optional(),
+  // The rule set the answer and chart follow, per location. Omitted: the location's first.
+  selectedRuleSetIds: z.record(Id, Id).optional(),
+  // The boat class chosen in each rule set, wherever it is used. Omitted: the rule set's first.
+  boatClassIds: z.record(Id, Id).optional(),
 });
 export type Preferences = z.infer<typeof Preferences>;
 

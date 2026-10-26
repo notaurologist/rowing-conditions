@@ -3,23 +3,49 @@ import { useState } from 'react';
 import { UnitToggle } from './components/UnitToggle.tsx';
 import { CurrentConditions } from './features/conditions/CurrentConditions.tsx';
 import { LocationSetup } from './features/location-setup/LocationSetup.tsx';
+import { RuleSetBar } from './features/rules/RuleSetBar.tsx';
 import { RuleSetEditor } from './features/rules/RuleSetEditor.tsx';
+import {
+  attachedRuleSets,
+  chooseBoatClass,
+  selectRuleSet,
+} from './features/rules/ruleSetChoice.ts';
+import { attachRuleSet } from './features/rules/ruleSetDraft.ts';
+import type { Preferences } from './lib/storage.ts';
 import { useAppStorage, useStoredData } from './lib/useStoredData.ts';
 
 export function App() {
   const storage = useAppStorage();
   const { locations, ruleSets, preferences } = useStoredData();
   const [adding, setAdding] = useState(false);
-  const [editingLimits, setEditingLimits] = useState(false);
+  // The rule set being edited: an id, 'new', or null when not editing.
+  const [editing, setEditing] = useState<string | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
 
   const selected =
     locations.find((location) => location.id === preferences.selectedLocationId) ?? locations[0];
-  // One rule set per location until several can be shown side by side (#30).
-  const ruleSet = selected && ruleSets.find((r) => selected.ruleSetIds.includes(r.id));
+  const choices = selected ? attachedRuleSets(selected, ruleSets, preferences) : [];
+
+  const savePreferences = (next: Preferences) => {
+    try {
+      storage.savePreferences(next);
+    } catch (error) {
+      setProblem(`Couldn't save your choice: ${String(error)}`);
+    }
+  };
+
+  const attach = (ruleSetId: string) => {
+    if (!selected) return;
+    try {
+      storage.saveLocations(attachRuleSet(locations, selected.id, ruleSetId));
+      storage.savePreferences(selectRuleSet(preferences, selected.id, ruleSetId));
+    } catch (error) {
+      setProblem(`Couldn't add the rule set: ${String(error)}`);
+    }
+  };
 
   const select = (id: string) => {
-    setEditingLimits(false);
+    setEditing(null);
     try {
       storage.savePreferences({ ...preferences, selectedLocationId: id });
     } catch (error) {
@@ -80,9 +106,6 @@ export function App() {
               </select>
             </label>
 
-            <button type="button" onClick={() => setEditingLimits(true)} disabled={editingLimits}>
-              {ruleSet ? 'Edit limits' : 'Enter limits'}
-            </button>
             <button type="button" onClick={() => setAdding(true)}>
               Add location
             </button>
@@ -91,23 +114,35 @@ export function App() {
             </button>
           </section>
         )}
-        {!adding && selected && editingLimits && (
+        {!adding && selected && editing !== null && (
           <RuleSetEditor
-            key={`${selected.id}:${ruleSet?.id ?? 'new'}`}
-            ruleSet={ruleSet}
+            key={`${selected.id}:${editing}`}
+            ruleSet={ruleSets.find((r) => r.id === editing)}
             location={selected}
             units={preferences.units}
-            onDone={() => setEditingLimits(false)}
+            onDone={() => setEditing(null)}
           />
         )}
-        {!adding && selected && !editingLimits && (
-          <CurrentConditions
-            key={selected.id}
-            location={selected}
-            units={preferences.units}
-            ruleSet={ruleSet}
-            onEditLimits={() => setEditingLimits(true)}
-          />
+        {!adding && selected && editing === null && (
+          <>
+            <RuleSetBar
+              choices={choices}
+              ruleSets={ruleSets}
+              onSelect={(id) => savePreferences(selectRuleSet(preferences, selected.id, id))}
+              onBoatClass={(id, boatClassId) =>
+                savePreferences(chooseBoatClass(preferences, id, boatClassId))
+              }
+              onAttach={attach}
+              onEdit={(id) => setEditing(id ?? 'new')}
+            />
+            <CurrentConditions
+              key={selected.id}
+              location={selected}
+              units={preferences.units}
+              choices={choices}
+              onEditLimits={() => setEditing('new')}
+            />
+          </>
         )}
       </main>
     </div>

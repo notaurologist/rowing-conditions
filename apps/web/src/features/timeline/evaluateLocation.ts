@@ -27,15 +27,17 @@ export interface LocationEvaluation {
   evaluation: TimelineEvaluation;
 }
 
-// Evaluates the forecast once for the answer, the chart and the period list. Uses the rule
-// set's first boat class until boat class selection arrives (#30). Null without a rule set.
+// Evaluates the forecast once per rule set, for the answer, the chart and the period list. Uses
+// the given boat class, or the rule set's first. Null without a rule set.
 export function evaluateLocation(
   conditions: Conditions,
   location: SavedLocation,
   ruleSet: RuleSet | undefined,
   now: string,
+  boatClassId?: string,
 ): LocationEvaluation | null {
-  const boatClass = ruleSet?.boatClasses[0];
+  const boatClass =
+    ruleSet?.boatClasses.find((c) => c.id === boatClassId) ?? ruleSet?.boatClasses[0];
   if (!ruleSet || !boatClass) return null;
   const input: TimelineInput = {
     forecast: conditions.forecast,

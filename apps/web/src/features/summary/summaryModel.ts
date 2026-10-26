@@ -10,12 +10,14 @@ import { dayLabel, formatClock, reasonText } from '../timeline/periodCopy.ts';
 export interface Summary {
   headline: string;
   detail: string[];
+  others: string[]; // one sentence per other attached rule set
   days: { name: string; text: string }[];
 }
 
 export interface SummaryInput {
   conditions: Conditions;
-  evaluated: LocationEvaluation | null;
+  evaluated: LocationEvaluation | null; // the selected rule set
+  alongside?: readonly LocationEvaluation[]; // every attached rule set, including the selected one
   now: string;
 }
 
@@ -199,19 +201,39 @@ function daylightDays(conditions: Conditions, now: string): Summary['days'] {
     }));
 }
 
-export function summaryModel({ conditions, evaluated, now }: SummaryInput): Summary {
+// The other rule sets in a sentence each, so a glance shows where the clubs differ.
+function others(
+  evaluated: LocationEvaluation,
+  alongside: readonly LocationEvaluation[],
+  now: string,
+  timeZone: string | null,
+): string[] {
+  return alongside
+    .filter((e) => e.ruleSet.id !== evaluated.ruleSet.id)
+    .map((e) => {
+      const boatClass = e.ruleSet.boatClasses.length > 1 ? ` (${e.boatClassName})` : '';
+      return e.timeline.hasLimits
+        ? `${headline(e, now, timeZone)}${boatClass}.`
+        : `${e.ruleSet.name} has no limits for ${e.boatClassName} yet.`;
+    });
+}
+
+export function summaryModel({ conditions, evaluated, alongside, now }: SummaryInput): Summary {
   const tz = conditions.location.timezone;
   if (!evaluated) {
     return {
       headline: 'No limits to compare against yet',
       detail: ['Enter your club’s limits, or your own, to see when conditions are within them.'],
+      others: [],
       days: daylightDays(conditions, now),
     };
   }
+  const rest = others(evaluated, alongside ?? [], now, tz);
   if (!evaluated.timeline.hasLimits) {
     return {
       headline: `${evaluated.ruleSet.name} has no limits for ${evaluated.boatClassName} yet`,
       detail: ['Enter your or your club’s limits to see when conditions are within them.'],
+      others: rest,
       days: daylightDays(conditions, now),
     };
   }
@@ -219,6 +241,7 @@ export function summaryModel({ conditions, evaluated, now }: SummaryInput): Summ
   return {
     headline: headline(evaluated, now, tz),
     detail: [...deciding(evaluated, conditions, window), ...measurementNote(conditions)],
+    others: rest,
     days: days(evaluated, conditions, now),
   };
 }

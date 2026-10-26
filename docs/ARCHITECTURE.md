@@ -565,7 +565,7 @@ No secrets in code or fixtures.
   - Row labels sit in a left column on wide screens and above their rows below 600 px (a container query). There, the scale labels, the hour chip and later window labels are hidden, and status spans use short words.
   - **Readout:** a pointer layer and a range input (for keyboard and touch) choose the hour. It starts at the next window.
   - **Hourly values** table: every readout, for screen readers.
-  - **Rule set:** the chart uses the location's first attached rule set and its first boat class until rule set selection arrives (#30).
+  - **Rule sets:** one status strip per attached rule set, in the location's order, each evaluated for its chosen boat class. Only the selected rule set's limits, fills and windows are drawn in the rows, and its strip says "drawn below". The hourly table has a status column per rule set.
 - **Rule set editor** (`src/features/rules/`): name, boat classes, limits, an optional daylight window and an optional flow gauge.
   - Each limit reads as the club words it: metric, wording ("at most", "below", "at least", "above"), number and unit. The unit defaults to the display units and can be any unit in `metricUnits`; it is kept as `enteredUnit`. `thresholdFromEntry` and `entryFromThreshold` (`packages/core/src/rules/entry.ts`) convert between what was typed and a `Threshold`, so a saved limit opens again exactly as entered.
   - `ruleSetDraft.ts` holds the form as strings and `checkDraft` turns it into a `RuleSet` or plain-language errors keyed by field: a missing number, more precision than the unit shows ("mph limits are whole numbers"), zero or less for flow, wind and rain chance, rain chance over 100%. The `RuleSet` schema is still parsed last as a backstop.
@@ -573,6 +573,12 @@ No secrets in code or fixtures.
   - The flow gauge choice appears only with a flow limit, listing `/gauges/nearby`. When a rule set names one, the web client sends it as `flowGaugeRefs`.
   - Saving a new rule set attaches it to the current location. Deleting one detaches it from every location first.
   - Reached from the summary's empty state ("Enter your club's limits") and the location bar ("Enter limits" or "Edit limits").
+- **Several rule sets per location** (`src/features/rules/RuleSetBar.tsx`, `ruleSetChoice.ts`): a location can have any number of rule sets attached, and one rule set can be attached to several locations.
+  - **Selected rule set:** one of them drives the headline, the deciding-factor sentence, the day summaries and the limit lines. Its buttons are marked with `aria-pressed` and a check mark. The choice is stored per location in preferences (`selectedRuleSetIds`); without one, it's the location's first.
+  - **Boat class:** chosen per rule set and stored in preferences (`boatClassIds`), so the choice follows the rule set to every location. Without one, it's the rule set's first class.
+  - **Side by side:** every attached rule set is evaluated. Each gets its own status strip and its own notices (no limits for the class, or a limit no source here can check), and the summary gives each other rule set one sentence.
+  - **Managing them:** the bar adds a new rule set or attaches one already stored. The editor's "Remove from [location]" detaches a rule set, and "Delete rule set" removes it everywhere.
+  - **Flow gauges:** the conditions request asks for every attached rule set's named flow gauge, at most 5 (the API's limit). A rule set past the cap shows its flow limit as unknown.
 - Map with Leaflet (react-leaflet), OpenStreetMap tiles, respecting the tile usage policy and attribution. The tile URL is configurable (`VITE_TILE_URL`), as the policy asks, and Leaflet loads lazily because it needs `window`.
 - **Location setup** (`src/features/location-setup/`): pick a point on the map or use the browser's location, then choose a gauge from `/gauges/nearby`. `defaultGauge` (`packages/core/src/geo/defaultGauge.ts`) suggests the nearest gauge reporting flow, else gauge height, else water temperature; with none, the suggestion is weather-only. The user can pick any listed gauge or weather-only. Each gauge shows its distance and what it reports. Saving waits for the gauge list, so the saved choice is one the user saw.
 - PWA via `vite-plugin-pwa`. Offline: show last loaded conditions clearly marked with their age.

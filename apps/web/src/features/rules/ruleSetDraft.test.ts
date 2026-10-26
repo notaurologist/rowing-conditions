@@ -4,6 +4,7 @@ import {
   addLimit,
   attachRuleSet,
   checkDraft,
+  detachRuleSet,
   draftFromRuleSet,
   emptyDraft,
   type RuleSetDraft,
@@ -272,6 +273,14 @@ describe('saving and removing rule sets', () => {
     const attached = attachRuleSet(locations, 'home', a.id);
     expect(attached.map((l) => l.ruleSetIds)).toEqual([[a.id], []]);
     expect(attachRuleSet(attached, 'home', a.id)).toEqual(attached);
+  });
+
+  it('detaches a rule set from one location and keeps it for the others', () => {
+    const locations = [location('home', [a.id, 'other']), location('away', [a.id])];
+    expect(detachRuleSet(locations, 'home', a.id).map((l) => l.ruleSetIds)).toEqual([
+      ['other'],
+      [a.id],
+    ]);
   });
 
   it('removes a rule set and detaches it from every location', () => {

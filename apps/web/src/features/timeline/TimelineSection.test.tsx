@@ -173,6 +173,52 @@ describe('TimelineSection', () => {
     );
   });
 
+  it('shows each attached rule set’s status and notices, by name', () => {
+    const conditions = structuredClone(montague) as Conditions;
+    const water: RuleSet = {
+      id: 'rs-w',
+      name: 'Club W',
+      boatClasses: [{ id: 'all', name: 'All boats' }],
+      thresholds: [
+        {
+          id: 'water',
+          metric: 'waterTemp',
+          comparison: 'min',
+          boundary: 'inclusive',
+          value: toInternal('waterTemp', 50, 'degF'),
+          enteredUnit: 'degF',
+        },
+      ],
+    };
+    const empty: RuleSet = { ...water, id: 'rs-e', name: 'Club E', thresholds: [] };
+    const a = evaluateLocation(conditions, location, clubA, NOW);
+    const all = [clubA, water, empty].flatMap(
+      (r) => evaluateLocation(conditions, location, r, NOW) ?? [],
+    );
+    const html = renderToStaticMarkup(
+      <TimelineSection
+        conditions={conditions}
+        location={location}
+        evaluated={a}
+        alongside={all}
+        units="us"
+        now={NOW}
+      />,
+    );
+    const text = html
+      .replace(/<[^>]+>/g, ' ')
+      .replaceAll('’', "'")
+      .replace(/\s+/g, ' ');
+    expect(html).toMatch(/aria-label="Club A status: outside Today 8 AM/);
+    // No source here measures water temperature, so Club W's every hour is unknown.
+    expect(html).toMatch(/aria-label="Club W status: unknown Today 8 AM/);
+    expect(text).toContain("Club W's water temperature limit can't be checked here");
+    expect(text).not.toContain("Club A's water temperature limit");
+    expect(text).toContain('Club E has no limits for All boats yet');
+    expect(text).toContain('Club A all limits · drawn below');
+    expect(html.match(/<th scope="col">Club [AWE]<\/th>/g)).toHaveLength(3);
+  });
+
   it('says where the flow forecast comes from, and offers every value as a table', () => {
     const { html, text } = render();
     expect(text).toContain(
