@@ -1,12 +1,13 @@
 import {
   Alert,
-  DaylightTimes,
+  type ConditionsResponse,
   daylightTimes,
   ForecastPoint,
   Gauge,
   type GaugeRef,
   Reading,
   type SourceId,
+  type SourceStatus,
   UtcTime,
 } from '@rowing/core';
 import { z } from 'zod';
@@ -40,36 +41,6 @@ const CurrentWeatherPayload = z.object({
   station: z.object({ id: z.string(), name: z.string(), distanceKm: z.number() }).optional(),
   readings: Readings,
 });
-
-export const SourceStatus = z.object({
-  id: z.enum(['usgs', 'nwps', 'nws']),
-  status: z.enum(['ok', 'stale', 'error']),
-  fetchedAt: UtcTime.optional(), // the oldest data from this source in the response
-  message: z.string().optional(),
-});
-export type SourceStatus = z.infer<typeof SourceStatus>;
-
-export const ConditionsResponse = z.object({
-  location: z.object({
-    lat: z.number(),
-    lon: z.number(),
-    timezone: z.string().nullable(), // IANA, from NWS; null if unavailable
-    place: z.string().optional(),
-  }),
-  gauge: Gauge.pick({ ref: true, name: true, lat: true, lon: true }).optional(),
-  current: Readings,
-  currentBasis: z.enum(['station', 'forecast']).optional(),
-  station: z.object({ id: z.string(), name: z.string(), distanceKm: z.number() }).optional(),
-  forecast: ForecastPoints, // FORECAST_HOURS hourly points from the current hour
-  // Flow from gauges named by rule sets. name is absent when the gauge's metadata didn't load.
-  flowSeries: z.array(
-    z.object({ gaugeRef: z.string(), name: z.string().optional(), points: ForecastPoints }),
-  ),
-  daylight: z.array(DaylightTimes),
-  alerts: z.array(Alert),
-  sources: z.array(SourceStatus),
-});
-export type ConditionsResponse = z.infer<typeof ConditionsResponse>;
 
 export interface ConditionsDeps {
   usgs: FlowSource;

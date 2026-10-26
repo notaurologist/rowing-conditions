@@ -1,9 +1,8 @@
-import type { Gauge, NearbyGauge, Reading } from '@rowing/core';
+import type { ConditionsResponse, Gauge, NearbyGauge, Reading } from '@rowing/core';
 import { describe, expect, it, vi } from 'vitest';
 import type { SourceResult } from './adapters/http.ts';
 import type { FlowSource } from './adapters/types.ts';
 import { createApp, DEFAULT_RADIUS_KM, MAX_FLOW_GAUGES, MAX_RADIUS_KM } from './app.ts';
-import type { ConditionsResponse } from './services/conditions.ts';
 
 const montague: Gauge = {
   ref: 'usgs:USGS-01170500',

@@ -1,10 +1,10 @@
 import { zValidator } from '@hono/zod-validator';
-import { GaugeRef } from '@rowing/core';
+import { type ConditionsResponse, GaugeRef } from '@rowing/core';
 import { Hono } from 'hono';
 import { z } from 'zod';
 import type { SourceError } from './adapters/http.ts';
 import type { FlowSource } from './adapters/types.ts';
-import type { ConditionsInput, ConditionsResponse } from './services/conditions.ts';
+import type { ConditionsInput } from './services/conditions.ts';
 import type { SearchPlaces } from './services/places.ts';
 
 export interface AppDeps {

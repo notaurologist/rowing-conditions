@@ -1,5 +1,6 @@
-import type { RuleSet, SavedLocation } from '@rowing/core';
+import { ConditionsResponse, type RuleSet, type SavedLocation } from '@rowing/core';
 import { describe, expect, it, vi } from 'vitest';
+import montague from '../../test/fixtures/conditions-montague.json' with { type: 'json' };
 import { createStorage, type KeyValueStore, STORAGE_KEYS, STORAGE_VERSION } from './storage.ts';
 
 function memoryStore(initial: Record<string, string> = {}): KeyValueStore & {
@@ -227,5 +228,76 @@ describe('rule set choices in preferences', () => {
     };
     storage.savePreferences(preferences);
     expect(storage.loadPreferences()).toEqual(preferences);
+  });
+});
+
+describe('last loaded conditions', () => {
+  const entry = {
+    request: 'request-a',
+    loadedAt: '2026-10-26T13:00:00.000Z',
+    conditions: ConditionsResponse.parse(montague),
+  };
+  const other: SavedLocation = { ...location, id: 'loc-2', name: 'Northfield' };
+
+  it('round-trips the copy for a saved location and the same request', () => {
+    const storage = createStorage(memoryStore(), silentLogger());
+    storage.saveLocations([location]);
+    storage.saveLastConditions('loc-1', entry);
+    expect(storage.loadLastConditions('loc-1', 'request-a')).toEqual(entry);
+  });
+
+  it('returns null for another request, so a copy is never used for different gauges', () => {
+    const storage = createStorage(memoryStore(), silentLogger());
+    storage.saveLocations([location]);
+    storage.saveLastConditions('loc-1', entry);
+    expect(storage.loadLastConditions('loc-1', 'request-b')).toBeNull();
+    expect(storage.loadLastConditions('loc-2', 'request-a')).toBeNull();
+  });
+
+  it('keeps one copy per saved location and drops copies for removed ones', () => {
+    const storage = createStorage(memoryStore(), silentLogger());
+    storage.saveLocations([location, other]);
+    storage.saveLastConditions('loc-1', entry);
+    storage.saveLastConditions('loc-2', entry);
+    expect(storage.loadLastConditions('loc-1', 'request-a')).toEqual(entry);
+
+    storage.saveLocations([other]);
+    const newer = { ...entry, loadedAt: '2026-10-26T14:00:00.000Z' };
+    storage.saveLastConditions('loc-2', newer);
+    expect(storage.loadLastConditions('loc-1', 'request-a')).toBeNull();
+    expect(storage.loadLastConditions('loc-2', 'request-a')).toEqual(newer);
+  });
+
+  it('drops an invalid copy without losing the others', () => {
+    const logger = silentLogger();
+    const store = memoryStore({
+      [STORAGE_KEYS.lastConditions]: envelope({
+        'loc-1': entry,
+        'loc-2': { ...entry, conditions: { location: 'nowhere' } },
+      }),
+    });
+    const storage = createStorage(store, logger);
+    expect(storage.loadLastConditions('loc-1', 'request-a')).toEqual(entry);
+    expect(storage.loadLastConditions('loc-2', 'request-a')).toBeNull();
+    expect(logger.warn).toHaveBeenCalledWith('Dropped 1 invalid stored lastConditions');
+  });
+
+  it('does not notify subscribers, since the copy is not part of the snapshot', () => {
+    const storage = createStorage(memoryStore(), silentLogger());
+    storage.saveLocations([location]);
+    const listener = vi.fn();
+    storage.subscribe(listener);
+    storage.saveLastConditions('loc-1', entry);
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  it('lets a failed write throw, like the other saves', () => {
+    const store = memoryStore();
+    const storage = createStorage(store, silentLogger());
+    storage.saveLocations([location]);
+    store.setItem = () => {
+      throw new Error('QuotaExceededError');
+    };
+    expect(() => storage.saveLastConditions('loc-1', entry)).toThrow('QuotaExceededError');
   });
 });
