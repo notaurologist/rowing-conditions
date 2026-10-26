@@ -561,11 +561,12 @@ No secrets in code or fixtures.
     - the latest measurement at the current time; one further outside the forecast than half its span or a quarter of its size is marked off-scale and drawn at the edge, so a forecast that missed doesn't flatten the row
     - a readout per hour with the margin to the limit ("3,090 cfs · 10 under")
     - status spans, windows (the next one named), twilight and night from the exact daylight times, and day and hour labels in the location's time zone
+    - each hour's light in words ("Daylight", "Twilight, then night"), so light isn't shown by shading alone
   - `Meteogram` draws from the model with visx `scaleLinear`, `LinePath` and `Area`, positioning by percentage so it fits any width without measuring. The space between each series and its limit is filled (Playfair's balance chart): room in `--room`, past the limit in `--over-fill`.
   - Row labels sit in a left column on wide screens and above their rows below 600 px (a container query). There, the scale labels, the hour chip and later window labels are hidden, and status spans use short words.
-  - **Readout:** a pointer layer and a range input (for keyboard and touch) choose the hour. It starts at the next window.
+  - **Readout:** a pointer layer and a range input (for keyboard and touch) choose the hour, shown with its light. It starts at the next window.
   - **Hourly values** table: every readout, for screen readers.
-  - **Rule sets:** one status strip per attached rule set, in the location's order, each evaluated for its chosen boat class. Only the selected rule set's limits, fills and windows are drawn in the rows, and its strip says "drawn below". The hourly table has a status column per rule set.
+  - **Rule sets:** one status strip per attached rule set, in the location's order, each evaluated for its chosen boat class. Only the selected rule set's limits, fills and windows are drawn in the rows, and its strip says "drawn below". The hourly table has a light column and a status column per rule set.
 - **Rule set editor** (`src/features/rules/`): name, boat classes, limits, an optional daylight window and an optional flow gauge.
   - Each limit reads as the club words it: metric, wording ("at most", "below", "at least", "above"), number and unit. The unit defaults to the display units and can be any unit in `metricUnits`; it is kept as `enteredUnit`. `thresholdFromEntry` and `entryFromThreshold` (`packages/core/src/rules/entry.ts`) convert between what was typed and a `Threshold`, so a saved limit opens again exactly as entered.
   - `ruleSetDraft.ts` holds the form as strings and `checkDraft` turns it into a `RuleSet` or plain-language errors keyed by field: a missing number, more precision than the unit shows ("mph limits are whole numbers"), zero or less for flow, wind and rain chance, rain chance over 100%. The `RuleSet` schema is still parsed last as a backstop.

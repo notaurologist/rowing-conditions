@@ -360,4 +360,12 @@ describe('meteogramModel time and light', () => {
     expect(m.hours[6]?.label).toBe('Today 2 PM');
     expect(m.hours[35]?.label).toBe('Tomorrow 7 PM');
   });
+
+  it('names the light in each hour in words, including hours that cross sunset and dusk', () => {
+    const m = model();
+    expect(m.hours[6]?.light).toBe('Daylight');
+    expect(m.hours[9]?.light).toBe('Daylight, then twilight');
+    expect(m.hours[10]?.light).toBe('Twilight, then night');
+    expect(m.hours[14]?.light).toBe('Night');
+  });
 });

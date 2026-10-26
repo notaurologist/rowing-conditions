@@ -27,6 +27,7 @@ function HourTable({ model }: { model: MeteogramModel }) {
           <thead>
             <tr>
               <th scope="col">Hour</th>
+              <th scope="col">Light</th>
               {model.statuses.map((strip) => (
                 <th key={strip.ruleSetId} scope="col">
                   {strip.name}
@@ -43,6 +44,7 @@ function HourTable({ model }: { model: MeteogramModel }) {
             {model.hours.map((h, i) => (
               <tr key={h.time}>
                 <th scope="row">{h.label}</th>
+                <td>{h.light}</td>
                 {model.statuses.map((strip) => (
                   <td key={strip.ruleSetId}>{statusAt(strip, i)}</td>
                 ))}

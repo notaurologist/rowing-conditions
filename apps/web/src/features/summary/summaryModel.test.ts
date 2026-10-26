@@ -114,7 +114,7 @@ describe('summaryModel headline', () => {
 describe('summaryModel detail', () => {
   it('names the deciding limit, its closest margin in the window, and a measurement that disagrees with the forecast', () => {
     expect(summary().detail).toEqual([
-      'Flow decides it, with 6 rowing hours past its limit.',
+      'Flow is past its limit for 6 rowing hours, the most of any limit.',
       'In the window, it comes no closer than 10 cfs to the 3,100 cfs limit.',
       'The river measured 3,750 cfs at 8:15 AM; the forecast for that hour was 3,230 cfs.',
     ]);
@@ -132,7 +132,7 @@ describe('summaryModel detail', () => {
   it('describes the closest limit when none is crossed', () => {
     const loose = structuredClone(clubA);
     loose.thresholds = loose.thresholds.filter((t) => t.id === 'gust');
-    expect(summary(loose).detail[0]).toBe('Wind gusts decide it, coming closest to their limit.');
+    expect(summary(loose).detail[0]).toBe('Wind gusts come closest to their limit.');
   });
 });
 

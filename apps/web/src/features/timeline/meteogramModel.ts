@@ -80,7 +80,7 @@ export interface StatusStrip {
 }
 
 export interface MeteogramModel {
-  hours: { time: string; label: string }[];
+  hours: { time: string; label: string; light: string }[]; // light in words: Twilight, then night
   rows: MeteogramRow[];
   light: { from: number; to: number; light: 'twilight' | 'night' }[];
   // One strip per attached rule set, in the location's order. The selected one also drives the
@@ -214,9 +214,14 @@ function lightSpans(
       const level = hourLightLevel(new Date(start + i * HOUR).toISOString(), lat, lon);
       return { from: i, to: i + 1, light: (level === 'dark' ? 'night' : level) as Light };
     });
-  return spans.filter(
-    (s): s is { from: number; to: number; light: 'twilight' | 'night' } => s.light !== 'daylight',
-  );
+  return spans;
+}
+
+// The light levels an hour passes through, in words, so light isn't conveyed by shading alone.
+function hourLight(spans: readonly { from: number; to: number; light: Light }[], i: number) {
+  const levels = spans.filter((s) => s.from < i + 1 && s.to > i).map((s) => s.light);
+  const words = levels.filter((l, k) => l !== levels[k - 1]).join(', then ');
+  return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
 export function meteogramModel(input: MeteogramInput): MeteogramModel {
@@ -500,9 +505,11 @@ export function meteogramModel(input: MeteogramInput): MeteogramModel {
       ticks.push({ at: i, label: h === 12 ? 'noon' : formatClock(p.time, timeZone) });
   });
 
-  const hours = forecast.map((p) => ({
+  const light = lightSpans(conditions.daylight, start, n, location.lat, location.lon);
+  const hours = forecast.map((p, i) => ({
     time: p.time,
     label: `${dayLabel(p.time, now, timeZone)} ${formatClock(p.time, timeZone)}`,
+    light: hourLight(light, i),
   }));
   const firstWindow = windows[0];
   const defaultHour = firstWindow ? Math.min(n - 1, Math.max(0, Math.floor(firstWindow.from))) : 0;
@@ -510,7 +517,9 @@ export function meteogramModel(input: MeteogramInput): MeteogramModel {
   return {
     hours,
     rows,
-    light: lightSpans(conditions.daylight, start, n, location.lat, location.lon),
+    light: light.filter(
+      (s): s is { from: number; to: number; light: 'twilight' | 'night' } => s.light !== 'daylight',
+    ),
     statuses,
     windows,
     days,
