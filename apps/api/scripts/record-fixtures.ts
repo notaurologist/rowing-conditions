@@ -9,6 +9,14 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { gaugeUrl, nearbyGaugesUrl, stageFlowUrl } from '../src/adapters/nwps/requests.ts';
 import {
+  alertsUrl,
+  gridUrl,
+  latestObservationUrl,
+  NWS_BASE_URL,
+  pointsUrl,
+  stationsUrl,
+} from '../src/adapters/nws/requests.ts';
+import {
   historyUrl,
   latestReadingsUrl,
   locationUrl,
@@ -40,6 +48,13 @@ const fixtures: Record<string, string> = {
   'nwps/gauge-by-usgs-01161280': gaugeUrl('01161280'), // Northfield, looked up by USGS number
   'nwps/stageflow-mntm3': stageFlowUrl('MNTM3'),
   'nwps/stageflow-nfdm3': stageFlowUrl('NFDM3'), // no forecast: sentinel issuedTime, -999 flows
+  'nws/points-turners-falls': pointsUrl(42.6, -72.55),
+  'nws/grid-box-20-103': gridUrl('BOX', 20, 103), // has PT3H and P1D intervals
+  'nws/stations-box-20-103': stationsUrl('BOX', 20, 103),
+  'nws/observation-kore': latestObservationUrl('KORE'), // windGust null: no gust reported
+  'nws/alerts-turners-falls': alertsUrl(42.6, -72.55), // usually empty
+  // Not a URL the adapter builds: a statewide query, to have real alerts to parse.
+  'nws/alerts-sample-ak': `${NWS_BASE_URL}/alerts/active?area=AK`,
   'usgs/history-montague-flow': historyUrl(
     MONTAGUE,
     usgsParameterCodes.flow,
@@ -64,6 +79,37 @@ for (const name of ['nwps/stageflow-mntm3', 'nwps/stageflow-nfdm3']) {
   };
 }
 
+// NWS grid data has about 60 series; the adapter reads five.
+const NWS_SERIES = [
+  'temperature',
+  'windSpeed',
+  'windGust',
+  'windDirection',
+  'probabilityOfPrecipitation',
+];
+trims['nws/grid-box-20-103'] = {
+  note: `properties trimmed to updateTime, validTimes, and ${NWS_SERIES.join(', ')}`,
+  apply: (body) => {
+    const b = body as { properties: Record<string, unknown> };
+    const keep = ['updateTime', 'validTimes', ...NWS_SERIES];
+    b.properties = Object.fromEntries(keep.map((k) => [k, b.properties[k]]));
+    return b;
+  },
+};
+for (const [name, count] of [
+  ['nws/stations-box-20-103', 5],
+  ['nws/alerts-sample-ak', 3],
+] as const) {
+  trims[name] = {
+    note: `features trimmed to the first ${count}`,
+    apply: (body) => {
+      const b = body as { features: unknown[] };
+      b.features = b.features.slice(0, count);
+      return b;
+    },
+  };
+}
+
 const filter = process.argv[2];
 const selected = Object.entries(fixtures).filter(([name]) => !filter || name.startsWith(filter));
 if (selected.length === 0) {
@@ -73,7 +119,14 @@ if (selected.length === 0) {
 
 let failed = 0;
 for (const [name, url] of selected) {
-  const response = await fetch(url, { signal: AbortSignal.timeout(30_000) });
+  const response = await fetch(url, {
+    signal: AbortSignal.timeout(30_000),
+    // NWS rejects requests without a User-Agent. The recorder identifies itself by repository.
+    headers: {
+      'User-Agent':
+        'rowing-conditions fixture recorder (github.com/notaurologist/rowing-conditions)',
+    },
+  });
   const text = await response.text();
   let body: unknown;
   try {

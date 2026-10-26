@@ -397,11 +397,13 @@ interface FlowForecastSource {
   getStageFlow(lid: string): Promise<SourceResult<{ observed: Reading[]; forecast: ForecastPoint[]; issuedAt: string | null }>>;
 }
 
+// Implemented by apps/api/src/adapters/nws/nws.ts.
 interface WeatherSource {
   id: SourceId;
-  getCurrent(lat: number, lon: number): Promise<Reading[]>;
-  getHourlyForecast(lat: number, lon: number, hours: number): Promise<ForecastPoint[]>;
-  getAlerts(lat: number, lon: number): Promise<Alert[]>;
+  getPoint(lat: number, lon: number): Promise<SourceResult<{ gridId, gridX, gridY, timeZone, place? }>>;
+  getHourlyForecast(lat: number, lon: number, hours: number): Promise<SourceResult<ForecastPoint[]>>;  // from the current hour
+  getCurrent(lat: number, lon: number): Promise<SourceResult<{ basis: 'station' | 'forecast'; station?: { id, name, distanceKm }; readings: Reading[] }>>;
+  getAlerts(lat: number, lon: number): Promise<SourceResult<Alert[]>>;
 }
 ```
 
@@ -411,6 +413,13 @@ Adapter rules:
 - Adapters take `fetch`, `logger` and `now` as options. Tests inject a `routedFetch` (`apps/api/test/fixtures.ts`) that serves recorded fixtures and fails on any request it doesn't expect, so no test can reach the network.
 - `Gauge` and `NearbyGauge` (a gauge plus `distanceKm`) are Zod schemas in `packages/core/src/types/gauge.ts`. `distanceKm` and `boundingBox` are in `packages/core/src/geo/geo.ts`.
 - A reading the core `Reading` schema rejects, for example a negative discharge, is kept with a null value and logged. That makes it `missing`, never dropped silently.
+- **NWS:**
+  - **Requests:** the adapter sends `NWS_USER_AGENT` on every request and retries a 5xx once after a pause. It never retries a 4xx.
+  - **Forecast:** grid intervals (`PT3H`, `P1D`, …) are expanded to hours. An hour that no interval covers is `null`, which means missing, not absent. Units are converted from their WMO codes, and a series in an unknown unit is skipped and logged.
+  - **Current weather** follows #19: the nearest station within 30 km whose observation is no more than 2 hours old. Otherwise it's the forecast's current hour, with `basis: 'forecast'`.
+  - **Quality control:** station values that NWS quality control marked rejected (`X`) or questioned (`Q`) are `unreliable`.
+  - **Alerts:** times are normalized to UTC. A missing `ends` falls back to `expires`, and an unknown severity becomes `Unknown`.
+  - **`Alert`** is a schema in `packages/core/src/types/alert.ts`.
 - **NWPS forecast:** `getStageFlow` turns the 6-hourly forecast into hourly `ForecastPoint`s with `interpolateHourly` (`packages/core/src/series/interpolate.ts`). It's linear between steps and never extrapolates. An hour next to a missing step is null. Hours between steps carry `interpolated: true`, and every hour's provenance `asOf` is the forecast issue time. A gauge without a forecast returns `forecast: []` and `issuedAt: null`.
 - Convert to SI inside the adapter. Nothing outside an adapter knows a source's native units.
 - Set timeouts on every request (default 10 s).
