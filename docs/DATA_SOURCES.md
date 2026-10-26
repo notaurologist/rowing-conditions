@@ -1,6 +1,6 @@
 # Data Sources
 
-Status: Draft v0.4. USGS and NWPS verified October 25, 2026; other sources as of October 2026.
+Status: Draft v0.5. USGS, NWPS, and NWS verified October 25, 2026; other sources as of October 2026.
 
 **Before implementing or changing any adapter, verify the details below against the source's official documentation.** APIs change (USGS is mid-migration as of this writing). If the docs differ from this file, follow the docs and update this file in the same change.
 
@@ -133,24 +133,46 @@ Verified against the live API on October 25, 2026 (issue #17).
 
 ## National Weather Service API (US forecasts and alerts)
 
+Verified against the live API on October 25, 2026 (issue #19).
+
 - **Docs:** https://www.weather.gov/documentation/services-web-api
 - **Base URL:** `https://api.weather.gov`
-- **Auth:** none. A `User-Agent` header identifying the app and a contact email is **required**; requests without it may be blocked. Read from `NWS_USER_AGENT`.
+- **Auth:** none. A `User-Agent` header identifying the app and a contact email is **required**. A request without one gets **403**. Read it from `NWS_USER_AGENT`.
 - **Coverage:** US only.
+- **Format:** GeoJSON, with records under `properties`. Times carry offsets, local ones on alerts (`-08:00`), so normalize to `Z`.
+- **Caching headers:** grid data comes with `Cache-Control: max-age=3600` and `Last-Modified`, and the payload has `updateTime`. Use `updateTime` as the forecast's `asOf`.
 
 ### Flow
 
-1. `GET /points/{lat},{lon}` (max 4 decimal places) returns the forecast office, grid coordinates, and URLs for `forecastHourly` and `forecastGridData`. The mapping from point to grid rarely changes: cache for 30 days.
-2. `GET /gridpoints/{office}/{x},{y}` (the `forecastGridData` URL) returns raw time series: `temperature`, `windSpeed`, `windGust`, `windDirection`, `probabilityOfPrecipitation`, and more. Prefer this over `forecastHourly`, which returns pre-formatted strings.
-3. `GET /alerts/active?point={lat},{lon}` returns active alerts.
+1. `GET /points/{lat},{lon}`. Coordinates with more than 4 decimals get a **301** redirect to the rounded point, so round to 4 before requesting. The response gives:
+   - the grid: `gridId` (`BOX`), `gridX` and `gridY`
+   - URLs: `forecastGridData` and `observationStations`
+   - the location's **`timeZone`** (`America/New_York`), which `/conditions` can use as its location time zone
+   - `relativeLocation`, the nearest named place (`Turners Falls`)
+
+   The mapping from point to grid rarely changes, so cache it for 30 days.
+2. `GET /gridpoints/{office}/{x},{y}` (the `forecastGridData` URL) returns raw time series. Prefer it over `forecastHourly`, which returns pre-formatted strings. Each series has a `uom` and `values: [{ validTime, value }]`:
+   - `temperature`: `wmoUnit:degC`
+   - `windSpeed` and `windGust`: `wmoUnit:km_h-1`. Values are knot multiples converted to km/h (1.852, 3.704, …).
+   - `windDirection`: `wmoUnit:degree_(angle)`
+   - `probabilityOfPrecipitation`: `wmoUnit:percent`. Convert to a 0–1 fraction.
+   - The data covers `validTimes`, here 7½ days from 13:00Z.
+3. `GET /alerts/active?point={lat},{lon}` returns `{ features: [...] }`. Each alert's `properties` include `id`, `event`, `headline`, `severity`, `onset`, `ends`, `expires` and `effective`. `ends` can be null, so fall back to `expires`.
+4. **Current observations:** `GET /gridpoints/{office}/{x},{y}/stations` lists observation stations nearest first, followed by `GET /stations/{id}/observations/latest`. Each value is `{ unitCode, value, qualityControl }`, and `windGust` is null when there's no gust. The nearest station to Turners Falls is Orange Municipal Airport (`KORE`), 22 km away.
+
+### Current conditions: decided in #19
+
+Current weather comes from the **nearest station's latest observation, if it's within 30 km and no more than 2 hours old**. The UI labels it with the station name and distance, and takes freshness from its `timestamp`. Otherwise, current weather is the grid forecast's value for the current hour, labeled as a forecast.
+
+The reasons: a nearby station measures conditions rather than predicting them, but stations are mostly airports, can be far from the water, and report late (Chicopee's latest was 2 hours old). The thresholds are starting values to tune in M9. Evaluation is unaffected: it uses the hourly forecast throughout, as before.
 
 ### Quirks
 
-- Grid data values use ISO 8601 intervals (`validTime: "2026-10-24T14:00:00+00:00/PT3H"`), meaning one value can span several hours. Expand to hourly points.
-- Units are given as WMO codes (for example `wmoUnit:degC`, `wmoUnit:km_h-1`). Convert based on the stated unit, never assume.
-- `windGust` is often missing for some hours. Missing is `null`, not zero.
-- The API returns intermittent 500 errors. Retry once with backoff, then serve stale cache.
-- Rate limits are not precisely published. Caching per `ARCHITECTURE.md` keeps us well clear.
+- **Intervals:** grid values span ISO 8601 intervals (`PT1H`, `PT3H`, `P1D`; precipitation chance was daily for the first day), so one value can cover several hours. Expand to hourly points.
+- **Units** are given as WMO codes. Convert based on the stated unit, never assume.
+- **Missing values:** `windGust` can be missing for some hours. Missing is `null`, not zero. Today there were none.
+- **500 errors:** the docs and earlier experience report intermittent 500s. Three repeated requests on October 25 all returned 200. Keep the plan to retry once with backoff, then serve stale cache.
+- **Rate limits** are not published. Caching per `ARCHITECTURE.md` keeps us well clear.
 
 ---
 
