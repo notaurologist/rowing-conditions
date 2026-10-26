@@ -7,8 +7,8 @@
     ".": "./src/app.ts"
   },
   "scripts": {
-    "dev": "node --watch src/index.ts",
-    "start": "node src/index.ts",
+    "dev": "node --env-file-if-exists=../../.env --watch src/index.ts",
+    "start": "node --env-file-if-exists=../../.env src/index.ts",
     "typecheck": "tsc -p .",
     "fixtures:record": "node scripts/record-fixtures.ts",
     "db:generate": "drizzle-kit generate",

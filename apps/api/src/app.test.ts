@@ -2,7 +2,8 @@ import type { Gauge, NearbyGauge, Reading } from '@rowing/core';
 import { describe, expect, it, vi } from 'vitest';
 import type { SourceResult } from './adapters/http.ts';
 import type { FlowSource } from './adapters/types.ts';
-import { createApp, DEFAULT_RADIUS_KM, MAX_RADIUS_KM } from './app.ts';
+import { createApp, DEFAULT_RADIUS_KM, MAX_FLOW_GAUGES, MAX_RADIUS_KM } from './app.ts';
+import type { ConditionsResponse } from './services/conditions.ts';
 
 const montague: Gauge = {
   ref: 'usgs:USGS-01170500',
@@ -39,7 +40,19 @@ function fakeUsgs(overrides: Partial<FlowSource> = {}): FlowSource {
   };
 }
 
-const request = (path: string, usgs = fakeUsgs()) => createApp({ usgs }).request(path);
+const emptyConditions: ConditionsResponse = {
+  location: { lat: 42.6, lon: -72.55, timezone: 'America/New_York' },
+  current: [],
+  forecast: [],
+  flowSeries: [],
+  daylight: [],
+  alerts: [],
+  sources: [{ id: 'nws', status: 'error', message: 'nws timed out' }],
+};
+const fakeConditions = () => vi.fn(async () => emptyConditions);
+
+const request = (path: string, usgs = fakeUsgs(), conditions = fakeConditions()) =>
+  createApp({ usgs, conditions }).request(path);
 
 describe('GET /health', () => {
   it('returns ok', async () => {
@@ -147,5 +160,59 @@ describe('GET /gauges/:ref', () => {
       latest: [],
       sources: [{ id: 'usgs', status: 'error', message: 'The operation timed out' }],
     });
+  });
+});
+
+describe('GET /conditions', () => {
+  it('passes validated input to the conditions service and returns its response with 200', async () => {
+    const conditions = fakeConditions();
+    const res = await request(
+      '/conditions?lat=42.6&lon=-72.55&gaugeRef=usgs:USGS-01170500&flowGaugeRefs=nwps:MNTM3,usgs:USGS-01161280',
+      fakeUsgs(),
+      conditions,
+    );
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual(emptyConditions);
+    expect(conditions).toHaveBeenCalledWith({
+      lat: 42.6,
+      lon: -72.55,
+      gaugeRef: 'usgs:USGS-01170500',
+      flowGaugeRefs: ['nwps:MNTM3', 'usgs:USGS-01161280'],
+    });
+  });
+
+  it('returns 200 even when sources failed, since failures are reported per source', async () => {
+    const res = await request('/conditions?lat=42.6&lon=-72.55');
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as ConditionsResponse;
+    expect(body.sources[0]?.status).toBe('error');
+  });
+
+  it('accepts a weather-only location and drops duplicate or empty flow gauge refs', async () => {
+    const conditions = fakeConditions();
+    await request(
+      '/conditions?lat=42.6&lon=-72.55&flowGaugeRefs=nwps:MNTM3,,nwps:MNTM3',
+      fakeUsgs(),
+      conditions,
+    );
+    expect(conditions).toHaveBeenCalledWith({
+      lat: 42.6,
+      lon: -72.55,
+      flowGaugeRefs: ['nwps:MNTM3'],
+    });
+  });
+
+  it.each([
+    ['missing lon', '/conditions?lat=42.6'],
+    ['a bad gauge ref', '/conditions?lat=42.6&lon=-72.55&gaugeRef=01170500'],
+    ['a bad flow gauge ref', '/conditions?lat=42.6&lon=-72.55&flowGaugeRefs=nwps:MNTM3,MNTM3'],
+    [
+      'too many flow gauges',
+      `/conditions?lat=42.6&lon=-72.55&flowGaugeRefs=${Array.from({ length: MAX_FLOW_GAUGES + 1 }, (_, i) => `nwps:G${i}`).join(',')}`,
+    ],
+  ])('rejects %s with 400 without calling the service', async (_, path) => {
+    const conditions = fakeConditions();
+    expect((await request(path, fakeUsgs(), conditions)).status).toBe(400);
+    expect(conditions).not.toHaveBeenCalled();
   });
 });
