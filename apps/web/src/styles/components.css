@@ -3,6 +3,7 @@
  *   button, button.primary, .link-button          actions
  *   .segmented (and .unit-toggle, .chips)         one choice from a few; aria-pressed marks it
  *   .field, input, select                         form fields
+ *   .field-hint, .field-error, .check             hint and error under a field, in words; a checkbox
  *   .notice, .notice-error                        messages; errors carry words, not just color
  *   .tag, .tag-warning                            small labels, such as qualifiers
  *   .status-within, .status-outside, .status-unknown  status words with their symbol
@@ -136,6 +137,36 @@ select {
 input[type="text"],
 select {
   width: 100%;
+}
+
+.field > .field-hint {
+  color: var(--muted);
+  font-size: var(--text-sm);
+  font-weight: 400;
+}
+
+.field-error {
+  color: var(--outside-ink);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+input[aria-invalid="true"] {
+  border-color: var(--over);
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--control-height);
+}
+
+.check input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--accent);
 }
 
 .notice {

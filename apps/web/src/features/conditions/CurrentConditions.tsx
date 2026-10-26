@@ -24,19 +24,24 @@ export function CurrentConditions({
   location,
   units,
   ruleSet,
+  onEditLimits,
 }: {
   location: SavedLocation;
   units: DisplaySystem;
   ruleSet: RuleSet | undefined;
+  onEditLimits: () => void;
 }) {
   const now = useNow();
+  // The rule set's own flow gauge, when it names one other than the location's.
+  const flowGaugeRef = ruleSet?.flowGaugeRef ?? null;
   const query = useQuery({
-    queryKey: ['conditions', location.lat, location.lon, location.gaugeRef ?? null],
+    queryKey: ['conditions', location.lat, location.lon, location.gaugeRef ?? null, flowGaugeRef],
     queryFn: () =>
       fetchConditions(api, {
         lat: location.lat,
         lon: location.lon,
         ...(location.gaugeRef ? { gaugeRef: location.gaugeRef as GaugeRef } : {}),
+        ...(flowGaugeRef ? { flowGaugeRefs: [flowGaugeRef] } : {}),
       }),
   });
 
@@ -58,7 +63,12 @@ export function CurrentConditions({
   const evaluated = evaluateLocation(query.data, location, ruleSet, now);
   return (
     <>
-      <Summary conditions={query.data} evaluated={evaluated} now={now} />
+      <Summary
+        conditions={query.data}
+        evaluated={evaluated}
+        now={now}
+        onEditLimits={onEditLimits}
+      />
       <TimelineSection
         conditions={query.data}
         location={location}

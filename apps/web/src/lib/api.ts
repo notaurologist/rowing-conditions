@@ -33,10 +33,17 @@ export async function fetchPlaces(client: ApiClient, query: string) {
   return body.places;
 }
 
-export function fetchConditions(client: ApiClient, at: Coordinates & { gaugeRef?: GaugeRef }) {
+export function fetchConditions(
+  client: ApiClient,
+  at: Coordinates & { gaugeRef?: GaugeRef; flowGaugeRefs?: readonly GaugeRef[] },
+) {
   return parseResponse(
     client.conditions.$get({
-      query: { ...coordinateQuery(at), ...(at.gaugeRef ? { gaugeRef: at.gaugeRef } : {}) },
+      query: {
+        ...coordinateQuery(at),
+        ...(at.gaugeRef ? { gaugeRef: at.gaugeRef } : {}),
+        ...(at.flowGaugeRefs?.length ? { flowGaugeRefs: at.flowGaugeRefs.join(',') } : {}),
+      },
     }),
   );
 }

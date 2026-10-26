@@ -204,7 +204,7 @@ export function summaryModel({ conditions, evaluated, now }: SummaryInput): Summ
   if (!evaluated) {
     return {
       headline: 'No limits to compare against yet',
-      detail: ['Attach a rule set to see when conditions are within its limits.'],
+      detail: ['Enter your club’s limits, or your own, to see when conditions are within them.'],
       days: daylightDays(conditions, now),
     };
   }

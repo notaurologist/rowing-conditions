@@ -787,3 +787,130 @@
     padding: var(--space-4) 0 0;
   }
 }
+
+/* The rule set editor (features/rules/RuleSetEditor.tsx). Each limit reads as a sentence:
+   "Wind gusts [at most] [15] [mph]". */
+.rule-editor,
+.rule-editor-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-width: 720px;
+}
+
+.rule-editor {
+  margin-top: var(--space-5);
+}
+
+.rule-editor h2,
+.rule-editor p {
+  margin: 0;
+}
+
+.rule-editor-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--hair);
+  border-radius: var(--radius-md);
+}
+
+.rule-editor-group > legend {
+  padding: 0 var(--space-2);
+  font-weight: 600;
+}
+
+.rule-editor-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-2) var(--space-3);
+}
+
+.rule-editor-row > input,
+.rule-editor-row > .field {
+  flex: 1 1 160px;
+  width: auto;
+}
+
+.rule-editor-empty {
+  color: var(--ink-2);
+}
+
+.limit-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--hair);
+}
+
+.limit-sentence {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    "name remove"
+    "inputs inputs";
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+.limit-metric {
+  grid-area: name;
+  font-weight: 600;
+}
+
+.limit-inputs {
+  grid-area: inputs;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.limit-inputs select {
+  width: auto;
+}
+
+.rule-editor input.limit-value {
+  width: 5.5em;
+  font-variant-numeric: tabular-nums;
+}
+
+.limit-unit {
+  min-width: 3em;
+}
+
+.limit-remove {
+  grid-area: remove;
+  min-height: 32px; /* a link-sized target is too small to tap */
+  padding: 0 var(--space-1);
+}
+
+.limit-classes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--space-4);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.limit-classes legend {
+  padding: 0;
+  margin-bottom: var(--space-1);
+  font-size: var(--text-sm);
+  color: var(--ink-2);
+}
+
+button.danger {
+  color: var(--outside-ink);
+}
+
+@media (min-width: 600px) {
+  .limit-sentence {
+    grid-template-columns: 11em 1fr auto;
+    grid-template-areas: "name inputs remove";
+  }
+}
