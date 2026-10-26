@@ -522,6 +522,17 @@ No secrets in code or fixtures.
   - **The panel also shows** today's daylight times by the location's local date, active alerts with severity in words, and a notice for each failed or stale source.
   - **Units:** the US/Metric toggle saves to preferences and marks the current choice with `aria-pressed` and a check mark.
 - A root error boundary shows a message and a reload button instead of a blank page.
+- **Design tokens and shared components** (`src/styles/`, #77). New styles follow this convention:
+  - **Files, in import order:**
+    - `tokens.css` defines every color, type size, spacing step, radius and control height, for light and dark (`prefers-color-scheme`).
+    - `base.css` sets the font and typography.
+    - `components.css` holds the shared controls: button, `.primary`, `.link-button`, `.segmented`, `.chips`, `.field`, inputs, `.notice`, `.tag`, the `.status-*` labels and `.visually-hidden`.
+    - `features.css` holds feature layout.
+  - **Features use tokens by role** (`var(--water)`, `var(--space-4)`), never raw values, and compose the shared components instead of restyling controls.
+  - **Color roles:** paper, surface, ink, muted and hairline for the page; accent for links, focus and the selected control; water, wind, rain and room for data; and over, within and outside for status.
+    - Status colors always come with a symbol and words.
+    - The pairs that must be told apart (water blue against over-the-limit red, within against outside) pass a contrast and color-vision-deficiency check in both themes.
+  - **Type:** Source Sans 3, self-hosted from `src/assets/fonts/` (SIL Open Font License), with tabular numbers throughout.
 - Charts with visx. The 48-hour timeline is a feature folder of its own (`features/timeline/`) with its chart components kept independent of data fetching, so they can be tested with fixture data.
 - **Main screen order** for a location: the answer (next window within the rule set's limits, what's happening now if the window is later, and what follows), the 48-hour chart, "Hour by hour" periods by day with reasons, then current conditions. `evaluateLocation` evaluates the forecast once for all three. Status is shown with a symbol (✓ ✕ ?) and words, never color alone. Copy says "within/outside Club A's limits", never a verdict.
 - **Timeline** (`src/features/timeline/`):

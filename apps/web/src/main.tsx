@@ -5,7 +5,10 @@ import { App } from './App.tsx';
 import { ErrorBoundary } from './components/ErrorBoundary.tsx';
 import { createStorage } from './lib/storage.ts';
 import { StorageContext } from './lib/useStoredData.ts';
-import './styles.css';
+import './styles/tokens.css';
+import './styles/base.css';
+import './styles/components.css';
+import './styles/features.css';
 
 const root = document.getElementById('root');
 if (!root) {
