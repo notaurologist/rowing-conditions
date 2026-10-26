@@ -1,8 +1,9 @@
-import type { DisplaySystem, GaugeRef, SavedLocation } from '@rowing/core';
+import type { ChartMetric, DisplaySystem, GaugeRef, RuleSet, SavedLocation } from '@rowing/core';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { api, apiErrorMessage, fetchConditions } from '../../lib/api.ts';
 import { formatAge } from '../../lib/format.ts';
+import { TimelineSection } from '../timeline/TimelineSection.tsx';
 import { ConditionsPanel } from './ConditionsPanel.tsx';
 
 // Re-render each minute so ages ("25 min ago") and stale flags stay current.
@@ -15,12 +16,20 @@ function useNow(intervalMs = 60_000): string {
   return now;
 }
 
+// Fetches /conditions once for the location and shows the 48-hour timeline, then the
+// current readings.
 export function CurrentConditions({
   location,
   units,
+  ruleSet,
+  pinned,
+  onPin,
 }: {
   location: SavedLocation;
   units: DisplaySystem;
+  ruleSet: RuleSet | undefined;
+  pinned: ChartMetric | undefined;
+  onPin: (metric: ChartMetric | undefined) => void;
 }) {
   const now = useNow();
   const query = useQuery({
@@ -33,7 +42,7 @@ export function CurrentConditions({
       }),
   });
 
-  if (query.isPending) return <p aria-live="polite">Loading current conditions…</p>;
+  if (query.isPending) return <p aria-live="polite">Loading conditions…</p>;
   if (query.isError) {
     return (
       <div role="alert" className="notice notice-error">
@@ -50,6 +59,15 @@ export function CurrentConditions({
   const loadedAt = new Date(query.dataUpdatedAt).toISOString();
   return (
     <>
+      <TimelineSection
+        conditions={query.data}
+        location={location}
+        ruleSet={ruleSet}
+        units={units}
+        pinned={pinned}
+        onPin={onPin}
+        now={now}
+      />
       <ConditionsPanel conditions={query.data} units={units} now={now} />
       <p className="reading-meta refresh-row">
         Loaded {formatAge(loadedAt, now)}.{' '}

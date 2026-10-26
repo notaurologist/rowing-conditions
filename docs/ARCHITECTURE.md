@@ -517,6 +517,16 @@ No secrets in code or fixtures.
   - **Units:** the US/Metric toggle saves to preferences and marks the current choice with `aria-pressed` and a check mark.
 - A root error boundary shows a message and a reload button instead of a blank page.
 - Charts with visx. The 48-hour timeline is a feature folder of its own (`features/timeline/`) with its chart components kept independent of data fetching, so they can be tested with fixture data.
+- **Timeline** (`src/features/timeline/`):
+  - `timelineModel` turns the forecast into what the chart draws:
+    - series in display units, with `null` for gaps
+    - the rule set's limit lines for the boat class, worded as entered ("at most 15 mph")
+    - each hour's status
+    - light bands drawn from the exact civil dawn, sunrise, sunset and civil dusk times, because civil twilight (about 30 minutes) often falls between hourly samples
+  - `TimelineChart` draws only from the model and takes a width, so it renders from fixtures.
+  - **Statuses** are drawn with patterns (solid within, hatched outside, dotted unknown), with a text title per hour and a legend in words. The `svg` has a title and a summary, and an "Hourly values" table gives every number.
+  - **Default chart** (`defaultChartMetric` in `packages/core/src/evaluation/chartMetric.ts`): the user's pinned metric if it has data here, else the limiting factor, else flow, else wind. A label says which and why. The pinned metric is stored in preferences.
+  - **Rule set:** the chart uses the location's first attached rule set and its first boat class until rule set selection arrives (#30).
 - Map with Leaflet (react-leaflet), OpenStreetMap tiles, respecting the tile usage policy and attribution. The tile URL is configurable (`VITE_TILE_URL`), as the policy asks, and Leaflet loads lazily because it needs `window`.
 - **Location setup** (`src/features/location-setup/`): pick a point on the map or use the browser's location, then choose a gauge from `/gauges/nearby`. `defaultGauge` (`packages/core/src/geo/defaultGauge.ts`) suggests the nearest gauge reporting flow, else gauge height, else water temperature; with none, the suggestion is weather-only. The user can pick any listed gauge or weather-only. Each gauge shows its distance and what it reports. Saving waits for the gauge list, so the saved choice is one the user saw.
 - PWA via `vite-plugin-pwa`. Offline: show last loaded conditions clearly marked with their age.
