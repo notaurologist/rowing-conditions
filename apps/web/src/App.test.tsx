@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderToString } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { App } from './App.tsx';
+import { INTRO_VERSION } from './features/intro/Intro.tsx';
 import { createStorage, type KeyValueStore } from './lib/storage.ts';
 import { StorageContext } from './lib/useStoredData.ts';
 
@@ -18,7 +19,14 @@ function memoryStore(): KeyValueStore {
   };
 }
 
-const newStorage = () => createStorage(memoryStore(), { warn: () => {} });
+const unseenStorage = () => createStorage(memoryStore(), { warn: () => {} });
+
+// Most tests start after the intro has been read.
+const newStorage = () => {
+  const storage = unseenStorage();
+  storage.savePreferences({ units: 'us', introVersion: INTRO_VERSION });
+  return storage;
+};
 
 function render(storage = newStorage()) {
   return renderToString(
@@ -56,7 +64,11 @@ describe('App', () => {
       turnersFalls,
       { id: 'loc-2', name: 'Lake Wyola', lat: 42.5, lon: -72.43, ruleSetIds: [] },
     ]);
-    storage.savePreferences({ units: 'us', selectedLocationId: 'loc-2' });
+    storage.savePreferences({
+      units: 'us',
+      introVersion: INTRO_VERSION,
+      selectedLocationId: 'loc-2',
+    });
     const html = render(storage);
     expect(html).toMatch(/<option value="loc-2" selected="">Lake Wyola/);
     expect(html).not.toContain('Add a location</h2>');
@@ -65,7 +77,11 @@ describe('App', () => {
   it('falls back to the first location when the selected one is gone', () => {
     const storage = newStorage();
     storage.saveLocations([turnersFalls]);
-    storage.savePreferences({ units: 'us', selectedLocationId: 'deleted' });
+    storage.savePreferences({
+      units: 'us',
+      introVersion: INTRO_VERSION,
+      selectedLocationId: 'deleted',
+    });
     const html = render(storage);
     expect(html).toMatch(/<option value="loc-1" selected="">Turners Falls/);
   });
@@ -104,7 +120,11 @@ describe('App limits', () => {
       ruleSet('rs-c', 'Club C'),
     ]);
     storage.saveLocations([{ ...turnersFalls, ruleSetIds: ['rs-a', 'rs-b'] }]);
-    storage.savePreferences({ units: 'us', selectedRuleSetIds: { 'loc-1': 'rs-b' } });
+    storage.savePreferences({
+      units: 'us',
+      introVersion: INTRO_VERSION,
+      selectedRuleSetIds: { 'loc-1': 'rs-b' },
+    });
     const html = render(storage);
     expect(html).toContain('aria-pressed="false">Club A</button>');
     expect(html).toContain('aria-pressed="true"><span aria-hidden="true">✓ </span>Club B</button>');
@@ -112,5 +132,27 @@ describe('App limits', () => {
     // Club C is stored but not attached here, so it can be added.
     expect(html).toMatch(/<option value="rs-c">Club C<\/option>/);
     expect(html).not.toMatch(/<option value="rs-a">Club A<\/option>/);
+  });
+
+  it('shows the intro on first use, before location setup', () => {
+    const html = render(unseenStorage());
+    expect(html).toContain('About Rowing Conditions');
+    expect(html).toContain('>Continue</button>');
+    expect(html).not.toContain('Add a location');
+    expect(html).not.toContain('>About</button>');
+  });
+
+  it('shows the intro to someone who already has locations but has not seen it', () => {
+    const storage = unseenStorage();
+    storage.saveLocations([turnersFalls]);
+    const html = render(storage);
+    expect(html).toContain('About Rowing Conditions');
+    expect(html).not.toContain('Turners Falls</option>');
+  });
+
+  it('offers About in the header once the intro has been seen', () => {
+    const html = render();
+    expect(html).toContain('>About</button>');
+    expect(html).not.toContain('About Rowing Conditions');
   });
 });
