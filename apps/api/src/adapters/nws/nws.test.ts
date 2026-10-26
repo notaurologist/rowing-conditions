@@ -163,6 +163,29 @@ describe('requests', () => {
     expect(headers?.['User-Agent']).toBe(UA);
   });
 
+  // Node's fetch sends Accept-Language: * by default, and the NWS CDN served a stale copy for it (#87).
+  it('sends an explicit Accept-Language on every request', async () => {
+    const r = adapter();
+    const calls: RequestInit[] = [];
+    const recording: FetchFn = async (url, init) => {
+      calls.push(init ?? {});
+      return r.fetch(url, init);
+    };
+    const nws = createNwsAdapter({
+      userAgent: UA,
+      fetch: recording,
+      logger: { warn: vi.fn() },
+      now: () => NOW,
+    });
+    await nws.getHourlyForecast(LAT, LON, 48);
+    await nws.getCurrent(LAT, LON);
+    await nws.getAlerts(LAT, LON);
+    expect(calls.length).toBeGreaterThan(4);
+    for (const call of calls) {
+      expect((call.headers as Record<string, string>)['Accept-Language']).toBe('en-US');
+    }
+  });
+
   it('rounds coordinates to 4 decimals, which the API requires', async () => {
     const r = adapter();
     await r.nws.getPoint(42.600001, -72.550004);

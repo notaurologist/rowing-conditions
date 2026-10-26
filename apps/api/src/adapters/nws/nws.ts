@@ -74,7 +74,12 @@ export function createNwsAdapter(options: NwsAdapterOptions): WeatherSource {
     source: 'nws',
     fetch: options.fetch ?? globalThis.fetch,
     logger,
-    headers: { 'User-Agent': options.userAgent, Accept: 'application/geo+json' },
+    // Node's fetch sends Accept-Language: * by default, and the CDN kept a stale copy for it (#87).
+    headers: {
+      'User-Agent': options.userAgent,
+      Accept: 'application/geo+json',
+      'Accept-Language': 'en-US',
+    },
     ...(options.timeoutMs !== undefined ? { timeoutMs: options.timeoutMs } : {}),
   };
 
