@@ -21,3 +21,4 @@ One file per decision. Format: context, decision, consequences. Never edit a pas
 | 0015 | Free-tier CI plus local pre-push checks | Accepted |
 | 0016 | PGlite for automated database tests | Accepted |
 | 0017 | Vercel for the web app and API, Neon for Postgres | Accepted |
+| 0018 | Record API errors in Postgres | Accepted |
