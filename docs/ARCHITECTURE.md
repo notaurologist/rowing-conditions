@@ -389,10 +389,12 @@ interface FlowSource {
   getHistory(gaugeId: string, metric: Metric, from: string, to: string): Promise<SourceResult<Reading[]>>;  // one metric per request
 }
 
+// Implemented by apps/api/src/adapters/nwps/nwps.ts.
 interface FlowForecastSource {
   id: SourceId;                // 'nwps'
-  findForecastPoint(lat: number, lon: number, usgsId?: string): Promise<Gauge | null>;
-  getStageFlow(gaugeRef: string): Promise<{ observed: Reading[]; forecast: ForecastPoint[]; issuedAt?: string }>;
+  findNearby(lat: number, lon: number, radiusKm: number): Promise<SourceResult<NearbyGauge[]>>;  // each with hasFlowForecast
+  getGauge(identifier: string): Promise<SourceResult<Gauge | null>>;  // NWS location ID, or a bare USGS site number to find its forecast point
+  getStageFlow(lid: string): Promise<SourceResult<{ observed: Reading[]; forecast: ForecastPoint[]; issuedAt: string | null }>>;
 }
 
 interface WeatherSource {
@@ -409,6 +411,7 @@ Adapter rules:
 - Adapters take `fetch`, `logger` and `now` as options. Tests inject a `routedFetch` (`apps/api/test/fixtures.ts`) that serves recorded fixtures and fails on any request it doesn't expect, so no test can reach the network.
 - `Gauge` and `NearbyGauge` (a gauge plus `distanceKm`) are Zod schemas in `packages/core/src/types/gauge.ts`. `distanceKm` and `boundingBox` are in `packages/core/src/geo/geo.ts`.
 - A reading the core `Reading` schema rejects, for example a negative discharge, is kept with a null value and logged. That makes it `missing`, never dropped silently.
+- **NWPS forecast:** `getStageFlow` turns the 6-hourly forecast into hourly `ForecastPoint`s with `interpolateHourly` (`packages/core/src/series/interpolate.ts`). It's linear between steps and never extrapolates. An hour next to a missing step is null. Hours between steps carry `interpolated: true`, and every hour's provenance `asOf` is the forecast issue time. A gauge without a forecast returns `forecast: []` and `issuedAt: null`.
 - Convert to SI inside the adapter. Nothing outside an adapter knows a source's native units.
 - Set timeouts on every request (default 10 s).
 - Send required headers (NWS requires a `User-Agent` with contact info).
