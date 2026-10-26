@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import montague from '../../../test/fixtures/conditions-montague.json' with { type: 'json' };
 import type { Conditions } from '../../lib/api.ts';
+import { evaluateLocation } from './evaluateLocation.ts';
 import { chartExplanation, TimelineSection } from './TimelineSection.tsx';
 
 const conditions = () => structuredClone(montague) as Conditions;
@@ -37,7 +38,7 @@ function render(props: { ruleSet?: RuleSet; pinned?: ChartMetric; data?: Conditi
     <TimelineSection
       conditions={props.data ?? conditions()}
       location={location}
-      ruleSet={props.ruleSet}
+      evaluated={evaluateLocation(props.data ?? conditions(), location, props.ruleSet, NOW)}
       units="us"
       pinned={props.pinned}
       onPin={() => {}}

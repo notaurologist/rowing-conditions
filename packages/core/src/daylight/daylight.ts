@@ -95,3 +95,14 @@ export function hourOverlapsCivilDaylight(hourStart: string, lat: number, lon: n
   // The Sun never crosses -6° today (polar day, white nights, or deep polar night).
   return getPosition(middle, lat, lon).altitude > -6;
 }
+
+// Civil dawn to civil dusk for the solar day containing the middle of the hour: the default
+// span of rowing hours. Where the Sun never crosses -6°, the whole day or none of it.
+export function civilDaylightSpan(hourStart: string, lat: number, lon: number): DaylightWindowSpan {
+  const middle = new Date(Date.parse(UtcTime.parse(hourStart)) + HOUR / 2);
+  const times = getTimes(middle, lat, lon);
+  if (times.dawn && times.dusk) {
+    return { kind: 'span', start: times.dawn.toISOString(), end: times.dusk.toISOString() };
+  }
+  return getPosition(middle, lat, lon).altitude > -6 ? { kind: 'allDay' } : { kind: 'none' };
+}

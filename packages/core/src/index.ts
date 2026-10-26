@@ -2,6 +2,7 @@ export * from './daylight/daylight.ts';
 export * from './evaluation/chartMetric.ts';
 export * from './evaluation/evaluate.ts';
 export * from './evaluation/limitingFactor.ts';
+export * from './evaluation/periods.ts';
 export * from './evaluation/windows.ts';
 export * from './geo/defaultGauge.ts';
 export * from './geo/geo.ts';

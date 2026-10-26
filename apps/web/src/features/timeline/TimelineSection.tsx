@@ -4,19 +4,16 @@ import {
   type ChartMetric,
   type DisplaySystem,
   defaultChartMetric,
-  evaluateTimeline,
-  findLimitingFactor,
   type Metric,
-  type RuleSet,
   type SavedLocation,
-  type TimelineInput,
 } from '@rowing/core';
 import { ParentSize } from '@visx/responsive';
 import { useState } from 'react';
 import type { Conditions } from '../../lib/api.ts';
 import { formatTime, metricName } from '../../lib/format.ts';
+import type { LocationEvaluation } from './evaluateLocation.ts';
 import { CHART_HEIGHT, STATUS_LABELS, TimelineChart } from './TimelineChart.tsx';
-import { type TimelineEvaluation, type TimelineModel, timelineModel } from './timelineModel.ts';
+import { type TimelineModel, timelineModel } from './timelineModel.ts';
 
 export const CHIP_LABELS: Record<ChartMetric, string> = {
   flow: 'Flow',
@@ -55,32 +52,6 @@ export function chartExplanation(choice: ChartChoice, ruleSetName: string | unde
         ? `Showing ${name}. ${ruleSetName} has no limit that decides the chart here.`
         : `Showing ${name}. Attach a rule set to chart the metric that decides things.`;
   }
-}
-
-function evaluate(
-  conditions: Conditions,
-  location: SavedLocation,
-  ruleSet: RuleSet | undefined,
-  now: string,
-) {
-  const boatClass = ruleSet?.boatClasses[0];
-  if (!ruleSet || !boatClass) return null;
-  const input: TimelineInput = {
-    forecast: conditions.forecast,
-    ruleSet,
-    boatClassId: boatClass.id,
-    lat: location.lat,
-    lon: location.lon,
-    now,
-    flowByGauge: Object.fromEntries(conditions.flowSeries.map((s) => [s.gaugeRef, s.points])),
-  };
-  const timeline = evaluateTimeline(input);
-  return {
-    boatClassName: boatClass.name,
-    timeline,
-    limiting: timeline.hasLimits ? findLimitingFactor(input, timeline) : null,
-    evaluation: { ruleSet, boatClassId: boatClass.id, hours: timeline.hours } as TimelineEvaluation,
-  };
 }
 
 function summarize(model: TimelineModel, title: string): string {
@@ -199,7 +170,7 @@ function HourTable({
 interface Props {
   conditions: Conditions;
   location: SavedLocation;
-  ruleSet: RuleSet | undefined;
+  evaluated: LocationEvaluation | null;
   units: DisplaySystem;
   pinned: ChartMetric | undefined;
   onPin: (metric: ChartMetric | undefined) => void;
@@ -211,7 +182,7 @@ interface Props {
 export function TimelineSection({
   conditions,
   location,
-  ruleSet,
+  evaluated,
   units,
   pinned,
   onPin,
@@ -221,7 +192,7 @@ export function TimelineSection({
   const [chosen, setChosen] = useState<ChartMetric | undefined>(undefined);
   const timeZone = conditions.location.timezone;
   const available = availableChartMetrics(conditions.forecast);
-  const evaluated = evaluate(conditions, location, ruleSet, now);
+  const ruleSet = evaluated?.ruleSet;
   const choice = defaultChartMetric({ available, pinned, limiting: evaluated?.limiting ?? null });
 
   if (!choice) {

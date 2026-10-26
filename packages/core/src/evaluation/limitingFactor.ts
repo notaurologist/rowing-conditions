@@ -1,10 +1,10 @@
-import { hourOverlapsCivilDaylight } from '../daylight/daylight.ts';
 import type { HourResult } from '../types/evaluation.ts';
 import type { Metric } from '../types/measurement.ts';
 import type { ForecastPoint } from '../types/readings.ts';
 import type { Threshold } from '../types/rules.ts';
 import { combinedTempF } from '../units/units.ts';
 import { forecastForRuleSet, type TimelineInput, type TimelineResult } from './evaluate.ts';
+import { isRowingHour } from './windows.ts';
 
 export interface LimitingFactor {
   metric: Metric;
@@ -38,14 +38,6 @@ function valueFor(threshold: Threshold, point: ForecastPoint): number | undefine
   }
   const value = point.values[threshold.metric];
   return typeof value === 'number' ? value : undefined;
-}
-
-// Rowing hours: those not entirely outside the rule set's daylight window, or, without a
-// window, those overlapping civil dawn to civil dusk.
-function isRowingHour(hour: HourResult, input: TimelineInput): boolean {
-  if (input.ruleSet.daylight !== undefined)
-    return !hour.failures.some((f) => f.kind === 'daylight');
-  return hourOverlapsCivilDaylight(hour.time, input.lat, input.lon);
 }
 
 // The metric deciding things for this rule set and boat class, for the chart's default.
