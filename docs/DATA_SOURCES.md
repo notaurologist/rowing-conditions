@@ -141,6 +141,7 @@ Verified against the live API on October 25, 2026 (issue #19).
 - **Coverage:** US only.
 - **Format:** GeoJSON, with records under `properties`. Times carry offsets, local ones on alerts (`-08:00`), so normalize to `Z`.
 - **Caching headers:** grid data comes with `Cache-Control: max-age=3600` and `Last-Modified`, and the payload has `updateTime`. Use `updateTime` as the forecast's `asOf`.
+- **Send `Accept-Language: en-US`.** The CDN caches a separate copy per `Accept-Language` value. Node's built-in `fetch` sends `Accept-Language: *` by default, and on October 26, 2026 the copy cached for `*` was 12.5 hours old while the `en-US` copy was current (#87). The adapter sets the header explicitly. Check freshness from Node, not curl or a browser, which don't send `*`.
 
 ### Flow
 
