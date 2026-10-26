@@ -223,6 +223,12 @@ The code is in `packages/core/src/evaluation/evaluate.ts`.
   - The start is cut by the first hour's solar day and the end by the last hour's.
   - A window that cutting leaves empty is dropped.
   - During polar day nothing is cut.
+- `findPeriods(hours, { ruleSet, lat, lon }) → Period[]` and `nextWindow(periods, now)` are in `packages/core/src/evaluation/periods.ts`. They feed the main screen's answer and its "Hour by hour" list.
+  - A period is a run of rowing hours with the same status. Night and gaps split periods.
+  - Edges are cut to the minute at the rule set's daylight window, or at civil dawn and dusk (`civilDaylightSpan`), so a period never runs into the dark.
+  - Each non-within period carries its reasons: the worst value against each limit that failed, with how many hours failed it, and each unknown metric and reason.
+  - `nextWindow` returns the first within period not yet over, the period under way now if the window is later, and the next period that isn't within ("what follows"). A within period tomorrow morning isn't a change.
+- `isRowingHour` (rowing hours, below) is in `windows.ts` and shared by `findLimitingFactor` and `findPeriods`.
 - `findLimitingFactor(input, timeline) → { metric, reason: 'mostHoursOutside' | 'leastHeadroom', hoursOutside, headroom } | null`
   - It takes the same `input` given to `evaluateTimeline`, plus that call's result. Because of that, it ranks against the same flow series evaluation used, including a rule set's named gauge (`forecastForRuleSet`). It's in `packages/core/src/evaluation/limitingFactor.ts`.
   - Considers only metrics that have a limit applying to the boat class, excluding `unavailableMetrics`, and only rowing hours. Rowing hours are defined as follows:
@@ -517,6 +523,7 @@ No secrets in code or fixtures.
   - **Units:** the US/Metric toggle saves to preferences and marks the current choice with `aria-pressed` and a check mark.
 - A root error boundary shows a message and a reload button instead of a blank page.
 - Charts with visx. The 48-hour timeline is a feature folder of its own (`features/timeline/`) with its chart components kept independent of data fetching, so they can be tested with fixture data.
+- **Main screen order** for a location: the answer (next window within the rule set's limits, what's happening now if the window is later, and what follows), the 48-hour chart, "Hour by hour" periods by day with reasons, then current conditions. `evaluateLocation` evaluates the forecast once for all three. Status is shown with a symbol (✓ ✕ ?) and words, never color alone. Copy says "within/outside Club A's limits", never a verdict.
 - **Timeline** (`src/features/timeline/`):
   - `timelineModel` turns the forecast into what the chart draws:
     - series in display units, with `null` for gaps

@@ -1,4 +1,4 @@
-import { daylightWindowSpan } from '../daylight/daylight.ts';
+import { daylightWindowSpan, hourOverlapsCivilDaylight } from '../daylight/daylight.ts';
 import type { HourResult } from '../types/evaluation.ts';
 import type { RuleSet } from '../types/rules.ts';
 
@@ -16,9 +16,16 @@ export interface WindowContext {
   lon: number;
 }
 
+// Rowing hours: those not entirely outside the rule set's daylight window, or, without a
+// window, those overlapping civil dawn to civil dusk. Used for the default chart and periods.
+export function isRowingHour(hour: HourResult, ctx: WindowContext): boolean {
+  if (ctx.ruleSet.daylight !== undefined) return !hour.failures.some((f) => f.kind === 'daylight');
+  return hourOverlapsCivilDaylight(hour.time, ctx.lat, ctx.lon);
+}
+
 // Edges are cut inward to whole minutes, so a window never starts before the daylight window
 // opens or ends after it closes.
-function trimToDaylight(
+export function trimToDaylight(
   start: number,
   end: number,
   first: HourResult,
