@@ -1,4 +1,4 @@
-import { Id, RuleSet, SavedLocation } from '@rowing/core';
+import { ConditionsResponse, Id, RuleSet, SavedLocation, UtcTime } from '@rowing/core';
 import { z } from 'zod';
 
 // The one module that touches localStorage. Each kind of data has its own key, so rule sets
@@ -15,6 +15,7 @@ export const STORAGE_KEYS = {
   locations: 'rowing-conditions:locations',
   ruleSets: 'rowing-conditions:rule-sets',
   preferences: 'rowing-conditions:preferences',
+  lastConditions: 'rowing-conditions:last-conditions',
 } as const;
 
 type StorageKey = keyof typeof STORAGE_KEYS;
@@ -28,6 +29,16 @@ export const Preferences = z.object({
   boatClassIds: z.record(Id, Id).optional(),
 });
 export type Preferences = z.infer<typeof Preferences>;
+
+// The last conditions loaded for a location, shown with their age when a new load fails or
+// the device is offline. request identifies what was asked for (gauges included), so a copy
+// is only used for the same request.
+export const LastConditions = z.object({
+  request: z.string(),
+  loadedAt: UtcTime,
+  conditions: ConditionsResponse,
+});
+export type LastConditions = z.infer<typeof LastConditions>;
 
 export interface StoredData {
   locations: SavedLocation[];
@@ -155,6 +166,25 @@ export function createStorage(
     for (const listener of listeners) listener();
   }
 
+  // Last loaded conditions per location id. Invalid entries are dropped one by one.
+  function readLastConditions(): Record<string, LastConditions> {
+    const data = readCurrent('lastConditions');
+    if (data === undefined) return {};
+    if (typeof data !== 'object' || data === null || Array.isArray(data)) {
+      discard('lastConditions', 'not a record');
+      return {};
+    }
+    const valid: Record<string, LastConditions> = {};
+    let dropped = 0;
+    for (const [id, entry] of Object.entries(data)) {
+      const result = LastConditions.safeParse(entry);
+      if (result.success) valid[id] = result.data;
+      else dropped += 1;
+    }
+    if (dropped > 0) logger.warn(`Dropped ${dropped} invalid stored lastConditions`);
+    return valid;
+  }
+
   const loadLocations = () => readList('locations', SavedLocation);
   const loadRuleSets = () => readList('ruleSets', RuleSet);
 
@@ -166,6 +196,27 @@ export function createStorage(
       write('locations', z.array(SavedLocation), locations),
     saveRuleSets: (ruleSets: RuleSet[]) => write('ruleSets', z.array(RuleSet), ruleSets),
     savePreferences: (preferences: Preferences) => write('preferences', Preferences, preferences),
+
+    /** The last conditions loaded for this location and request, or null when there are none. */
+    loadLastConditions(locationId: string, request: string): LastConditions | null {
+      const entry = readLastConditions()[locationId];
+      return entry?.request === request ? entry : null;
+    },
+    /**
+     * Keeps one copy per saved location, dropping copies for removed locations. Not part of
+     * the snapshot, so nothing re-renders. A failed write throws to the caller, like the others.
+     */
+    saveLastConditions(locationId: string, entry: LastConditions) {
+      const saved = new Set(loadLocations().map((location) => location.id));
+      const kept = Object.fromEntries(
+        Object.entries(readLastConditions()).filter(([id]) => saved.has(id) && id !== locationId),
+      );
+      const data = z.record(z.string(), LastConditions).parse({ ...kept, [locationId]: entry });
+      store.setItem(
+        STORAGE_KEYS.lastConditions,
+        JSON.stringify({ version: STORAGE_VERSION, data }),
+      );
+    },
 
     /** All stored data. The same object is returned until something changes, for useSyncExternalStore. */
     snapshot(): StoredData {

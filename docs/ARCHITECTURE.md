@@ -375,7 +375,7 @@ Routes validate input with `@hono/zod-validator` and answer 400 on invalid input
 ### Response shape for `/conditions`
 
 ```ts
-// Zod schema: ConditionsResponse in apps/api/src/services/conditions.ts
+// Zod schema: ConditionsResponse in packages/core/src/types/conditions.ts, so clients can re-validate a kept copy
 {
   location: { lat, lon, timezone: string | null, place? },   // timezone from NWS; null if NWS failed
   gauge?: { ref, name, lat, lon },
@@ -518,7 +518,7 @@ No secrets in code or fixtures.
 - React with Vite, TypeScript strict mode.
 - Server state via TanStack Query, using the typed Hono client (`src/lib/api.ts`). Response types come from the API's `AppType`, so a route change that breaks the web app is a type error. Every call throws on a non-2xx response, so a failed request is an error state, never empty data. In development Vite proxies `/api` to the API on :3000; `VITE_API_URL` overrides the base URL.
 - Saved locations, rule sets, and unit preference in `localStorage`, behind one storage module (`src/lib/storage.ts`). Rule sets are stored independently of locations so one club's rules can be attached to several locations.
-  - Each kind of data has its own key (`rowing-conditions:locations`, `:rule-sets`, `:preferences`), so corrupt data under one key never costs the others.
+  - Each kind of data has its own key (`rowing-conditions:locations`, `:rule-sets`, `:preferences`, and `:last-conditions` for offline use), so corrupt data under one key never costs the others.
   - Each value is `{ version, data }`. On read, older versions are migrated one step at a time (`migrations[n]` turns version n into n + 1) and the data is validated with Zod.
   - Data that can't be read (bad JSON, no envelope, no migration path, failed validation) is discarded and logged. In a list, only the invalid items are dropped. Data from a newer version is left in place and defaults are used. Reading never throws.
   - Writes are validated first. A failed write (quota, blocked storage) throws to the caller, which must show it.
@@ -584,7 +584,9 @@ No secrets in code or fixtures.
   - **Flow gauges:** the conditions request asks for every attached rule set's named flow gauge, at most 5 (the API's limit). A rule set past the cap shows its flow limit as unknown.
 - Map with Leaflet (react-leaflet), OpenStreetMap tiles, respecting the tile usage policy and attribution. The tile URL is configurable (`VITE_TILE_URL`), as the policy asks, and Leaflet loads lazily because it needs `window`.
 - **Location setup** (`src/features/location-setup/`): pick a point on the map or use the browser's location, then choose a gauge from `/gauges/nearby`. `defaultGauge` (`packages/core/src/geo/defaultGauge.ts`) suggests the nearest gauge reporting flow, else gauge height, else water temperature; with none, the suggestion is weather-only. The user can pick any listed gauge or weather-only. Each gauge shows its distance and what it reports. Saving waits for the gauge list, so the saved choice is one the user saw.
-- PWA via `vite-plugin-pwa`. Offline: show last loaded conditions clearly marked with their age.
+- **PWA** via `vite-plugin-pwa` (`vite.config.ts`): a web app manifest, and a service worker that precaches the app shell and fonts so the app opens offline. It doesn't cache API responses.
+  - **Icons** are drawn in `public/icon.svg` and exported as PNGs at 512, 192 (`icon-*.png`) and 180 (`apple-touch-icon.png`). The waves stay inside the maskable safe zone, so the 512 doubles as the maskable icon.
+  - **Offline:** each successful `/conditions` load is kept on the device (storage key `:last-conditions`, one copy per saved location, for the same location and gauges). When the device is offline or a load fails, the last copy is shown under a notice saying why and when it was loaded ("Offline. Showing conditions loaded 3 h ago, at 9:00 AM."). Evaluation runs against the current time, so readings in an old copy go stale and their hours read as unknown. `shownConditions` (`src/features/conditions/lastLoaded.ts`) decides what is shown.
 - Accessibility: status must never be communicated by color alone. Use labels, patterns, or icons alongside color.
 
 ## Native path (later)

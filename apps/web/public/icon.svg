@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <title>Rowing Conditions</title>
+  <!-- Source for the PNG icons: full bleed, with the waves inside the maskable safe zone. -->
+  <rect width="512" height="512" fill="#2563a8"/>
+  <g fill="none" stroke="#fcfbf8" stroke-width="28" stroke-linecap="round">
+    <path d="M136 196q30-26 60 0t60 0t60 0t60 0"/>
+    <path d="M136 266q30-26 60 0t60 0t60 0t60 0"/>
+    <path d="M136 336q30-26 60 0t60 0t60 0t60 0"/>
+  </g>
+</svg>

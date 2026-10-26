@@ -1,14 +1,16 @@
-import { evaluateTimeline, type ForecastPoint, type Gauge, type Reading, toSI } from '@rowing/core';
+import {
+  ConditionsResponse,
+  evaluateTimeline,
+  type ForecastPoint,
+  type Gauge,
+  type Reading,
+  toSI,
+} from '@rowing/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createTestDatabase } from '../../test/database.ts';
 import type { SourceError, SourceResult } from '../adapters/http.ts';
 import type { FlowForecastSource, FlowSource, WeatherSource } from '../adapters/types.ts';
-import {
-  type ConditionsDeps,
-  ConditionsResponse,
-  FORECAST_HOURS,
-  getConditions,
-} from './conditions.ts';
+import { type ConditionsDeps, FORECAST_HOURS, getConditions } from './conditions.ts';
 import { createSourceCache } from './sourceCache.ts';
 
 const LAT = 42.6;

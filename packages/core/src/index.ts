@@ -9,6 +9,7 @@ export * from './rules/entry.ts';
 export * from './rules/examples.ts';
 export * from './series/interpolate.ts';
 export * from './types/alert.ts';
+export * from './types/conditions.ts';
 export * from './types/evaluation.ts';
 export * from './types/gauge.ts';
 export * from './types/location.ts';
