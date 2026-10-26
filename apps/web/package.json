@@ -12,9 +12,6 @@
   "dependencies": {
     "@rowing/core": "workspace:*",
     "@tanstack/react-query": "5.104.5",
-    "@visx/axis": "4.0.0",
-    "@visx/group": "4.0.0",
-    "@visx/responsive": "4.0.0",
     "@visx/scale": "4.0.0",
     "@visx/shape": "4.0.0",
     "hono": "4.13.13",

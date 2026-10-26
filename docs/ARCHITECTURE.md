@@ -238,8 +238,8 @@ The code is in `packages/core/src/evaluation/evaluate.ts`.
   - A metric with several limits (a min and a max, or limits for different classes that both apply) takes the least headroom among them.
   - A metric with no usable value in any rowing hour has no headroom and isn't considered. That includes unavailable metrics.
   - If no hours are outside, picks the metric with the least headroom (defined below).
-  - Returns `null` if no metric qualifies; the UI then falls back to the user's pinned metric or flow.
-  - The UI chart defaults to this metric unless the user has pinned one. Tested like the rest of evaluation.
+  - Returns `null` if no metric qualifies.
+  - The main screen names this metric as the one deciding the answer. Tested like the rest of evaluation.
 - Evaluation is always per rule set and boat class. The UI may show several rule sets side by side for one location.
 - `now` is passed in, never read from the clock, so evaluation stays pure and testable.
 - Must be thoroughly unit tested. This is the most important logic in the product.
@@ -533,17 +533,19 @@ No secrets in code or fixtures.
     - Status colors always come with a symbol and words.
     - The pairs that must be told apart (water blue against over-the-limit red, within against outside) pass a contrast and color-vision-deficiency check in both themes.
   - **Type:** Source Sans 3, self-hosted from `src/assets/fonts/` (SIL Open Font License), with tabular numbers throughout.
-- Charts with visx. The 48-hour timeline is a feature folder of its own (`features/timeline/`) with its chart components kept independent of data fetching, so they can be tested with fixture data.
+- Charts with visx (scales and shapes). The 48-hour timeline is a feature folder of its own (`features/timeline/`) with its chart components kept independent of data fetching, so they can be tested with fixture data.
 - **Main screen order** for a location: the answer (next window within the rule set's limits, what's happening now if the window is later, and what follows), the 48-hour chart, "Hour by hour" periods by day with reasons, then current conditions. `evaluateLocation` evaluates the forecast once for all three. Status is shown with a symbol (✓ ✕ ?) and words, never color alone. Copy says "within/outside Club A's limits", never a verdict.
-- **Timeline** (`src/features/timeline/`):
-  - `timelineModel` turns the forecast into what the chart draws:
-    - series in display units, with `null` for gaps
-    - the rule set's limit lines for the boat class, worded as entered ("at most 15 mph")
-    - each hour's status
-    - light bands drawn from the exact civil dawn, sunrise, sunset and civil dusk times, because civil twilight (about 30 minutes) often falls between hourly samples
-  - `TimelineChart` draws only from the model and takes a width, so it renders from fixtures.
-  - **Statuses** are drawn with patterns (solid within, hatched outside, dotted unknown), with a text title per hour and a legend in words. The `svg` has a title and a summary, and an "Hourly values" table gives every number.
-  - **Default chart** (`defaultChartMetric` in `packages/core/src/evaluation/chartMetric.ts`): the user's pinned metric if it has data here, else the limiting factor, else flow, else wind. A label says which and why. The pinned metric is stored in preferences.
+- **Meteogram** (`src/features/timeline/`):
+  - `meteogramModel` turns a `/conditions` response and its evaluation into rows on one time axis:
+    - flow (a hydrograph), wind (a band from sustained to gusts, with arrows every 3 hours), air temperature, water temperature (or a row saying it isn't measured), gauge height and combined temperature when a limit uses them, and rain chance (bars, 0–100%)
+    - each applicable limit, in the row's display unit
+    - the latest measurement at the current time; one further outside the forecast than half its span or a quarter of its size is marked off-scale and drawn at the edge, so a forecast that missed doesn't flatten the row
+    - a readout per hour with the margin to the limit ("3,090 cfs · 10 under")
+    - status spans, windows (the next one named), twilight and night from the exact daylight times, and day and hour labels in the location's time zone
+  - `Meteogram` draws from the model with visx `scaleLinear`, `LinePath` and `Area`, positioning by percentage so it fits any width without measuring. The space between each series and its limit is filled (Playfair's balance chart): room in `--room`, past the limit in `--over-fill`.
+  - Row labels sit in a left column on wide screens and above their rows below 600 px (a container query). There, the scale labels, the hour chip and later window labels are hidden, and status spans use short words.
+  - **Readout:** a pointer layer and a range input (for keyboard and touch) choose the hour. It starts at the next window.
+  - **Hourly values** table: every readout, for screen readers.
   - **Rule set:** the chart uses the location's first attached rule set and its first boat class until rule set selection arrives (#30).
 - Map with Leaflet (react-leaflet), OpenStreetMap tiles, respecting the tile usage policy and attribution. The tile URL is configurable (`VITE_TILE_URL`), as the policy asks, and Leaflet loads lazily because it needs `window`.
 - **Location setup** (`src/features/location-setup/`): pick a point on the map or use the browser's location, then choose a gauge from `/gauges/nearby`. `defaultGauge` (`packages/core/src/geo/defaultGauge.ts`) suggests the nearest gauge reporting flow, else gauge height, else water temperature; with none, the suggestion is weather-only. The user can pick any listed gauge or weather-only. Each gauge shows its distance and what it reports. Saving waits for the gauge list, so the saved choice is one the user saw.

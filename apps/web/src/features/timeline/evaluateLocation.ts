@@ -2,6 +2,7 @@ import {
   evaluateTimeline,
   findLimitingFactor,
   findPeriods,
+  type HourResult,
   type LimitingFactor,
   type Period,
   type RuleSet,
@@ -10,7 +11,12 @@ import {
   type TimelineResult,
 } from '@rowing/core';
 import type { Conditions } from '../../lib/api.ts';
-import type { TimelineEvaluation } from './timelineModel.ts';
+
+export interface TimelineEvaluation {
+  ruleSet: RuleSet;
+  boatClassId: string;
+  hours: HourResult[];
+}
 
 export interface LocationEvaluation {
   ruleSet: RuleSet;

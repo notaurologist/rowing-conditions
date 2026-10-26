@@ -1,4 +1,4 @@
-import type { ChartMetric, SavedLocation } from '@rowing/core';
+import type { SavedLocation } from '@rowing/core';
 import { useState } from 'react';
 import { UnitToggle } from './components/UnitToggle.tsx';
 import { CurrentConditions } from './features/conditions/CurrentConditions.tsx';
@@ -27,15 +27,6 @@ export function App() {
       storage.savePreferences({ ...preferences, units });
     } catch (error) {
       setProblem(`Couldn't save the unit choice: ${String(error)}`);
-    }
-  };
-
-  const setPinned = (pinnedChartMetric: ChartMetric | undefined) => {
-    const { pinnedChartMetric: _, ...rest } = preferences;
-    try {
-      storage.savePreferences(pinnedChartMetric ? { ...rest, pinnedChartMetric } : rest);
-    } catch (error) {
-      setProblem(`Couldn't save the pinned chart: ${String(error)}`);
     }
   };
 
@@ -100,8 +91,6 @@ export function App() {
             location={selected}
             units={preferences.units}
             ruleSet={ruleSets.find((r) => selected.ruleSetIds.includes(r.id))}
-            pinned={preferences.pinnedChartMetric}
-            onPin={setPinned}
           />
         )}
       </main>
