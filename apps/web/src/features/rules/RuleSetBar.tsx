@@ -19,20 +19,24 @@ export function RuleSetBar({ choices, ruleSets, onSelect, onBoatClass, onAttach,
   return (
     <section className="rule-set-bar" aria-label="Rule sets">
       {choices.length > 1 && (
-        <fieldset className="segmented">
-          <legend className="visually-hidden">Rule set the answer and chart follow</legend>
-          {choices.map((c) => (
-            <button
-              key={c.ruleSet.id}
-              type="button"
-              aria-pressed={c.selected}
-              onClick={() => onSelect(c.ruleSet.id)}
-            >
-              {c.selected && <span aria-hidden="true">✓ </span>}
-              {c.ruleSet.name}
-            </button>
-          ))}
-        </fieldset>
+        <div className="field">
+          {/* The fieldset's legend names the group for screen readers; this shows it. */}
+          <span aria-hidden="true">Limits shown</span>
+          <fieldset className="segmented">
+            <legend className="visually-hidden">Limits shown</legend>
+            {choices.map((c) => (
+              <button
+                key={c.ruleSet.id}
+                type="button"
+                aria-pressed={c.selected}
+                onClick={() => onSelect(c.ruleSet.id)}
+              >
+                {c.selected && <span aria-hidden="true">✓ </span>}
+                {c.ruleSet.name}
+              </button>
+            ))}
+          </fieldset>
+        </div>
       )}
 
       {selected && selected.ruleSet.boatClasses.length > 1 && (
