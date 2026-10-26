@@ -496,8 +496,13 @@ No secrets in code or fixtures.
 ## apps/web
 
 - React with Vite, TypeScript strict mode.
-- Server state via TanStack Query, using the typed Hono client.
-- Saved locations, rule sets, and unit preference in `localStorage`, behind one storage module. Rule sets are stored independently of locations so one club's rules can be attached to several locations. Stored data is versioned and validated with Zod on read; invalid data is discarded with a migration path, never crashes the app.
+- Server state via TanStack Query, using the typed Hono client (`src/lib/api.ts`). Response types come from the API's `AppType`, so a route change that breaks the web app is a type error. Every call throws on a non-2xx response, so a failed request is an error state, never empty data. In development Vite proxies `/api` to the API on :3000; `VITE_API_URL` overrides the base URL.
+- Saved locations, rule sets, and unit preference in `localStorage`, behind one storage module (`src/lib/storage.ts`). Rule sets are stored independently of locations so one club's rules can be attached to several locations.
+  - Each kind of data has its own key (`rowing-conditions:locations`, `:rule-sets`, `:preferences`), so corrupt data under one key never costs the others.
+  - Each value is `{ version, data }`. On read, older versions are migrated one step at a time (`migrations[n]` turns version n into n + 1) and the data is validated with Zod.
+  - Data that can't be read (bad JSON, no envelope, no migration path, failed validation) is discarded and logged. In a list, only the invalid items are dropped. Data from a newer version is left in place and defaults are used. Reading never throws.
+  - Writes are validated first. A failed write (quota, blocked storage) throws to the caller, which must show it.
+- A root error boundary shows a message and a reload button instead of a blank page.
 - Charts with visx. The 48-hour timeline is a feature folder of its own (`features/timeline/`) with its chart components kept independent of data fetching, so they can be tested with fixture data.
 - Map with Leaflet (react-leaflet), OpenStreetMap tiles, respecting the tile usage policy and attribution.
 - PWA via `vite-plugin-pwa`. Offline: show last loaded conditions clearly marked with their age.
