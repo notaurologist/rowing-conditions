@@ -2,6 +2,7 @@ import { type RuleSet, type SavedLocation, toInternal } from '@rowing/core';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import montague from '../../../test/fixtures/conditions-montague.json' with { type: 'json' };
+import { NAMED_GAUGE, withNamedGauge } from '../../../test/namedGauge.ts';
 import type { Conditions } from '../../lib/api.ts';
 import { evaluateLocation } from './evaluateLocation.ts';
 import { TimelineSection } from './TimelineSection.tsx';
@@ -226,6 +227,29 @@ describe('TimelineSection', () => {
     );
     expect(html).toContain('<summary>Hourly values</summary>');
     expect(html.match(/<th scope="row">/g)).toHaveLength(48);
+  });
+
+  it('names the NWPS forecast even when the first hour holds a measurement', () => {
+    const conditions = structuredClone(montague) as Conditions;
+    const first = conditions.forecast[0];
+    if (first?.provenance.flow) {
+      first.provenance.flow = {
+        kind: 'observation',
+        asOf: '2026-10-26T12:15:00.000Z',
+        source: 'usgs',
+      };
+    }
+    expect(render(clubA, conditions).text).toContain(
+      'Flow: National Water Prediction Service forecast',
+    );
+  });
+
+  it('names the gauge in the flow note when the rule set has its own', () => {
+    const conditions = withNamedGauge(structuredClone(montague) as Conditions);
+    const { text } = render({ ...clubA, flowGaugeRef: NAMED_GAUGE }, conditions);
+    expect(text).toContain(
+      'Flow at North River at Shattuckville, MA: National Water Prediction Service forecast',
+    );
   });
 
   it('never gives a verdict', () => {

@@ -2,6 +2,7 @@ import { type RuleSet, type SavedLocation, toInternal } from '@rowing/core';
 import { describe, expect, it } from 'vitest';
 import montague from '../../../test/fixtures/conditions-montague.json' with { type: 'json' };
 import northfield from '../../../test/fixtures/conditions-northfield.json' with { type: 'json' };
+import { NAMED_GAUGE, withNamedGauge } from '../../../test/namedGauge.ts';
 import type { Conditions } from '../../lib/api.ts';
 import { evaluateLocation } from './evaluateLocation.ts';
 import { type MeteogramRow, meteogramModel } from './meteogramModel.ts';
@@ -61,8 +62,10 @@ function model(
     ruleSet?: RuleSet;
     units?: 'us' | 'metric';
     boatClass?: string;
+    location?: SavedLocation;
   } = {},
 ) {
+  const at = options.location ?? location;
   const conditions = options.conditions ?? data();
   const ruleSet = options.ruleSet === undefined ? clubA : options.ruleSet;
   const rs = options.boatClass
@@ -70,10 +73,10 @@ function model(
     : ruleSet;
   return meteogramModel({
     conditions,
-    location,
+    location: at,
     units: options.units ?? 'us',
     now: NOW,
-    evaluated: evaluateLocation(conditions, location, rs, NOW),
+    evaluated: evaluateLocation(conditions, at, rs, NOW),
   });
 }
 const row = (m: ReturnType<typeof model>, id: MeteogramRow['id']) => {
@@ -367,5 +370,38 @@ describe('meteogramModel time and light', () => {
     expect(m.hours[9]?.light).toBe('Daylight, then twilight');
     expect(m.hours[10]?.light).toBe('Twilight, then night');
     expect(m.hours[14]?.light).toBe('Night');
+  });
+});
+
+describe('meteogramModel with a rule set that names its flow gauge', () => {
+  const named: RuleSet = { ...clubA, flowGaugeRef: NAMED_GAUGE };
+
+  it('draws flow, the measurement and the gauge name from that gauge, not the location’s', () => {
+    const flow = row(model({ conditions: withNamedGauge(data()), ruleSet: named }), 'flow');
+    const own = row(model(), 'flow');
+    const value = (r: MeteogramRow, i: number) => r.series[0]?.points[i]?.value ?? 0;
+    expect(value(flow, 5)).toBeCloseTo(value(own, 5) * 2, -1);
+    expect(flow.observed?.label).toBe('9,000 measured 8:15 AM');
+    expect(flow.sub).toBe('cfs, limit 3,100 · gauge: North River at Shattuckville, MA');
+    expect(own.sub).toBe('cfs, limit 3,100');
+  });
+
+  it('shows flow at a weather-only location instead of saying it has no gauge', () => {
+    const lake = { ...location, gaugeRef: undefined };
+    const conditions = withNamedGauge(data(), { weatherOnly: true });
+    expect(row(model({ conditions, location: lake }), 'flow').message).toBe(
+      'No gauge for this location (weather only).',
+    );
+    const flow = row(model({ conditions, location: lake, ruleSet: named }), 'flow');
+    expect(flow.kind).toBe('line');
+    expect(flow.observed?.label).toBe('9,000 measured 8:15 AM');
+  });
+
+  it('says so when the named gauge sent no flow', () => {
+    const conditions = { ...data(), flowSeries: [] };
+    expect(row(model({ conditions, ruleSet: named }), 'flow')).toMatchObject({
+      kind: 'message',
+      message: 'No flow values from USGS 01169000.',
+    });
   });
 });

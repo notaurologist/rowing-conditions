@@ -73,7 +73,13 @@ export function TimelineSection({ conditions, location, evaluated, alongside, un
   const all = alongside ?? (evaluated ? [evaluated] : []);
   const model = meteogramModel({ conditions, location, units, now, evaluated, alongside: all });
   const timeZone = conditions.location.timezone;
-  const flow = conditions.forecast.find((p) => p.provenance.flow)?.provenance.flow;
+  // The first hour holds the latest measurement (#75), so a forecast anywhere in the series is
+  // what says whether the gauge has one.
+  const flows = (evaluated?.forecast ?? conditions.forecast).flatMap((p) =>
+    p.provenance.flow ? [p.provenance.flow] : [],
+  );
+  const flow = flows.find((f) => f.kind === 'forecast') ?? flows[0];
+  const flowAt = evaluated?.flowGauge ? `Flow at ${evaluated.flowGauge.name}` : 'Flow';
 
   return (
     <section className="timeline" aria-labelledby="timeline-heading">
@@ -115,8 +121,8 @@ export function TimelineSection({ conditions, location, evaluated, alongside, un
         {flow && (
           <p>
             {flow.kind === 'forecast'
-              ? `Flow: National Water Prediction Service forecast, issued ${formatTime(flow.asOf, now, timeZone)}. Hours between its 6-hourly steps are interpolated.`
-              : `Flow: no forecast for this gauge, so the latest observation, from ${formatTime(flow.asOf, now, timeZone)}, is shown for every hour.`}
+              ? `${flowAt}: National Water Prediction Service forecast, issued ${formatTime(flow.asOf, now, timeZone)}. Hours between its 6-hourly steps are interpolated.`
+              : `${flowAt}: no forecast for this gauge, so the latest observation, from ${formatTime(flow.asOf, now, timeZone)}, is shown for every hour.`}
           </p>
         )}
       </div>

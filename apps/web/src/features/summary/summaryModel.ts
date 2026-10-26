@@ -25,34 +25,6 @@ const HOUR = 3_600_000;
 const MINUTE = 60_000;
 // A measurement this far from the forecast for its hour is worth saying out loud.
 const DISAGREEMENT = 0.1;
-const SMALL = new Set([
-  'at',
-  'near',
-  'below',
-  'above',
-  'of',
-  'the',
-  'and',
-  'in',
-  'on',
-  'nr',
-  'abv',
-  'blw',
-]);
-
-/** "CONNECTICUT RIVER AT MONTAGUE CITY, MA" → "Connecticut River at Montague City, MA". */
-export function tidyGaugeName(name: string): string {
-  if (name !== name.toUpperCase()) return name;
-  const words = name.replace(/\.$/, '').toLowerCase().split(' ');
-  return words
-    .map((w, i) => {
-      if (/^[a-z]{2}$/.test(w) && i === words.length - 1) return w.toUpperCase();
-      if (i > 0 && SMALL.has(w)) return w;
-      return w.charAt(0).toUpperCase() + w.slice(1);
-    })
-    .join(' ');
-}
-
 function capitalize(s: string) {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
@@ -60,11 +32,7 @@ function capitalize(s: string) {
 // Wind gusts are plural; every other metric name is singular.
 const plural = (metric: Metric) => metric === 'windGust';
 
-function deciding(
-  evaluated: LocationEvaluation,
-  conditions: Conditions,
-  window: Period | undefined,
-): string[] {
+function deciding(evaluated: LocationEvaluation, window: Period | undefined): string[] {
   const limiting = evaluated.limiting;
   if (!limiting) return [];
   const name = capitalize(metricName(limiting.metric));
@@ -86,7 +54,7 @@ function deciding(
     const limit = displayValue(threshold.metric, threshold.value, unit);
     const start = Date.parse(window.start) - HOUR;
     const end = Date.parse(window.end);
-    const margins = conditions.forecast
+    const margins = evaluated.forecast
       .filter(
         (p) =>
           Date.parse(p.time) >= start &&
@@ -106,7 +74,11 @@ function deciding(
   return sentences;
 }
 
-function measurementNote(conditions: Conditions): string[] {
+// Compares the location gauge's latest flow with the forecast for its hour. A gauge a rule set
+// names comes only as a series, whose first hour already holds the measurement, so there is
+// nothing to compare, and comparing the location's gauge would mix two gauges.
+function measurementNote(conditions: Conditions, evaluated: LocationEvaluation): string[] {
+  if (evaluated.flowGauge) return [];
   const reading = conditions.current.find((r) => r.metric === 'flow');
   if (!reading || reading.value === null) return [];
   const hour = new Date(Math.floor(Date.parse(reading.observedAt) / HOUR) * HOUR).toISOString();
@@ -240,7 +212,7 @@ export function summaryModel({ conditions, evaluated, alongside, now }: SummaryI
   const window = nextWindow(evaluated.periods, now)?.window;
   return {
     headline: headline(evaluated, now, tz),
-    detail: [...deciding(evaluated, conditions, window), ...measurementNote(conditions)],
+    detail: [...deciding(evaluated, window), ...measurementNote(conditions, evaluated)],
     others: rest,
     days: days(evaluated, conditions, now),
   };
