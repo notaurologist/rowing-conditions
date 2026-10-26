@@ -1,4 +1,12 @@
-import type { ForecastPoint, Gauge, Metric, NearbyGauge, Reading, SourceId } from '@rowing/core';
+import type {
+  Alert,
+  ForecastPoint,
+  Gauge,
+  Metric,
+  NearbyGauge,
+  Reading,
+  SourceId,
+} from '@rowing/core';
 import type { SourceResult } from './http.ts';
 
 // A source of observed river data (USGS in the US). Methods never throw.
@@ -28,4 +36,32 @@ export interface FlowForecastSource {
   // identifier: an NWS location ID, or a bare USGS site number to find a USGS gauge's forecast point.
   getGauge(identifier: string): Promise<SourceResult<Gauge | null>>;
   getStageFlow(lid: string): Promise<SourceResult<StageFlow>>;
+}
+
+export interface WeatherPoint {
+  gridId: string;
+  gridX: number;
+  gridY: number;
+  timeZone: string; // IANA, e.g. America/New_York
+  place?: string; // nearest named place, e.g. "Turners Falls, MA"
+}
+
+export interface CurrentWeather {
+  // 'station': the nearest fresh station observation. 'forecast': the forecast's current hour.
+  basis: 'station' | 'forecast';
+  station?: { id: string; name: string; distanceKm: number };
+  readings: Reading[];
+}
+
+// A source of weather forecasts, observations, and alerts (NWS in the US). Methods never throw.
+export interface WeatherSource {
+  id: SourceId;
+  getPoint(lat: number, lon: number): Promise<SourceResult<WeatherPoint>>;
+  getHourlyForecast(
+    lat: number,
+    lon: number,
+    hours: number,
+  ): Promise<SourceResult<ForecastPoint[]>>;
+  getCurrent(lat: number, lon: number): Promise<SourceResult<CurrentWeather>>;
+  getAlerts(lat: number, lon: number): Promise<SourceResult<Alert[]>>;
 }
