@@ -129,6 +129,15 @@ Starting values (to be tuned during backtesting, M9):
 
 Hours past the end of a flow forecast are unknown for flow. The app does not fall back to the latest observation there, because that would contradict the trend the forecast just showed.
 
+### Measured now beats forecast for now
+
+For the current hour, a real measurement replaces the forecast: the gauge's latest flow, gauge height and water temperature, and the nearby weather station's air temperature and wind. On October 26, 2026 the gauge at Montague measured 7,440 cfs while a 22-hour-old forecast still said 3,183 for that hour, and the app showed a window that the river had already closed. Later hours keep the forecast, because a measurement says nothing directly about them. The summary says in plain numbers when the latest reading and the forecast for its hour disagree by more than 10%, so a forecast that has drifted is visible. Two limits:
+
+- **Recency:** only a measurement taken in the current hour or the one before counts. An older reading served from a cache doesn't stand in for now.
+- **Newer forecasts win:** a forecast issued after the measurement keeps its value.
+
+(Decided in issue #75, October 2026.)
+
 ### Flagged readings
 
 USGS marks recent data as provisional. That is normal and does not affect evaluation. Some qualifiers mean the value itself is unreliable: ice-affected discharge, equipment malfunction, and estimated values. Estimated values are common during ice periods. Those readings are shown with their qualifier, but evaluation treats them as unknown. While a gauge reports estimates, a flow limit can stay unknown for weeks in winter; revisit this during backtesting (M9) if that turns out to hide too much. (Decided in issue #41, October 2026.)

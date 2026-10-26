@@ -11,6 +11,7 @@ import {
 } from '@rowing/core';
 import { z } from 'zod';
 import type { FlowForecastSource, FlowSource, WeatherSource } from '../adapters/types.ts';
+import { withLatestMeasurements } from './latestMeasurements.ts';
 import { riverHours } from './riverHours.ts';
 import { type CachedResult, cacheTtlMs, type SourceCache } from './sourceCache.ts';
 
@@ -191,14 +192,20 @@ export async function getConditions(
   );
   const weatherByTime = new Map((weather ?? []).map((p) => [Date.parse(p.time), p]));
   const displayHours = riverHours(times, display?.forecast ?? [], display?.latest ?? []);
+  // Station readings are measurements; forecast-based current weather is not.
+  const measured = [
+    ...(current?.basis === 'station' ? current.readings : []),
+    ...(display?.latest ?? []),
+  ];
   const forecast: ForecastPoint[] = times.map((time, i) => {
     const w = weatherByTime.get(Date.parse(time));
     const r = displayHours[i];
-    return {
+    const point = {
       time,
       values: { ...w?.values, ...r?.values },
       provenance: { ...w?.provenance, ...r?.provenance },
     };
+    return i === 0 ? withLatestMeasurements(point, measured) : point;
   });
 
   const flowSeries = (input.flowGaugeRefs ?? []).map((gaugeRef, i) => {
@@ -209,9 +216,11 @@ export async function getConditions(
       points: times.map((time, h) => {
         const hour = hours[h];
         const flow = hour?.provenance.flow;
-        return flow
+        const point: ForecastPoint = flow
           ? { time, values: { flow: hour?.values.flow ?? null }, provenance: { flow } }
           : { time, values: {}, provenance: {} };
+        const flowReadings = (data?.latest ?? []).filter((reading) => reading.metric === 'flow');
+        return h === 0 ? withLatestMeasurements(point, flowReadings) : point;
       }),
     };
   });
