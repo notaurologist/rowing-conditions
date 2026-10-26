@@ -14,6 +14,8 @@ Requires Node 26 and pnpm 12.15.0.
 nvm install    # reads .nvmrc
 npm install -g pnpm@12.15.0
 pnpm install   # also turns on the pre-push hook
+docker compose up -d   # local Postgres 18 (needs Docker)
+pnpm db:migrate
 pnpm dev       # api on http://localhost:3000, web on http://localhost:5173
 ```
 
@@ -28,6 +30,7 @@ pnpm dev       # api on http://localhost:3000, web on http://localhost:5173
 | `pnpm format` | Formats with Biome |
 | `pnpm check` | Lint, typecheck, and test; runs before every push and in CI |
 | `pnpm coverage` | Tests with coverage; text summary plus an HTML report in `coverage/` |
+| `pnpm db:migrate` | Applies database migrations (local Docker Postgres unless `DATABASE_URL` is set) |
 
 `git push --no-verify` skips the pre-push check once.
 

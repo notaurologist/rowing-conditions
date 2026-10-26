@@ -15,7 +15,8 @@
     "check": "pnpm lint && pnpm typecheck && pnpm test",
     "coverage": "vitest run --coverage",
     "prepare": "git config core.hooksPath .githooks",
-    "fixtures:record": "pnpm --filter @rowing/api fixtures:record"
+    "fixtures:record": "pnpm --filter @rowing/api fixtures:record",
+    "db:migrate": "pnpm --filter @rowing/api db:migrate"
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.3",

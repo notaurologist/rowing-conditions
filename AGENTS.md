@@ -46,14 +46,14 @@ pnpm format         # Biome format, writes changes
 pnpm check          # lint, typecheck, test; what the pre-push hook and CI run
 pnpm coverage       # tests with v8 coverage; add --project @rowing/core for one package
 pnpm fixtures:record [prefix]  # re-record API fixtures (live network); manual only, never in the pre-push check or CI
+docker compose up -d  # local Postgres 18 (docker-compose.yml)
+pnpm db:migrate     # apply Drizzle migrations; DATABASE_URL defaults to the local container
+pnpm --filter @rowing/api db:generate  # after changing apps/api/src/db/schema.ts; commit the new migration
 ```
 
 Run one package's script with `pnpm --filter @rowing/api <script>` (or `@rowing/web`, `@rowing/core`).
 
 Fixtures live in `apps/api/test/fixtures/<source>/<name>.json` as `{ url, recordedAt, status, body }`. The recorder (`apps/api/scripts/record-fixtures.ts`) builds its URLs with the adapter's own request builders and sends no API key. Biome skips fixtures so re-recording doesn't churn formatting.
-
-Added later, with its milestone: `pnpm db:migrate` (M4).
-
 ## Conventions
 
 - Small, focused changes. One milestone task per branch or PR.
