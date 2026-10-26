@@ -4,6 +4,7 @@ import type {
   Gauge,
   Metric,
   NearbyGauge,
+  Place,
   Reading,
   SourceId,
 } from '@rowing/core';
@@ -64,4 +65,9 @@ export interface WeatherSource {
   ): Promise<SourceResult<ForecastPoint[]>>;
   getCurrent(lat: number, lon: number): Promise<SourceResult<CurrentWeather>>;
   getAlerts(lat: number, lon: number): Promise<SourceResult<Alert[]>>;
+}
+
+// Finds places by name, for picking a location (Nominatim). Methods never throw.
+export interface Geocoder {
+  search(query: string): Promise<SourceResult<Place[]>>;
 }

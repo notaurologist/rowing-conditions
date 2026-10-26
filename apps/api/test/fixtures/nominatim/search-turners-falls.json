@@ -1,0 +1,28 @@
+{
+  "url": "https://nominatim.openstreetmap.org/search?q=Turners+Falls&format=jsonv2&countrycodes=us&limit=5",
+  "recordedAt": "2026-10-26T02:06:30.010Z",
+  "status": 200,
+  "body": [
+    {
+      "place_id": 355391811,
+      "licence": "Data © OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+      "osm_type": "node",
+      "osm_id": 158895121,
+      "lat": "42.6083091",
+      "lon": "-72.5567883",
+      "category": "place",
+      "type": "suburb",
+      "place_rank": 19,
+      "importance": 0.40647197265303264,
+      "addresstype": "suburb",
+      "name": "Turners Falls",
+      "display_name": "Turners Falls, Montague, Franklin County, Massachusetts, 01376, United States",
+      "boundingbox": [
+        "42.5883091",
+        "42.6283091",
+        "-72.5767883",
+        "-72.5367883"
+      ]
+    }
+  ]
+}

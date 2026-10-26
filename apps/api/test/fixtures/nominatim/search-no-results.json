@@ -1,0 +1,6 @@
+{
+  "url": "https://nominatim.openstreetmap.org/search?q=qqzzxx+no+such+place&format=jsonv2&countrycodes=us&limit=5",
+  "recordedAt": "2026-10-26T02:06:30.491Z",
+  "status": 200,
+  "body": []
+}

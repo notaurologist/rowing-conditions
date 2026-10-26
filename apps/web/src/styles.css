@@ -68,3 +68,210 @@ button {
   background: var(--surface);
   border-radius: 4px;
 }
+
+button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--bg);
+}
+
+input[type="text"],
+select {
+  font: inherit;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--fg);
+  width: 100%;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.hint,
+.coordinates,
+.gauge-detail {
+  color: var(--muted);
+}
+
+.notice {
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.notice-error {
+  border-left: 4px solid #c0392b;
+}
+
+.notice p {
+  margin: 0 0 8px;
+}
+
+.location-setup {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.location-setup h2 {
+  margin: 0;
+}
+
+.location-setup p {
+  margin: 0;
+}
+
+.setup-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.location-map {
+  height: 50vh;
+  min-height: 260px;
+  max-height: 480px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.map-loading {
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+}
+
+.gauge-choice {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  margin: 0;
+  padding: 8px 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.gauge-choice legend {
+  font-weight: 600;
+  padding: 0 4px;
+}
+
+.gauge-option {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  cursor: pointer;
+}
+
+.gauge-option input {
+  margin-top: 4px;
+}
+
+.gauge-option > span {
+  display: flex;
+  flex-direction: column;
+}
+
+.gauge-name {
+  font-weight: 500;
+}
+
+.tag {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 0 6px;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  color: var(--accent);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.field > span {
+  font-weight: 600;
+}
+
+.location-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px 12px;
+}
+
+.location-bar .field {
+  flex: 1 1 200px;
+}
+
+.gauge-summary {
+  color: var(--muted);
+  flex-basis: 100%;
+  order: 1;
+}
+
+input[type="search"] {
+  font: inherit;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--fg);
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.place-search {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.search-row {
+  display: flex;
+  gap: 8px;
+}
+
+.place-results {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.place-results button {
+  width: 100%;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+}
+
+.attribution {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-top: 6px;
+}
+
+.attribution a {
+  color: inherit;
+}

@@ -7,6 +7,11 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  NOMINATIM_BASE_URL,
+  NOMINATIM_MIN_INTERVAL_MS,
+  searchUrl,
+} from '../src/adapters/nominatim/requests.ts';
 import { gaugeUrl, nearbyGaugesUrl, stageFlowUrl } from '../src/adapters/nwps/requests.ts';
 import {
   alertsUrl,
@@ -61,6 +66,8 @@ const fixtures: Record<string, string> = {
     sixHoursAgo.toISOString(),
     now.toISOString(),
   ),
+  'nominatim/search-turners-falls': searchUrl('Turners Falls'),
+  'nominatim/search-no-results': searchUrl('qqzzxx no such place'),
 };
 
 // Fixtures trimmed to keep the repo small. The trim is recorded in the fixture, so it's never
@@ -118,10 +125,18 @@ if (selected.length === 0) {
 }
 
 let failed = 0;
+let lastNominatimRequest = 0;
 for (const [name, url] of selected) {
+  // Nominatim allows one request per second.
+  if (url.startsWith(NOMINATIM_BASE_URL)) {
+    const wait = lastNominatimRequest + NOMINATIM_MIN_INTERVAL_MS - Date.now();
+    if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
+    lastNominatimRequest = Date.now();
+  }
   const response = await fetch(url, {
     signal: AbortSignal.timeout(30_000),
-    // NWS rejects requests without a User-Agent. The recorder identifies itself by repository.
+    // NWS rejects requests without a User-Agent, and Nominatim requires one that identifies
+    // the app. The recorder identifies itself by repository.
     headers: {
       'User-Agent':
         'rowing-conditions fixture recorder (github.com/notaurologist/rowing-conditions)',

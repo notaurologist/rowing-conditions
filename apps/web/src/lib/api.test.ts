@@ -1,7 +1,13 @@
 import { createApp } from '@rowing/api';
 import type { NearbyGauge } from '@rowing/core';
 import { describe, expect, it, vi } from 'vitest';
-import { apiErrorMessage, createApiClient, fetchConditions, fetchNearbyGauges } from './api.ts';
+import {
+  apiErrorMessage,
+  createApiClient,
+  fetchConditions,
+  fetchNearbyGauges,
+  fetchPlaces,
+} from './api.ts';
 
 const gauge: NearbyGauge = {
   ref: 'usgs:USGS-01170500',
@@ -82,6 +88,25 @@ describe('API client', () => {
     const error = await fetchNearbyGauges(client, { lat: 123, lon: 0 }).catch((e) => e);
     expect(error).toBeInstanceOf(Error);
     expect(apiErrorMessage(error)).toMatch(/400/);
+  });
+
+  it('searches places and shows the API message when search is off', async () => {
+    const place = {
+      name: 'Turners Falls',
+      displayName: 'Turners Falls, MA',
+      lat: 42.6,
+      lon: -72.55,
+    };
+    const searchPlaces = vi.fn(async () => ({ ok: true as const, data: [place] }));
+    const on = clientFor({ searchPlaces }).client;
+    await expect(fetchPlaces(on, 'Turners Falls')).resolves.toEqual([place]);
+    expect(searchPlaces).toHaveBeenCalledWith('Turners Falls');
+
+    const off = clientFor().client;
+    const error = await fetchPlaces(off, 'Turners Falls').catch((e) => e);
+    expect(apiErrorMessage(error)).toBe(
+      'Place search is turned off. Pick the location on the map.',
+    );
   });
 
   it('describes a network failure', () => {

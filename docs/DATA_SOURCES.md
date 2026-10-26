@@ -176,6 +176,24 @@ The reasons: a nearby station measures conditions rather than predicting them, b
 
 ---
 
+## OpenStreetMap Nominatim (place search)
+
+Chosen by the owner for location search in #25. Checked against the live API on October 26, 2026.
+
+- **Usage policy:** https://operations.osmfoundation.org/policies/nominatim/ . Free and needs no key, but it comes with conditions:
+  - **At most 1 request per second** for the whole app, from a single thread. The adapter's gate enforces this.
+  - **No autocomplete.** The web app searches only when the user submits.
+  - **An identifying `User-Agent`.** The adapter sends `NWS_USER_AGENT`.
+  - **Cache results.** Repeated identical queries can get a client blocked. Results are cached for 30 days.
+  - **Attribution:** "© OpenStreetMap contributors" is shown with the results. The data is under ODbL.
+  - **It must be possible to switch off without a software update**: `GEOCODING_ENABLED=false`.
+  - **Service is best effort.** Access can be withdrawn, especially from commercial apps. If a paid tier arrives, plan for a commercial geocoder or our own instance.
+- **Request:** `GET https://nominatim.openstreetmap.org/search?q={query}&format=jsonv2&countrycodes=us&limit=5`
+- **Response:** a JSON array. Each result has `place_id`, `lat` and `lon` (strings), `name` (can be empty), `display_name`, `category`, `type`, `importance` and `boundingbox`. A query with no match returns `[]` with status 200.
+- **Quirks:** coordinates are strings. Convert them in the adapter, and fall back to `display_name` when `name` is empty.
+
+---
+
 ## Sunrise and sunset
 
 Computed locally with the `suncalc` library. No external API.
