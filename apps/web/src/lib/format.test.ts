@@ -5,6 +5,7 @@ import {
   formatDistanceKm,
   formatNumber,
   formatTime,
+  gaugeId,
   listMetrics,
   tidyGaugeName,
 } from './format.ts';
@@ -89,5 +90,12 @@ describe('tidyGaugeName', () => {
     );
     expect(tidyGaugeName('FARMINGTON R AT RAINBOW, CT.')).toBe('Farmington R at Rainbow, CT');
     expect(tidyGaugeName('McDowell Creek at Oak, NC')).toBe('McDowell Creek at Oak, NC');
+  });
+});
+
+describe('gaugeId', () => {
+  it('shows a gauge reference the way its agency writes it', () => {
+    expect(gaugeId('usgs:USGS-01170500')).toBe('USGS 01170500');
+    expect(gaugeId('nwps:MNTM3')).toBe('NWPS MNTM3');
   });
 });

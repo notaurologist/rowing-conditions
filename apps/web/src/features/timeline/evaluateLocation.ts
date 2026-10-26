@@ -14,7 +14,7 @@ import {
   type TimelineResult,
 } from '@rowing/core';
 import type { Conditions } from '../../lib/api.ts';
-import { tidyGaugeName } from '../../lib/format.ts';
+import { gaugeId, tidyGaugeName } from '../../lib/format.ts';
 
 export interface TimelineEvaluation {
   ruleSet: RuleSet;
@@ -37,9 +37,7 @@ export interface LocationEvaluation {
 
 // "Connecticut River at Montague City, MA", or "USGS 01170500" when the name didn't load.
 function gaugeName(ref: GaugeRef, name: string | undefined): string {
-  if (name) return tidyGaugeName(name);
-  const id = ref.slice(ref.indexOf(':') + 1);
-  return ref.startsWith('usgs:') ? `USGS ${id.replace(/^USGS-/, '')}` : `NWPS ${id}`;
+  return name ? tidyGaugeName(name) : gaugeId(ref);
 }
 
 // Evaluates the forecast once per rule set, for the answer, the chart and the period list. Uses

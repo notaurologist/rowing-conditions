@@ -78,12 +78,14 @@ Real policies combine these patterns:
 | Club | Rules (summarized) | Source |
 |---|---|---|
 | Albany Rowing Center (NY) | Water at least 39°F to launch anything. Water at or below 50°F: only doubles, quads, fours, eights. Singles and pairs need water above 50°F and air plus water at least 90°F. Below 40°F air or 50°F water, boats stay within 100 yards of a launch. | [5] |
-| Des Moines Rowing Club (IA) | Rowing allowed 60 min before sunrise to 30 min after sunset if other conditions are met. Air over 36°F, no ice. Flow limits measured at a specific USGS gauge. No club singles at 15 mph wind. | [8] |
+| Des Moines Rowing Club (IA) | Rowing allowed 60 min before sunrise to 30 min after sunset if other conditions are met, with a bow light in low light. No rowing on club equipment when air plus water is below 100°F; eights in cold weather need air over 36°F and wind under 10 mph. Dock closed above 13,000 cfs and experienced crews only from 10,000 to 12,999 cfs, at the Des Moines River at 2nd Avenue gauge (USGS 05482000). No club singles at 15 mph wind; less experienced scullers not above 10 mph. | [8] |
 | Indianapolis Rowing Center (IN) | Off the water if lightning within 15 miles. Small boats advised not to row over 15 mph wind. Combined minimum 90°F small boats, 80°F for 4+ oars. Sunrise to sunset unless lit. | [7] |
-| Pittsburgh Rowing Club (PA) | Flow bands in cfs determine launch ratios and coach certification. Use the more restrictive of flow and temperature zones. Daylight relaxes one zone. Max 8 mph sustained wind against the current. | [10] |
+| Pittsburgh Rowing Club (PA) | Six flow zones, from under 28,000 cfs to 50,000–60,000 cfs, determine launch ratios and coach certification; the page shows flow from the Ohio River at Sewickley gauge (USGS 03086000). Use the more restrictive of flow and temperature zones. Daylight relaxes one zone, except the highest. In the highest zone, max 8 mph sustained wind against the current. | [10] |
 | Utah Crew (UT) | No boats if wind chill below 25°F. Restrictions when combined temperature below 90°F. No boats on the main course if water below 40°F. | [6] |
 | A Connecticut River club (MA) | Club boats only when flow is at or below 20 kcfs at the Montague gauge (NWS ID MNTM3). Members check the NWS hydrograph (3 days observed, 3 days forecast) and an hourly weather forecast before going out. | [19] |
 | Cantabs (Cambridge, UK) | Avoid boating with ice on the river, with a specific ice thickness cutoff. Follows RowSafe. | [14] |
+
+The rule set editor shows a few of these, checked against their sources in October 2026, under "How some clubs word their limits" (`packages/core/src/rules/examples.ts`). They are shown, never prefilled or applied, so none becomes a default (decision 0001). Rows whose source couldn't be read or isn't public are left out.
 
 ### What local practice adds
 

@@ -15,6 +15,7 @@ import { api, apiErrorMessage, fetchNearbyGauges } from '../../lib/api.ts';
 import { metricName, tidyGaugeName, unitSymbol } from '../../lib/format.ts';
 import { useAppStorage, useStoredData } from '../../lib/useStoredData.ts';
 import { newId } from '../location-setup/newLocation.ts';
+import { LimitExamples } from './LimitExamples.tsx';
 import { selectRuleSet } from './ruleSetChoice.ts';
 import {
   addLimit,
@@ -154,6 +155,7 @@ export function RuleSetEditor({ ruleSet, location, units, onDone }: Props) {
         Enter your club’s limits, or your own. The app has no limits of its own: it only shows when
         conditions are within or outside the limits you enter.
       </p>
+      <LimitExamples />
 
       <form className="rule-editor-form" onSubmit={save} noValidate>
         <label className="field">
