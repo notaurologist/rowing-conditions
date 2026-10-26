@@ -504,7 +504,8 @@ No secrets in code or fixtures.
   - Writes are validated first. A failed write (quota, blocked storage) throws to the caller, which must show it.
 - A root error boundary shows a message and a reload button instead of a blank page.
 - Charts with visx. The 48-hour timeline is a feature folder of its own (`features/timeline/`) with its chart components kept independent of data fetching, so they can be tested with fixture data.
-- Map with Leaflet (react-leaflet), OpenStreetMap tiles, respecting the tile usage policy and attribution.
+- Map with Leaflet (react-leaflet), OpenStreetMap tiles, respecting the tile usage policy and attribution. The tile URL is configurable (`VITE_TILE_URL`), as the policy asks, and Leaflet loads lazily because it needs `window`.
+- **Location setup** (`src/features/location-setup/`): pick a point on the map or use the browser's location, then choose a gauge from `/gauges/nearby`. `defaultGauge` (`packages/core/src/geo/defaultGauge.ts`) suggests the nearest gauge reporting flow, else gauge height, else water temperature; with none, the suggestion is weather-only. The user can pick any listed gauge or weather-only. Each gauge shows its distance and what it reports. Saving waits for the gauge list, so the saved choice is one the user saw.
 - PWA via `vite-plugin-pwa`. Offline: show last loaded conditions clearly marked with their age.
 - Accessibility: status must never be communicated by color alone. Use labels, patterns, or icons alongside color.
 
