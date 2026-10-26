@@ -5,24 +5,14 @@ import { createNominatimAdapter, normalizeQuery } from './nominatim.ts';
 
 const UA = 'rowing-conditions-test (test@example.test)';
 
-function adapter(respond = fixture('nominatim/search-turners-falls')) {
+function adapter(
+  respond = fixture('nominatim/search-turners-falls'),
+  gate = vi.fn(async () => {}),
+) {
   const fetch = routedFetch([{ path: '/search', respond }]);
   const logger: Logger = { warn: vi.fn() };
-  const waits: number[] = [];
-  let clock = 0;
-  const nominatim = createNominatimAdapter({
-    userAgent: UA,
-    fetch,
-    logger,
-    minIntervalMs: 1000,
-    now: () => clock,
-    // A fake pause that advances the fake clock, so the gate can be checked without waiting.
-    sleep: async (ms) => {
-      waits.push(ms);
-      clock += ms;
-    },
-  });
-  return { nominatim, fetch, logger, waits, tick: (ms: number) => (clock += ms) };
+  const nominatim = createNominatimAdapter({ userAgent: UA, fetch, logger, gate });
+  return { nominatim, fetch, logger, gate };
 }
 
 describe('search', () => {
@@ -55,7 +45,7 @@ describe('search', () => {
 
   it('sends the identifying User-Agent the usage policy requires', async () => {
     const fetch = vi.fn(async (_url: string, _init?: RequestInit) => json([])());
-    const nominatim = createNominatimAdapter({ userAgent: UA, fetch, sleep: async () => {} });
+    const nominatim = createNominatimAdapter({ userAgent: UA, fetch, gate: async () => {} });
     await nominatim.search('Turners Falls');
     const headers = new Headers(fetch.mock.calls[0]?.[1]?.headers);
     expect(headers.get('User-Agent')).toBe(UA);
@@ -103,32 +93,41 @@ describe('search', () => {
 });
 
 describe('the one-request-per-second gate', () => {
-  it('spaces back-to-back requests by the minimum interval', async () => {
-    const { nominatim, waits } = adapter();
-    await Promise.all([nominatim.search('a'), nominatim.search('b'), nominatim.search('c')]);
-    expect(waits).toEqual([1000, 1000]);
-  });
-
-  it('does not wait when the last request was long enough ago', async () => {
-    const { nominatim, waits, tick } = adapter();
+  it('waits on the gate before every request', async () => {
+    const order: string[] = [];
+    const gate = vi.fn(async () => {
+      order.push('gate');
+    });
+    const { nominatim, fetch } = adapter(fixture('nominatim/search-turners-falls'), gate);
+    const fetchCalls = () => fetch.calls.length;
     await nominatim.search('a');
-    tick(1500);
+    order.push(`fetched ${fetchCalls()}`);
     await nominatim.search('b');
-    expect(waits).toEqual([]);
+    order.push(`fetched ${fetchCalls()}`);
+    expect(order).toEqual(['gate', 'fetched 1', 'gate', 'fetched 2']);
   });
 
-  it('waits only for the rest of the interval', async () => {
-    const { nominatim, waits, tick } = adapter();
+  it('waits on the gate after a failed request too', async () => {
+    const { nominatim, gate } = adapter(json({}, 500));
     await nominatim.search('a');
-    tick(300);
     await nominatim.search('b');
-    expect(waits).toEqual([700]);
+    expect(gate).toHaveBeenCalledTimes(2);
   });
 
-  it('keeps spacing requests after one fails', async () => {
-    const { nominatim, waits } = adapter(json({}, 500));
-    await Promise.all([nominatim.search('a'), nominatim.search('b')]);
-    expect(waits).toEqual([1000]);
+  it('sends nothing and returns an error when the gate fails, and logs it', async () => {
+    const gate = vi.fn(async () => {
+      throw new Error('connection refused');
+    });
+    const { nominatim, fetch, logger } = adapter(fixture('nominatim/search-turners-falls'), gate);
+    expect(await nominatim.search('a')).toEqual({
+      ok: false,
+      error: { source: 'nominatim', kind: 'unavailable', message: 'Request gate unavailable' },
+    });
+    expect(fetch.calls).toEqual([]);
+    expect(logger.warn).toHaveBeenCalledWith(
+      'nominatim: request gate unavailable, request not sent',
+      { error: 'connection refused' },
+    );
   });
 });
 

@@ -182,7 +182,7 @@ The reasons: a nearby station measures conditions rather than predicting them, b
 Chosen by the owner for location search in #25. Checked against the live API on October 26, 2026.
 
 - **Usage policy:** https://operations.osmfoundation.org/policies/nominatim/ . Free and needs no key, but it comes with conditions:
-  - **At most 1 request per second** for the whole app, from a single thread. The adapter's gate enforces this.
+  - **At most 1 request per second** for the whole app, from a single thread. A gate shared through Postgres enforces this across API instances (`ARCHITECTURE.md`, Data fetching).
   - **No autocomplete.** The web app searches only when the user submits.
   - **An identifying `User-Agent`.** The adapter sends `NWS_USER_AGENT`.
   - **Cache results.** Repeated identical queries can get a client blocked. Results are cached for 30 days.

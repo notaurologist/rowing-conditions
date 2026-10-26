@@ -1,0 +1,188 @@
+{
+  "id": "f8ff8587-f8eb-490f-966e-9eace9e9c933",
+  "prevId": "ed749bd2-2885-4212-a5f4-4791193ca9ff",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.gauges": {
+      "name": "gauges",
+      "schema": "",
+      "columns": {
+        "ref": {
+          "name": "ref",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "source": {
+          "name": "source",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "lat": {
+          "name": "lat",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "lon": {
+          "name": "lon",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "metrics": {
+          "name": "metrics",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::text[]"
+        },
+        "has_flow_forecast": {
+          "name": "has_flow_forecast",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "linked_ref": {
+          "name": "linked_ref",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "gauges_linked_ref": {
+          "name": "gauges_linked_ref",
+          "columns": [
+            {
+              "expression": "linked_ref",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "gauges_source": {
+          "name": "gauges_source",
+          "value": "\"gauges\".\"source\" in ('usgs', 'nwps')"
+        },
+        "gauges_ref_matches_source": {
+          "name": "gauges_ref_matches_source",
+          "value": "\"gauges\".\"ref\" like \"gauges\".\"source\" || ':%'"
+        },
+        "gauges_lat": {
+          "name": "gauges_lat",
+          "value": "\"gauges\".\"lat\" between -90 and 90"
+        },
+        "gauges_lon": {
+          "name": "gauges_lon",
+          "value": "\"gauges\".\"lon\" between -180 and 180"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.request_gates": {
+      "name": "request_gates",
+      "schema": "",
+      "columns": {
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "last_start": {
+          "name": "last_start",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.source_cache": {
+      "name": "source_cache",
+      "schema": "",
+      "columns": {
+        "key": {
+          "name": "key",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "payload": {
+          "name": "payload",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "fetched_at": {
+          "name": "fetched_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "source_cache_expires_after_fetch": {
+          "name": "source_cache_expires_after_fetch",
+          "value": "\"source_cache\".\"expires_at\" >= \"source_cache\".\"fetched_at\""
+        }
+      },
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

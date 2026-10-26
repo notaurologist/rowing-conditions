@@ -452,7 +452,7 @@ Adapter rules:
   - **Quality control:** station values that NWS quality control marked rejected (`X`) or questioned (`Q`) are `unreliable`.
   - **Alerts:** times are normalized to UTC. A missing `ends` falls back to `expires`, and an unknown severity becomes `Unknown`.
   - **`Alert`** is a schema in `packages/core/src/types/alert.ts`.
-- **Nominatim** (place search, not a data source): every request goes through an in-process gate, one at a time, each starting at least 1.1 s after the previous one, so the app stays under the policy's one request per second. The gate is per process; the API runs as one. Results are cached for 30 days by normalized query (trimmed, single-spaced, lowercase). A result with coordinates out of range is dropped and logged.
+- **Nominatim** (place search, not a data source): every request first reserves a start time from a gate shared through Postgres (`createDatabaseGate` in `apps/api/src/services/requestGate.ts`, table `request_gates`), so each starts at least 1.1 s after the previous one across every API instance, and the app stays under the policy's one request per second. If the gate can't be checked, the request isn't sent and search returns an error with kind `unavailable`. Results are cached for 30 days by normalized query (trimmed, single-spaced, lowercase). A result with coordinates out of range is dropped and logged.
 - **NWPS forecast:** `getStageFlow` turns the 6-hourly forecast into hourly `ForecastPoint`s with `interpolateHourly` (`packages/core/src/series/interpolate.ts`). It's linear between steps and never extrapolates. An hour next to a missing step is null. Hours between steps carry `interpolated: true`, and every hour's provenance `asOf` is the forecast issue time. A gauge without a forecast returns `forecast: []` and `issuedAt: null`.
 - Convert to SI inside the adapter. Nothing outside an adapter knows a source's native units.
 - Set timeouts on every request (default 10 s).
@@ -488,6 +488,7 @@ Fetch on demand, cache in Postgres. No scheduled jobs in the MVP.
 MVP tables:
 
 - `source_cache`: `key` (pk), `payload` (jsonb, normalized data), `fetched_at`, `expires_at`.
+- `request_gates`: `name` (pk, e.g. `nominatim`), `last_start` (the latest reserved start time). One row per rate-limited service.
 - `gauges`: `ref` (pk, e.g. `usgs:USGS-01170500`, `nwps:MNTM3`), `source`, `name`, `lat`, `lon`, `metrics` (text[]), `has_flow_forecast` (bool), `linked_ref` (the matching gauge in the other source, when known), `updated_at`. Populated lazily from nearby searches.
 
 Migrations via `drizzle-kit`, committed to the repo:

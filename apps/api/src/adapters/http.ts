@@ -8,7 +8,8 @@ export type ErrorSource = SourceId | 'nominatim';
 
 export interface SourceError {
   source: ErrorSource;
-  kind: 'timeout' | 'network' | 'http' | 'parse';
+  // 'unavailable': the request wasn't sent, for example because its rate gate couldn't be checked.
+  kind: 'timeout' | 'network' | 'http' | 'parse' | 'unavailable';
   message: string;
   status?: number;
 }
