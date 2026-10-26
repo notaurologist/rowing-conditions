@@ -45,3 +45,10 @@ export const gauges = pgTable(
     index('gauges_linked_ref').on(t.linkedRef),
   ],
 );
+
+// Shared request gates for services that limit how often the whole app may call them,
+// such as Nominatim. One row per gate. See ARCHITECTURE.md (Data fetching).
+export const requestGates = pgTable('request_gates', {
+  name: text('name').primaryKey(), // e.g. 'nominatim'
+  lastStart: timestamp('last_start', { withTimezone: true }).notNull(), // the latest reserved start
+});

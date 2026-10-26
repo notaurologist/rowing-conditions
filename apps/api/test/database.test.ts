@@ -7,7 +7,11 @@ describe('createTestDatabase', () => {
     const tables = await client.query<{ tablename: string }>(
       "select tablename from pg_tables where schemaname = 'public' order by 1",
     );
-    expect(tables.rows.map((r) => r.tablename)).toEqual(['gauges', 'source_cache']);
+    expect(tables.rows.map((r) => r.tablename)).toEqual([
+      'gauges',
+      'request_gates',
+      'source_cache',
+    ]);
     await expect(
       client.query(
         "insert into gauges (ref, source, name, lat, lon) values ('noaa:X', 'noaa', 'X', 0, 0)",

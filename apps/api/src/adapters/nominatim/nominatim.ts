@@ -1,7 +1,8 @@
 import { Place } from '@rowing/core';
+import type { RequestGate } from '../../services/requestGate.ts';
 import { consoleLogger, type FetchFn, fetchJson, type Logger, type SourceResult } from '../http.ts';
 import type { Geocoder } from '../types.ts';
-import { NOMINATIM_MIN_INTERVAL_MS, searchUrl } from './requests.ts';
+import { searchUrl } from './requests.ts';
 import { NominatimSearch } from './schemas.ts';
 
 export interface NominatimAdapterOptions {
@@ -9,9 +10,9 @@ export interface NominatimAdapterOptions {
   fetch?: FetchFn;
   timeoutMs?: number;
   logger?: Logger;
-  minIntervalMs?: number;
-  now?: () => number; // milliseconds, for the gate
-  sleep?: (ms: number) => Promise<void>;
+  // Nominatim's usage policy allows at most one request per second for the whole app. Every
+  // request waits on this gate first; in the app it is shared through Postgres (requestGate.ts).
+  gate: RequestGate;
 }
 
 /** The form of a query used for cache keys: trimmed, single-spaced, lowercase. */
@@ -19,35 +20,8 @@ export function normalizeQuery(query: string): string {
   return query.trim().replace(/\s+/g, ' ').toLowerCase();
 }
 
-// Nominatim's usage policy allows at most one request per second for the whole app, from a
-// single thread. Requests go through this gate one at a time, each starting at least
-// minIntervalMs after the previous one started. The gate is per process; the API runs as one.
-function createGate(
-  minIntervalMs: number,
-  now: () => number,
-  sleep: (ms: number) => Promise<void>,
-) {
-  let lastStart = Number.NEGATIVE_INFINITY;
-  let queue: Promise<unknown> = Promise.resolve();
-  return <T>(task: () => Promise<T>): Promise<T> => {
-    const run = queue.then(async () => {
-      const wait = lastStart + minIntervalMs - now();
-      if (wait > 0) await sleep(wait);
-      lastStart = now();
-      return task();
-    });
-    queue = run.catch(() => {});
-    return run;
-  };
-}
-
 export function createNominatimAdapter(options: NominatimAdapterOptions): Geocoder {
   const logger = options.logger ?? consoleLogger;
-  const gate = createGate(
-    options.minIntervalMs ?? NOMINATIM_MIN_INTERVAL_MS,
-    options.now ?? Date.now,
-    options.sleep ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms))),
-  );
   const request = {
     source: 'nominatim' as const,
     fetch: options.fetch ?? globalThis.fetch,
@@ -58,7 +32,19 @@ export function createNominatimAdapter(options: NominatimAdapterOptions): Geocod
 
   return {
     async search(query: string): Promise<SourceResult<Place[]>> {
-      const result = await gate(() => fetchJson(searchUrl(query.trim()), NominatimSearch, request));
+      try {
+        await options.gate();
+      } catch (error) {
+        // Without the gate the app can't be sure it stays under the limit, so it doesn't ask.
+        logger.warn('nominatim: request gate unavailable, request not sent', {
+          error: error instanceof Error ? error.message : String(error),
+        });
+        return {
+          ok: false,
+          error: { source: 'nominatim', kind: 'unavailable', message: 'Request gate unavailable' },
+        };
+      }
+      const result = await fetchJson(searchUrl(query.trim()), NominatimSearch, request);
       if (!result.ok) return result;
 
       const places: Place[] = [];
