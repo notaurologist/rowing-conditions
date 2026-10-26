@@ -8,7 +8,7 @@ The app reports conditions. It never says whether conditions are safe or whether
 
 ## Setup
 
-Requires Node 26 and pnpm 12.15.0.
+Requires Node 24 and pnpm 12.15.0.
 
 ```bash
 nvm install    # reads .nvmrc
