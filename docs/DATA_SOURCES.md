@@ -1,6 +1,6 @@
 # Data Sources
 
-Status: Draft v0.3. USGS verified October 25, 2026; other sources as of October 2026.
+Status: Draft v0.4. USGS and NWPS verified October 25, 2026; other sources as of October 2026.
 
 **Before implementing or changing any adapter, verify the details below against the source's official documentation.** APIs change (USGS is mid-migration as of this writing). If the docs differ from this file, follow the docs and update this file in the same change.
 
@@ -98,28 +98,36 @@ Most reliability codes come with a null value, so those readings are already `mi
 
 ## NOAA National Water Prediction Service (US flow forecasts)
 
-- **Docs:** https://api.water.noaa.gov/nwps/v1/docs/ (OpenAPI). Overview: https://water.noaa.gov/about/api
+Verified against the live API on October 25, 2026 (issue #17).
+
+- **Docs:** https://api.water.noaa.gov/nwps/v1/docs/ (Swagger UI). The machine-readable spec is at `/nwps/v1/docs/swagger.json`. Overview: https://water.noaa.gov/about/api
 - **Base URL:** `https://api.water.noaa.gov/nwps/v1`
 - **What it provides:** official NWS streamflow forecasts and stream observations, flood categories, and location metadata for NWS forecast points. This is the data behind the `water.noaa.gov/gauges/<id>` hydrograph pages clubs link to.
-- **Coverage:** only gauges where a River Forecast Center issues forecasts. Many gauges have observations but no forecast; handle that as a normal case.
-- **History:** the API holds no historical observations beyond crest and low-water history. Backtesting uses USGS `continuous` data instead.
-- **Auth:** none known. Confirm in the docs.
+- **Coverage:** only some gauges have a forecast. In the box around Turners Falls, 3 of 5 NWPS gauges do: Montague (`MNTM3`), West Deerfield (`WDEM3`) and Colrain (`CRNM3`). Northfield (`NFDM3`) and Erving (`EROM3`) have observations only. Handle a missing forecast as a normal case.
+- **History:** `stageflow` observed data covers about the last 30 days at 15-minute steps. The API holds nothing older. Backtesting uses USGS `continuous` data instead.
+- **Auth:** none needed. The spec declares HTTP Basic auth, but every endpoint answered without credentials. No rate limits are documented, and no rate-limit headers are returned.
+- **Format:** plain JSON, not GeoJSON. Times are ISO 8601 with `Z`.
 
 ### Endpoints we use
 
 | Endpoint | Use |
 |---|---|
-| `GET /gauges/{lid}` | Gauge metadata, including the linked USGS site when there is one |
-| `GET /gauges/{lid}/stageflow` | Observed and forecast stage and flow time series |
-| `GET /gauges` (with bounding box filters) | Finding forecast points near a location |
+| `GET /gauges/{identifier}` | Gauge metadata. `identifier` is the NWS location ID (`MNTM3`) **or the USGS site number** (`01170500`), so one request links a USGS gauge to its NWPS forecast point. An unknown ID returns 404 with `{ code: 5, message: "[ID] could not find gauge ID" }`, or `could not find USGS ID`. |
+| `GET /gauges/{identifier}/stageflow` | `{ observed, forecast }`. Each has `issuedTime`, units, and `data: [{ validTime, generatedTime, primary, secondary }]`. `primary` is stage in `ft`; `secondary` is flow in `kcfs`. |
+| `GET /gauges?bbox.xmin&bbox.ymin&bbox.xmax&bbox.ymax&srid=EPSG_4326` | `{ gauges: [...] }` near a location. List entries have **`usgsId: null`**, so linking needs the single-gauge request. |
 
-### Identifiers and quirks
+### Fields that matter
 
-- Gauges use 5-character NWS location IDs (for example `MNTM3`, Connecticut River at Montague), case-insensitive in URLs.
-- Observed values usually originate from USGS gauges. Link the two (`gauges.linked_ref`) rather than showing duplicate gauges to users.
-- Check stated units per series; flow is commonly reported in kcfs. Convert to m³/s in the adapter.
-- Forecasts are issued on River Forecast Center schedules, often only a few times per day. Store and show the issue time.
-- Forecast steps are often 6-hourly. Interpolate to hourly for the timeline, and mark interpolated values internally.
+- **Gauge:** `lid`, `usgsId` (the bare site number; prefix `USGS-` to match USGS v1 IDs), `name`, `latitude`, `longitude`, and `pedts: { observed, forecast }`. **`pedts.forecast` is `""` when the gauge has no forecast.** That's the cheapest way to tell, and it works on list entries too. `inService.enabled` is false for gauges out of service.
+- **Units:** use the stated `primaryUnits` and `secondaryUnits` (`ft`, `kcfs` here). Never assume them. Convert to m and m³/s in the adapter.
+- **Forecast:** steps were 6-hourly. The `MNTM3` forecast had 12 points, about 66 hours. `issuedTime` was 14:44Z for a forecast first valid at 18:00Z. Store and show the issue time. Interpolate to hourly for the timeline, and mark interpolated values.
+
+### Sentinels and quirks
+
+- **No forecast:** `stageflow` still returns a `forecast` object, with empty strings, `issuedTime: "0001-01-01T00:00:00Z"` and no data. Treat it as no forecast, never as a forecast issued in year 1.
+- **Missing values:** `-999` in observed data (Northfield's flow was `-999` while USGS reported reverse flow). Flood-category flows use `-9999` for "not set". Treat both as missing.
+- **Duplicates:** observed values originate from USGS gauges. Link the two (`gauges.linked_ref`) rather than showing duplicate gauges to users.
+- **Forecasts can lag a regulated river.** At 23:30Z on October 25, Montague's observed flow was 5.04 kcfs, while the forecast issued at 14:44Z said 3.38 kcfs for the same evening. An afternoon dam release wasn't in the forecast. Showing the issue time, and the latest observation alongside the forecast, matters on dam-controlled rivers.
 
 ---
 
