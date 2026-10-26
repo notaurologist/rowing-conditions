@@ -613,4 +613,4 @@ Test files sit next to the code they test as `*.test.ts` or `*.test.tsx`. `pnpm 
 
 ## Hosting (MVP)
 
-API and Postgres on Railway or Render; static web build on the same platform or any static host. Decide at deploy milestone and record a decision.
+Proposed in decision 0017: the API on a Render free web service, the web build on a Render static site that rewrites `/api/*` to the API, and Postgres 18 on Neon's free plan.

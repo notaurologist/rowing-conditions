@@ -20,3 +20,4 @@ One file per decision. Format: context, decision, consequences. Never edit a pas
 | 0014 | Toolchain versions at M0 | Accepted |
 | 0015 | Free-tier CI plus local pre-push checks | Accepted |
 | 0016 | PGlite for automated database tests | Accepted |
+| 0017 | Render for the API and web app, Neon for Postgres | Proposed |
