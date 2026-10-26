@@ -613,4 +613,4 @@ Test files sit next to the code they test as `*.test.ts` or `*.test.tsx`. `pnpm 
 
 ## Hosting (MVP)
 
-Proposed in decision 0017: one Vercel project (Hobby plan) with the web build at `/` and the API as Vercel Functions at `/api/*`, and Postgres 18 on Neon's free plan.
+Decision 0017: one Vercel project (Hobby plan) with the web build at `/` and the API as Vercel Functions at `/api/*`, and Postgres 18 on Neon's free plan.

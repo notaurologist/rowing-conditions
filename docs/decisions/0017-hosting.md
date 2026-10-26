@@ -1,6 +1,6 @@
 # 0017: Vercel for the web app and API, Neon for Postgres
 
-Status: Proposed (October 2026). Supersedes the Node 26 part of 0013.
+Status: Accepted (October 2026). Supersedes the Node 26 part of 0013.
 
 ## Context
 M8 needs the API, the database, and the web app deployed (issue #32). The constraints:
