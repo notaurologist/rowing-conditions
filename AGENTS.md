@@ -45,11 +45,14 @@ pnpm lint           # Biome check (code and config, not Markdown)
 pnpm format         # Biome format, writes changes
 pnpm check          # lint, typecheck, test; what the pre-push hook and CI run
 pnpm coverage       # tests with v8 coverage; add --project @rowing/core for one package
+pnpm fixtures:record [prefix]  # re-record API fixtures (live network); manual only, never in the pre-push check or CI
 ```
 
 Run one package's script with `pnpm --filter @rowing/api <script>` (or `@rowing/web`, `@rowing/core`).
 
-Added later, with their milestones: `pnpm db:migrate` (M4) and `pnpm fixtures:record` (M2, manual only, never in the pre-push check or CI).
+Fixtures live in `apps/api/test/fixtures/<source>/<name>.json` as `{ url, recordedAt, status, body }`. The recorder (`apps/api/scripts/record-fixtures.ts`) builds its URLs with the adapter's own request builders and sends no API key. Biome skips fixtures so re-recording doesn't churn formatting.
+
+Added later, with its milestone: `pnpm db:migrate` (M4).
 
 ## Conventions
 
