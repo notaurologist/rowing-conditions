@@ -8,10 +8,12 @@ export function Summary({
   conditions,
   evaluated,
   now,
+  onEditLimits,
 }: {
   conditions: Conditions;
   evaluated: LocationEvaluation | null;
   now: string;
+  onEditLimits: () => void;
 }) {
   const summary = summaryModel({ conditions, evaluated, now });
   const place = conditions.gauge ? tidyGaugeName(conditions.gauge.name) : 'Weather only, no gauge';
@@ -26,6 +28,13 @@ export function Summary({
         </p>
         <h1 id="summary-heading">{summary.headline}</h1>
         {summary.detail.length > 0 && <p className="summary-detail">{summary.detail.join(' ')}</p>}
+        {!evaluated && (
+          <p>
+            <button type="button" className="primary" onClick={onEditLimits}>
+              Enter your club’s limits
+            </button>
+          </p>
+        )}
       </div>
       {summary.days.length > 0 && (
         <div className="summary-days">

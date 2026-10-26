@@ -70,3 +70,25 @@ describe('App', () => {
     expect(html).toMatch(/<option value="loc-1" selected="">Turners Falls/);
   });
 });
+
+describe('App limits', () => {
+  it('offers to enter limits for a location without a rule set', () => {
+    const storage = newStorage();
+    storage.saveLocations([turnersFalls]);
+    expect(render(storage)).toContain('Enter limits</button>');
+  });
+
+  it('offers to edit the location’s rule set when it has one', () => {
+    const storage = newStorage();
+    storage.saveRuleSets([
+      {
+        id: 'rs-a',
+        name: 'Club A',
+        boatClasses: [{ id: 'all', name: 'All boats' }],
+        thresholds: [],
+      },
+    ]);
+    storage.saveLocations([{ ...turnersFalls, ruleSetIds: ['rs-a'] }]);
+    expect(render(storage)).toContain('Edit limits</button>');
+  });
+});

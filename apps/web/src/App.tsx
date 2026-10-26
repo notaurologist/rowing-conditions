@@ -3,18 +3,23 @@ import { useState } from 'react';
 import { UnitToggle } from './components/UnitToggle.tsx';
 import { CurrentConditions } from './features/conditions/CurrentConditions.tsx';
 import { LocationSetup } from './features/location-setup/LocationSetup.tsx';
+import { RuleSetEditor } from './features/rules/RuleSetEditor.tsx';
 import { useAppStorage, useStoredData } from './lib/useStoredData.ts';
 
 export function App() {
   const storage = useAppStorage();
   const { locations, ruleSets, preferences } = useStoredData();
   const [adding, setAdding] = useState(false);
+  const [editingLimits, setEditingLimits] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
 
   const selected =
     locations.find((location) => location.id === preferences.selectedLocationId) ?? locations[0];
+  // One rule set per location until several can be shown side by side (#30).
+  const ruleSet = selected && ruleSets.find((r) => selected.ruleSetIds.includes(r.id));
 
   const select = (id: string) => {
+    setEditingLimits(false);
     try {
       storage.savePreferences({ ...preferences, selectedLocationId: id });
     } catch (error) {
@@ -75,6 +80,9 @@ export function App() {
               </select>
             </label>
 
+            <button type="button" onClick={() => setEditingLimits(true)} disabled={editingLimits}>
+              {ruleSet ? 'Edit limits' : 'Enter limits'}
+            </button>
             <button type="button" onClick={() => setAdding(true)}>
               Add location
             </button>
@@ -83,12 +91,22 @@ export function App() {
             </button>
           </section>
         )}
-        {!adding && selected && (
+        {!adding && selected && editingLimits && (
+          <RuleSetEditor
+            key={`${selected.id}:${ruleSet?.id ?? 'new'}`}
+            ruleSet={ruleSet}
+            location={selected}
+            units={preferences.units}
+            onDone={() => setEditingLimits(false)}
+          />
+        )}
+        {!adding && selected && !editingLimits && (
           <CurrentConditions
             key={selected.id}
             location={selected}
             units={preferences.units}
-            ruleSet={ruleSets.find((r) => selected.ruleSetIds.includes(r.id))}
+            ruleSet={ruleSet}
+            onEditLimits={() => setEditingLimits(true)}
           />
         )}
       </main>

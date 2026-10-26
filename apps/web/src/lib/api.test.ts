@@ -71,6 +71,25 @@ describe('API client', () => {
     });
   });
 
+  it('passes the gauges rule sets name for their flow limits', async () => {
+    const getConditions = vi.fn(async () => conditions);
+    const { client } = clientFor({ conditions: getConditions });
+
+    await fetchConditions(client, { lat: 42.6, lon: -72.55, flowGaugeRefs: [] });
+    await fetchConditions(client, {
+      lat: 42.6,
+      lon: -72.55,
+      flowGaugeRefs: ['nwps:MNTM3', 'usgs:USGS-01170500'],
+    });
+
+    expect(getConditions).toHaveBeenNthCalledWith(1, { lat: 42.6, lon: -72.55 });
+    expect(getConditions).toHaveBeenNthCalledWith(2, {
+      lat: 42.6,
+      lon: -72.55,
+      flowGaugeRefs: ['nwps:MNTM3', 'usgs:USGS-01170500'],
+    });
+  });
+
   it('throws on an upstream failure, with the message the API sent', async () => {
     const { client, usgs } = clientFor();
     usgs.findNearby.mockResolvedValueOnce({

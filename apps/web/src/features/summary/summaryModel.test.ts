@@ -102,7 +102,7 @@ describe('summaryModel headline', () => {
   it('explains a missing rule set and a rule set without limits', () => {
     expect(summary(null)).toMatchObject({
       headline: 'No limits to compare against yet',
-      detail: ['Attach a rule set to see when conditions are within its limits.'],
+      detail: ['Enter your club’s limits, or your own, to see when conditions are within them.'],
     });
     expect(summary({ ...clubA, thresholds: [] })).toMatchObject({
       headline: 'Club A has no limits for 1x and 2x yet',
