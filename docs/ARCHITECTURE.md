@@ -349,7 +349,7 @@ Hono on Node. Export the app type so clients use `hono/client` for typed calls. 
 | GET | `/health` | Liveness check |
 | GET | `/gauges/nearby?lat&lon&radiusKm` | `{ gauges: NearbyGauge[] }`, nearest first, each with the metrics it reports. `radiusKm` defaults to 25, max 100. Whether a flow forecast exists is added with the NWPS adapter (#18). |
 | GET | `/gauges/:ref` | `{ gauge, latest: Reading[], sources }` for a `usgs:` ref. Returns 404 if there's no such gauge. If the readings fail, it still returns the gauge, with that source marked `error`. `nwps:` refs get 501 until #18. |
-| GET | `/conditions?lat&lon&gaugeRef?&flowGaugeRefs?` | Current readings plus 48-hour hourly forecast (including forecast flow where available) and daylight data. `flowGaugeRefs` adds flow series for gauges named by rule sets. |
+| GET | `/conditions?lat&lon&gaugeRef?&flowGaugeRefs?` | Current readings plus 48-hour hourly forecast (including forecast flow where available) and daylight data. `flowGaugeRefs` (comma-separated, up to 5) adds flow series for gauges named by rule sets. Always 200 on valid input; failures are reported per source. |
 
 Routes validate input with `@hono/zod-validator` and answer 400 on invalid input. An adapter failure becomes 502 with `{ error: { source, kind, message } }`. `createApp(deps)` takes the adapters, so route tests pass in fake ones.
 
@@ -358,10 +358,13 @@ Routes validate input with `@hono/zod-validator` and answer 400 on invalid input
 ### Response shape for `/conditions`
 
 ```ts
+// Zod schema: ConditionsResponse in apps/api/src/services/conditions.ts
 {
-  location: { lat, lon, timezone },
-  gauge?: { id, name, lat, lon },
-  current: Reading[],
+  location: { lat, lon, timezone: string | null, place? },   // timezone from NWS; null if NWS failed
+  gauge?: { ref, name, lat, lon },
+  current: Reading[],                 // station or forecast weather, plus the gauge's latest readings
+  currentBasis?: 'station' | 'forecast',
+  station?: { id, name, distanceKm },
   forecast: ForecastPoint[],          // 48 hourly points
   flowSeries: { gaugeRef, points: ForecastPoint[] }[],  // flow values with full provenance (asOf, kind, qualifiers), so stale and qualifier checks work for rule-set gauges
   daylight: { date, civilDawn, sunrise, sunset, civilDusk }[],
@@ -371,6 +374,18 @@ Routes validate input with `@hono/zod-validator` and answer 400 on invalid input
 ```
 
 Partial success is normal. If NWS fails but USGS succeeds, return what is available with per-source status. Never fail the whole response because one source failed.
+
+How `getConditions` builds it (`apps/api/src/services/conditions.ts`):
+
+- **Through the cache:** every source call goes through the source cache. The NWS forecast is cached 72 hours deep and cut to the 48 hours from the current hour, so a cached forecast doesn't drift behind.
+- **River values for each hour** come from `riverHours`:
+  - flow and gauge height from the NWPS forecast where it covers the hour, missing after it ends, and the latest observation before it starts
+  - without a forecast, the latest observation copied to every hour
+  - water temperature always from the latest observation
+- **USGS gauges** are linked to NWPS by site number. The stage-and-flow forecast is fetched only when the gauge has one.
+- **`daylight`** covers each local solar date in the window, so it doesn't need a time zone.
+- **`sources`** has one entry per source used: `error` if any call failed with nothing cached, otherwise `stale` if any was served stale, otherwise `ok`. `fetchedAt` is that source's oldest data in the response.
+- **When every source fails** with nothing cached, the response is still 200 and still valid: empty readings, 48 empty forecast hours, and every source `error`.
 
 ### Adapters
 
@@ -467,12 +482,14 @@ Migrations via `drizzle-kit`, committed to the repo:
 
 ### Configuration
 
-Environment variables, validated with Zod at startup (fail fast if missing):
+Environment variables, validated with Zod at startup (fail fast if missing). It's `loadConfig` in `apps/api/src/config.ts`, and it lists every problem by variable name without echoing values:
 
-- `DATABASE_URL`
-- `NWS_USER_AGENT` (app name plus contact email)
-- `USGS_API_KEY` (optional)
-- `PORT`
+- `DATABASE_URL`: a `postgres://` or `postgresql://` URL
+- `NWS_USER_AGENT`: app name plus contact email. Required, because NWS answers 403 without it.
+- `USGS_API_KEY`: optional. An empty value counts as no key.
+- `PORT`: defaults to 3000
+
+`.env.example` at the repo root lists them. `pnpm dev` and `start` load `.env` from the repo root if it exists (`node --env-file-if-exists`).
 
 No secrets in code or fixtures.
 
