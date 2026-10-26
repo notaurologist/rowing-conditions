@@ -41,7 +41,7 @@ const turnersFalls = {
 
 describe('App', () => {
   it('renders the heading', () => {
-    expect(render()).toContain('Rowing Conditions</h1>');
+    expect(render()).toContain('Rowing Conditions</p>');
   });
 
   it('opens location setup when there are no saved locations', () => {
@@ -59,7 +59,6 @@ describe('App', () => {
     storage.savePreferences({ units: 'us', selectedLocationId: 'loc-2' });
     const html = render(storage);
     expect(html).toMatch(/<option value="loc-2" selected="">Lake Wyola/);
-    expect(html).toContain('Weather only (no gauge)');
     expect(html).not.toContain('Add a location</h2>');
   });
 
@@ -69,6 +68,5 @@ describe('App', () => {
     storage.savePreferences({ units: 'us', selectedLocationId: 'deleted' });
     const html = render(storage);
     expect(html).toMatch(/<option value="loc-1" selected="">Turners Falls/);
-    expect(html).toContain('Gauge usgs:USGS-01170500');
   });
 });

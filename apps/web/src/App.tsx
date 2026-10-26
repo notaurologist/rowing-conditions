@@ -42,7 +42,7 @@ export function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <h1>Rowing Conditions</h1>
+        <p className="app-title">Rowing Conditions</p>
         <UnitToggle units={preferences.units} onChange={setUnits} />
       </header>
       <main className="page">
@@ -74,9 +74,7 @@ export function App() {
                 ))}
               </select>
             </label>
-            <span className="gauge-summary">
-              {selected.gaugeRef ? `Gauge ${selected.gaugeRef}` : 'Weather only (no gauge)'}
-            </span>
+
             <button type="button" onClick={() => setAdding(true)}>
               Add location
             </button>

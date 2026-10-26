@@ -223,7 +223,7 @@ The code is in `packages/core/src/evaluation/evaluate.ts`.
   - The start is cut by the first hour's solar day and the end by the last hour's.
   - A window that cutting leaves empty is dropped.
   - During polar day nothing is cut.
-- `findPeriods(hours, { ruleSet, lat, lon }) → Period[]` and `nextWindow(periods, now)` are in `packages/core/src/evaluation/periods.ts`. They feed the main screen's answer and its "Hour by hour" list.
+- `findPeriods(hours, { ruleSet, lat, lon }) → Period[]` and `nextWindow(periods, now)` are in `packages/core/src/evaluation/periods.ts`. They feed the main screen's summary: the answer and the "Dawn to dusk" days.
   - A period is a run of rowing hours with the same status. Night and gaps split periods.
   - Edges are cut to the minute at the rule set's daylight window, or at civil dawn and dusk (`civilDaylightSpan`), so a period never runs into the dark.
   - Each non-within period carries its reasons: the worst value against each limit that failed, with how many hours failed it, and each unknown metric and reason.
@@ -534,7 +534,17 @@ No secrets in code or fixtures.
     - The pairs that must be told apart (water blue against over-the-limit red, within against outside) pass a contrast and color-vision-deficiency check in both themes.
   - **Type:** Source Sans 3, self-hosted from `src/assets/fonts/` (SIL Open Font License), with tabular numbers throughout.
 - Charts with visx (scales and shapes). The 48-hour timeline is a feature folder of its own (`features/timeline/`) with its chart components kept independent of data fetching, so they can be tested with fixture data.
-- **Main screen order** for a location: the answer (next window within the rule set's limits, what's happening now if the window is later, and what follows), the 48-hour chart, "Hour by hour" periods by day with reasons, then current conditions. `evaluateLocation` evaluates the forecast once for all three. Status is shown with a symbol (✓ ✕ ?) and words, never color alone. Copy says "within/outside Club A's limits", never a verdict.
+- **Main screen order** for a location, all from one evaluation (`evaluateLocation`):
+  - **The summary** (`src/features/summary/`). `summaryModel` writes:
+    - **The answer as the page's `<h1>`:** the next window ("Within Club A's limits today, 2 PM to 6:20 PM"), "now, until …", or "No hours within … from dawn to dusk in the next 48 hours".
+    - **One detail paragraph:** the deciding limit from `findLimitingFactor` and the closest it comes to its limit in the window, in the limit's unit. When the latest flow reading differs from that hour's forecast by more than 10%, it says so in plain numbers.
+    - **"Dawn to dusk":** a sentence per period for each day, with reasons (`reasonText`), dawn and dusk named, and a note when the forecast ends before dusk. Without limits, it gives each day's daylight times instead.
+
+    It sits beside the answer on wide screens and stacks below 820 px.
+  - **The meteogram.**
+  - **Current conditions.**
+
+  Copy says "within/outside Club A's limits", never a verdict.
 - **Meteogram** (`src/features/timeline/`):
   - `meteogramModel` turns a `/conditions` response and its evaluation into rows on one time axis:
     - flow (a hydrograph), wind (a band from sustained to gusts, with arrows every 3 hours), air temperature, water temperature (or a row saying it isn't measured), gauge height and combined temperature when a limit uses them, and rain chance (bars, 0–100%)

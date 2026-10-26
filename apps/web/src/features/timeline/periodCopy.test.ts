@@ -1,6 +1,6 @@
-import type { Period, PeriodReason } from '@rowing/core';
+import type { PeriodReason } from '@rowing/core';
 import { describe, expect, it } from 'vitest';
-import { formatClock, formatRange, mergeReasons, reasonText, statusText } from './periodCopy.ts';
+import { dayLabel, formatClock, reasonText } from './periodCopy.ts';
 
 const TZ = 'America/New_York';
 
@@ -54,15 +54,7 @@ describe('reasonText', () => {
   });
 });
 
-describe('statusText', () => {
-  it('names the rule set and never gives a verdict', () => {
-    expect(statusText('within', 'Club A')).toBe("Within Club A's limits");
-    expect(statusText('outside', 'Club A')).toBe("Outside Club A's limits");
-    expect(statusText('unknown', 'Club A')).toBe('Unknown');
-  });
-});
-
-describe('formatClock and formatRange', () => {
+describe('formatClock and dayLabel', () => {
   const now = '2026-10-26T14:00:00.000Z'; // 10 AM Monday in New York
 
   it('drops :00 and keeps other minutes', () => {
@@ -71,52 +63,8 @@ describe('formatClock and formatRange', () => {
   });
 
   it('names today and tomorrow, and the weekday after that', () => {
-    expect(formatRange('2026-10-26T15:00:00.000Z', '2026-10-26T19:00:00.000Z', now, TZ)).toBe(
-      'Today 11 AM – 3 PM',
-    );
-    expect(formatRange('2026-10-27T11:00:00.000Z', '2026-10-27T13:00:00.000Z', now, TZ)).toBe(
-      'Tomorrow 7 AM – 9 AM',
-    );
-    expect(formatRange('2026-10-28T11:00:00.000Z', '2026-10-28T13:00:00.000Z', now, TZ)).toBe(
-      'Wed, Oct 28 7 AM – 9 AM',
-    );
-  });
-});
-
-describe('mergeReasons', () => {
-  const period = (reasons: PeriodReason[]): Period => ({
-    status: 'outside',
-    start: '',
-    end: '',
-    reasons,
-  });
-
-  it('keeps the worst value per limit and each unknown once, across periods', () => {
-    const merged = mergeReasons([
-      period([gust, { kind: 'unknown', metric: 'waterTemp', reason: 'stale', hours: 2 }]),
-      period([
-        { ...gust, worst: 25, hours: 1 },
-        { kind: 'unknown', metric: 'waterTemp', reason: 'stale', hours: 1 },
-      ]),
-    ]);
-    expect(merged).toEqual([
-      { ...gust, worst: 25, hours: 4 },
-      { kind: 'unknown', metric: 'waterTemp', reason: 'stale', hours: 3 },
-    ]);
-  });
-
-  it('uses the lowest value for a min limit', () => {
-    const water: PeriodReason = {
-      ...gust,
-      thresholdId: 'w',
-      metric: 'waterTemp',
-      comparison: 'min',
-      worst: 44,
-      limit: 50,
-      unit: 'degF',
-    };
-    expect(mergeReasons([period([water]), period([{ ...water, worst: 41 }])])[0]).toMatchObject({
-      worst: 41,
-    });
+    expect(dayLabel('2026-10-26T15:00:00.000Z', now, TZ)).toBe('Today');
+    expect(dayLabel('2026-10-27T11:00:00.000Z', now, TZ)).toBe('Tomorrow');
+    expect(dayLabel('2026-10-28T11:00:00.000Z', now, TZ)).toBe('Wed, Oct 28');
   });
 });

@@ -3,9 +3,8 @@ import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { api, apiErrorMessage, fetchConditions } from '../../lib/api.ts';
 import { formatAge } from '../../lib/format.ts';
-import { AnswerCard } from '../timeline/AnswerCard.tsx';
+import { Summary } from '../summary/Summary.tsx';
 import { evaluateLocation } from '../timeline/evaluateLocation.ts';
-import { PeriodList } from '../timeline/PeriodList.tsx';
 import { TimelineSection } from '../timeline/TimelineSection.tsx';
 import { ConditionsPanel } from './ConditionsPanel.tsx';
 
@@ -19,8 +18,8 @@ function useNow(intervalMs = 60_000): string {
   return now;
 }
 
-// Fetches /conditions once for the location, evaluates it once, and shows the answer, the
-// 48-hour chart, the period list, then the current readings.
+// Fetches /conditions once for the location, evaluates it once, and shows the summary (the
+// answer and each day in words), the meteogram, then the current readings.
 export function CurrentConditions({
   location,
   units,
@@ -59,7 +58,7 @@ export function CurrentConditions({
   const evaluated = evaluateLocation(query.data, location, ruleSet, now);
   return (
     <>
-      <AnswerCard evaluated={evaluated} now={now} timeZone={query.data.location.timezone} />
+      <Summary conditions={query.data} evaluated={evaluated} now={now} />
       <TimelineSection
         conditions={query.data}
         location={location}
@@ -67,7 +66,6 @@ export function CurrentConditions({
         units={units}
         now={now}
       />
-      <PeriodList evaluated={evaluated} now={now} timeZone={query.data.location.timezone} />
       <ConditionsPanel conditions={query.data} units={units} now={now} />
       <p className="reading-meta refresh-row">
         Loaded {formatAge(loadedAt, now)}.{' '}
