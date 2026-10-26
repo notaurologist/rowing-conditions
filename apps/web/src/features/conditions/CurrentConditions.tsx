@@ -1,8 +1,9 @@
-import type { DisplaySystem, GaugeRef, RuleSet, SavedLocation } from '@rowing/core';
+import type { DisplaySystem, GaugeRef, SavedLocation } from '@rowing/core';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { api, apiErrorMessage, fetchConditions } from '../../lib/api.ts';
 import { formatAge } from '../../lib/format.ts';
+import { flowGaugeRefs, type RuleSetChoice } from '../rules/ruleSetChoice.ts';
 import { Summary } from '../summary/Summary.tsx';
 import { evaluateLocation } from '../timeline/evaluateLocation.ts';
 import { TimelineSection } from '../timeline/TimelineSection.tsx';
@@ -23,25 +24,25 @@ function useNow(intervalMs = 60_000): string {
 export function CurrentConditions({
   location,
   units,
-  ruleSet,
+  choices,
   onEditLimits,
 }: {
   location: SavedLocation;
   units: DisplaySystem;
-  ruleSet: RuleSet | undefined;
+  choices: readonly RuleSetChoice[]; // the location's rule sets, one of them selected
   onEditLimits: () => void;
 }) {
   const now = useNow();
-  // The rule set's own flow gauge, when it names one other than the location's.
-  const flowGaugeRef = ruleSet?.flowGaugeRef ?? null;
+  // The gauges rule sets name for their flow limits, when they differ from the location's.
+  const flowGauges = flowGaugeRefs(choices);
   const query = useQuery({
-    queryKey: ['conditions', location.lat, location.lon, location.gaugeRef ?? null, flowGaugeRef],
+    queryKey: ['conditions', location.lat, location.lon, location.gaugeRef ?? null, flowGauges],
     queryFn: () =>
       fetchConditions(api, {
         lat: location.lat,
         lon: location.lon,
         ...(location.gaugeRef ? { gaugeRef: location.gaugeRef as GaugeRef } : {}),
-        ...(flowGaugeRef ? { flowGaugeRefs: [flowGaugeRef] } : {}),
+        ...(flowGauges.length ? { flowGaugeRefs: flowGauges } : {}),
       }),
   });
 
@@ -60,12 +61,17 @@ export function CurrentConditions({
   }
 
   const loadedAt = new Date(query.dataUpdatedAt).toISOString();
-  const evaluated = evaluateLocation(query.data, location, ruleSet, now);
+  const alongside = choices.flatMap(
+    (c) => evaluateLocation(query.data, location, c.ruleSet, now, c.boatClassId) ?? [],
+  );
+  const selectedId = choices.find((c) => c.selected)?.ruleSet.id;
+  const evaluated = alongside.find((e) => e.ruleSet.id === selectedId) ?? null;
   return (
     <>
       <Summary
         conditions={query.data}
         evaluated={evaluated}
+        alongside={alongside}
         now={now}
         onEditLimits={onEditLimits}
       />
@@ -73,6 +79,7 @@ export function CurrentConditions({
         conditions={query.data}
         location={location}
         evaluated={evaluated}
+        alongside={alongside}
         units={units}
         now={now}
       />

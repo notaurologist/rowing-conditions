@@ -7,15 +7,17 @@ import { summaryModel, tidyGaugeName } from './summaryModel.ts';
 export function Summary({
   conditions,
   evaluated,
+  alongside,
   now,
   onEditLimits,
 }: {
   conditions: Conditions;
   evaluated: LocationEvaluation | null;
+  alongside?: readonly LocationEvaluation[];
   now: string;
   onEditLimits: () => void;
 }) {
-  const summary = summaryModel({ conditions, evaluated, now });
+  const summary = summaryModel({ conditions, evaluated, alongside, now });
   const place = conditions.gauge ? tidyGaugeName(conditions.gauge.name) : 'Weather only, no gauge';
   const rules = evaluated ? `${evaluated.ruleSet.name}, ${evaluated.boatClassName}` : null;
 
@@ -28,6 +30,15 @@ export function Summary({
         </p>
         <h1 id="summary-heading">{summary.headline}</h1>
         {summary.detail.length > 0 && <p className="summary-detail">{summary.detail.join(' ')}</p>}
+        {summary.others.length > 0 && (
+          <ul className="summary-others" aria-label="Other rule sets">
+            {summary.others.map((text, i) => (
+              // Sentences can repeat when two rule sets share a name; their order doesn't change.
+              // biome-ignore lint/suspicious/noArrayIndexKey: see above
+              <li key={i}>{text}</li>
+            ))}
+          </ul>
+        )}
         {!evaluated && (
           <p>
             <button type="button" className="primary" onClick={onEditLimits}>

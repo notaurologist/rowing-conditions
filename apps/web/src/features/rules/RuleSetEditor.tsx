@@ -16,11 +16,13 @@ import { metricName, unitSymbol } from '../../lib/format.ts';
 import { useAppStorage, useStoredData } from '../../lib/useStoredData.ts';
 import { newId } from '../location-setup/newLocation.ts';
 import { tidyGaugeName } from '../summary/summaryModel.ts';
+import { selectRuleSet } from './ruleSetChoice.ts';
 import {
   addLimit,
   attachRuleSet,
   checkDraft,
   type DraftErrors,
+  detachRuleSet,
   draftFromRuleSet,
   emptyDraft,
   type LimitDraft,
@@ -51,7 +53,7 @@ interface Props {
 // "All boats" class: the limits are the user's or their club's, never ours.
 export function RuleSetEditor({ ruleSet, location, units, onDone }: Props) {
   const storage = useAppStorage();
-  const { ruleSets, locations } = useStoredData();
+  const { ruleSets, locations, preferences } = useStoredData();
   const [draft, setDraft] = useState<RuleSetDraft>(() =>
     ruleSet ? draftFromRuleSet(ruleSet) : emptyDraft(),
   );
@@ -96,9 +98,24 @@ export function RuleSetEditor({ ruleSet, location, units, onDone }: Props) {
     setErrors({});
     try {
       storage.saveRuleSets(upsertRuleSet(ruleSets, result.ruleSet));
-      if (!ruleSet) storage.saveLocations(attachRuleSet(locations, location.id, result.ruleSet.id));
+      if (!ruleSet) {
+        // A new rule set is attached here and shown, since it's the one just entered.
+        storage.saveLocations(attachRuleSet(locations, location.id, result.ruleSet.id));
+        storage.savePreferences(selectRuleSet(preferences, location.id, result.ruleSet.id));
+      }
     } catch (error) {
       setProblem(`Couldn't save the rule set: ${apiErrorMessage(error)}`);
+      return;
+    }
+    onDone();
+  };
+
+  const detach = () => {
+    if (!ruleSet) return;
+    try {
+      storage.saveLocations(detachRuleSet(locations, location.id, ruleSet.id));
+    } catch (error) {
+      setProblem(`Couldn't remove the rule set from ${location.name}: ${apiErrorMessage(error)}`);
       return;
     }
     onDone();
@@ -357,6 +374,11 @@ export function RuleSetEditor({ ruleSet, location, units, onDone }: Props) {
           <button type="button" onClick={onDone}>
             Cancel
           </button>
+          {ruleSet && location.ruleSetIds.includes(ruleSet.id) && (
+            <button type="button" onClick={detach}>
+              Remove from {location.name}
+            </button>
+          )}
           {ruleSet && (
             <button type="button" className="danger" onClick={remove}>
               Delete rule set

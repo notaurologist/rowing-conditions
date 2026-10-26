@@ -3,7 +3,7 @@ import type { Conditions } from '../../lib/api.ts';
 import { formatTime, metricName } from '../../lib/format.ts';
 import type { LocationEvaluation } from './evaluateLocation.ts';
 import { Meteogram } from './Meteogram.tsx';
-import { type MeteogramModel, meteogramModel } from './meteogramModel.ts';
+import { type MeteogramModel, meteogramModel, type StatusStrip } from './meteogramModel.ts';
 
 const STATUS_TEXT = {
   within: 'Within limits',
@@ -11,8 +11,8 @@ const STATUS_TEXT = {
   unknown: 'Unknown',
 } as const;
 
-function statusAt(model: MeteogramModel, i: number) {
-  const span = model.status?.find((s) => i >= s.from && i < s.to);
+function statusAt(strip: StatusStrip, i: number) {
+  const span = strip.spans.find((s) => i >= s.from && i < s.to);
   return span ? STATUS_TEXT[span.status] : '';
 }
 
@@ -27,7 +27,11 @@ function HourTable({ model }: { model: MeteogramModel }) {
           <thead>
             <tr>
               <th scope="col">Hour</th>
-              {model.status && <th scope="col">Status</th>}
+              {model.statuses.map((strip) => (
+                <th key={strip.ruleSetId} scope="col">
+                  {strip.name}
+                </th>
+              ))}
               {rows.map((r) => (
                 <th key={r.id} scope="col">
                   {r.label}
@@ -39,7 +43,9 @@ function HourTable({ model }: { model: MeteogramModel }) {
             {model.hours.map((h, i) => (
               <tr key={h.time}>
                 <th scope="row">{h.label}</th>
-                {model.status && <td>{statusAt(model, i)}</td>}
+                {model.statuses.map((strip) => (
+                  <td key={strip.ruleSetId}>{statusAt(strip, i)}</td>
+                ))}
                 {rows.map((r) => (
                   <td key={r.id}>{r.readouts[i]}</td>
                 ))}
@@ -55,16 +61,16 @@ function HourTable({ model }: { model: MeteogramModel }) {
 interface Props {
   conditions: Conditions;
   location: SavedLocation;
-  evaluated: LocationEvaluation | null;
+  evaluated: LocationEvaluation | null; // the selected rule set: its limits are drawn
+  alongside?: readonly LocationEvaluation[]; // every attached rule set, for status and notices
   units: DisplaySystem;
   now: string;
 }
 
-export function TimelineSection({ conditions, location, evaluated, units, now }: Props) {
-  const model = meteogramModel({ conditions, location, units, now, evaluated });
+export function TimelineSection({ conditions, location, evaluated, alongside, units, now }: Props) {
+  const all = alongside ?? (evaluated ? [evaluated] : []);
+  const model = meteogramModel({ conditions, location, units, now, evaluated, alongside: all });
   const timeZone = conditions.location.timezone;
-  const ruleSet = evaluated?.ruleSet;
-  const unavailable = (evaluated?.timeline.unavailableMetrics ?? []) as Metric[];
   const flow = conditions.forecast.find((p) => p.provenance.flow)?.provenance.flow;
 
   return (
@@ -73,26 +79,29 @@ export function TimelineSection({ conditions, location, evaluated, units, now }:
         The next 48 hours
       </h2>
 
-      {!ruleSet && (
+      {all.length === 0 && (
         <p className="hint">
           No rule set is attached to this location, so hours aren’t compared against limits.
         </p>
       )}
-      {ruleSet && evaluated && !evaluated.timeline.hasLimits && (
-        <p className="hint">
-          {ruleSet.name} has no limits for {evaluated.boatClassName} yet, so hours aren’t compared
-          against limits.
-        </p>
-      )}
-      {ruleSet &&
-        unavailable.map((m) => (
-          <p key={m} className="notice">
-            {ruleSet.name}’s {metricName(m)} limit can’t be checked here: no source at this location
-            reports {metricName(m)}.
+      {all
+        .filter((e) => !e.timeline.hasLimits)
+        .map((e) => (
+          <p key={e.ruleSet.id} className="hint">
+            {e.ruleSet.name} has no limits for {e.boatClassName} yet, so hours aren’t compared
+            against its limits.
           </p>
         ))}
+      {all.flatMap((e) =>
+        (e.timeline.unavailableMetrics as Metric[]).map((m) => (
+          <p key={`${e.ruleSet.id}:${m}`} className="notice">
+            {e.ruleSet.name}’s {metricName(m)} limit can’t be checked here: no source at this
+            location reports {metricName(m)}.
+          </p>
+        )),
+      )}
 
-      <Meteogram key={location.id} model={model} ruleSetName={ruleSet?.name} />
+      <Meteogram key={location.id} model={model} />
 
       <div className="mg-notes">
         <p>

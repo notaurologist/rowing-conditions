@@ -78,17 +78,39 @@ describe('App limits', () => {
     expect(render(storage)).toContain('Enter limits</button>');
   });
 
+  const ruleSet = (id: string, name: string) => ({
+    id,
+    name,
+    boatClasses: [{ id: `${id}-all`, name: 'All boats' }],
+    thresholds: [],
+  });
+
   it('offers to edit the location’s rule set when it has one', () => {
     const storage = newStorage();
-    storage.saveRuleSets([
-      {
-        id: 'rs-a',
-        name: 'Club A',
-        boatClasses: [{ id: 'all', name: 'All boats' }],
-        thresholds: [],
-      },
-    ]);
+    storage.saveRuleSets([ruleSet('rs-a', 'Club A')]);
     storage.saveLocations([{ ...turnersFalls, ruleSetIds: ['rs-a'] }]);
-    expect(render(storage)).toContain('Edit limits</button>');
+    const html = render(storage);
+    expect(html).toContain('Edit <!-- -->Club A</button>');
+    expect(html).toContain('New rule set</button>');
+    // One rule set needs no choice between rule sets.
+    expect(html).not.toContain('aria-pressed="true"><span aria-hidden="true">✓ </span>Club A');
+  });
+
+  it('lets one of several attached rule sets be chosen, the stored choice pressed', () => {
+    const storage = newStorage();
+    storage.saveRuleSets([
+      ruleSet('rs-a', 'Club A'),
+      ruleSet('rs-b', 'Club B'),
+      ruleSet('rs-c', 'Club C'),
+    ]);
+    storage.saveLocations([{ ...turnersFalls, ruleSetIds: ['rs-a', 'rs-b'] }]);
+    storage.savePreferences({ units: 'us', selectedRuleSetIds: { 'loc-1': 'rs-b' } });
+    const html = render(storage);
+    expect(html).toContain('aria-pressed="false">Club A</button>');
+    expect(html).toContain('aria-pressed="true"><span aria-hidden="true">✓ </span>Club B</button>');
+    expect(html).toContain('Edit <!-- -->Club B</button>');
+    // Club C is stored but not attached here, so it can be added.
+    expect(html).toMatch(/<option value="rs-c">Club C<\/option>/);
+    expect(html).not.toMatch(/<option value="rs-a">Club A<\/option>/);
   });
 });

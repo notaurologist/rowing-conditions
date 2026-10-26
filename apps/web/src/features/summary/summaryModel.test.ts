@@ -181,3 +181,43 @@ describe('tidyGaugeName', () => {
     expect(tidyGaugeName('McDowell Creek at Oak, NC')).toBe('McDowell Creek at Oak, NC');
   });
 });
+
+describe('summaryModel with several rule sets', () => {
+  it('leads with the selected rule set and gives each other one a sentence', () => {
+    const conditions = structuredClone(montague) as Conditions;
+    const clubB: RuleSet = {
+      id: 'rs-b',
+      name: 'Club B',
+      boatClasses: [
+        { id: 'small', name: '1x' },
+        { id: 'big', name: 'Eights' },
+      ],
+      thresholds: [
+        {
+          ...(clubA.thresholds[0] as RuleSet['thresholds'][0]),
+          value: toInternal('flow', 20, 'kcfs'),
+          enteredUnit: 'kcfs',
+        },
+      ],
+    };
+    const empty: RuleSet = { ...clubB, id: 'rs-e', name: 'Club E', thresholds: [] };
+    const a = evaluateLocation(conditions, location, clubA, NOW);
+    const b = evaluateLocation(conditions, location, clubB, NOW, 'big');
+    const e = evaluateLocation(conditions, location, empty, NOW);
+    const result = summaryModel({
+      conditions,
+      evaluated: a,
+      alongside: [a, b, e].flatMap((x) => x ?? []),
+      now: NOW,
+    });
+    expect(result.headline).toBe(summary().headline);
+    expect(result.others).toEqual([
+      'Within Club B’s limits now, until 6:20 PM (Eights).',
+      'Club E has no limits for 1x yet.',
+    ]);
+  });
+
+  it('has no other sentences with one rule set', () => {
+    expect(summary().others).toEqual([]);
+  });
+});

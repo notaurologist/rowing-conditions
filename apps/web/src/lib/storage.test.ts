@@ -216,3 +216,16 @@ describe('createStorage', () => {
     expect(second.locations).toEqual([location]);
   });
 });
+
+describe('rule set choices in preferences', () => {
+  it('keeps the selected rule set per location and the boat class per rule set', () => {
+    const storage = createStorage(memoryStore(), silentLogger());
+    const preferences = {
+      units: 'us' as const,
+      selectedRuleSetIds: { 'loc-1': 'rs-b' },
+      boatClassIds: { 'rs-b': 'eights' },
+    };
+    storage.savePreferences(preferences);
+    expect(storage.loadPreferences()).toEqual(preferences);
+  });
+});

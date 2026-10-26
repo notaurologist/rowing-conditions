@@ -6,6 +6,7 @@ import type {
   MeteogramModel,
   MeteogramPoint,
   MeteogramRow,
+  StatusStrip,
 } from './meteogramModel.ts';
 
 // Draws the meteogram from its model. Each row shares the time axis; percentages place
@@ -209,13 +210,68 @@ const STATUS_WORDS = {
   unknown: { symbol: '?', long: () => 'Unknown', short: 'Unknown' },
 } as const;
 
-export function Meteogram({
-  model,
-  ruleSetName,
+// One rule set's status across the hours, in words and symbols as well as color. With several
+// rule sets, the selected one's label says its limits are the lines drawn in the rows.
+function StatusRow({
+  strip,
+  hours,
+  several,
 }: {
-  model: MeteogramModel;
-  ruleSetName: string | undefined;
+  strip: StatusStrip;
+  hours: MeteogramModel['hours'];
+  several: boolean;
 }) {
+  const n = hours.length;
+  const summary = strip.spans
+    .map(
+      (s) =>
+        `${STATUS_WORDS[s.status].short.toLowerCase()} ${hours[s.from]?.label} to ${hours[s.to - 1]?.label}`,
+    )
+    .join('; ');
+  return (
+    <div className={`mg-row mg-status-row`}>
+      <div className="mg-label">
+        <span className="mg-name">{strip.name}</span>
+        <span className="mg-sub">
+          {strip.sub}
+          {strip.selected && several && ' · drawn below'}
+        </span>
+      </div>
+      {strip.spans.length === 0 ? (
+        <div className="mg-status-empty">No limits for this boat class yet.</div>
+      ) : (
+        <div className="mg-status" role="img" aria-label={`${strip.name} status: ${summary}.`}>
+          {strip.spans.map((s) => {
+            const words = STATUS_WORDS[s.status];
+            const share = (s.to - s.from) / n;
+            return (
+              <div
+                key={s.from}
+                className={`mg-status-${s.status}`}
+                style={{ flex: `${s.to - s.from} 1 0` }}
+              >
+                <span className="mg-long">
+                  {words.symbol}
+                  {share > 0.12
+                    ? ` ${words.long(strip.name)}`
+                    : share > 0.06
+                      ? ` ${words.short}`
+                      : ''}
+                </span>
+                <span className="mg-short">
+                  {words.symbol}
+                  {share > 0.22 ? ` ${words.short}` : ''}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function Meteogram({ model }: { model: MeteogramModel }) {
   const n = model.hours.length;
   const [sel, setSel] = useState(model.defaultHour);
   if (n === 0) return <p>No forecast values are available for this location.</p>;
@@ -224,12 +280,6 @@ export function Meteogram({
     const box = e.currentTarget.getBoundingClientRect();
     setSel(Math.max(0, Math.min(n - 1, Math.floor(((e.clientX - box.left) / box.width) * n))));
   };
-  const statusSummary = model.status
-    ?.map(
-      (s) =>
-        `${STATUS_WORDS[s.status].short.toLowerCase()} ${model.hours[s.from]?.label} to ${model.hours[s.to - 1]?.label}`,
-    )
-    .join('; ');
 
   return (
     <div className="meteogram">
@@ -274,44 +324,14 @@ export function Meteogram({
           </div>
         )}
 
-        {model.status && (
-          <div className="mg-row">
-            <div className="mg-label">
-              <span className="mg-name">{ruleSetName}</span>
-              <span className="mg-sub">all limits</span>
-            </div>
-            <div
-              className="mg-status"
-              role="img"
-              aria-label={`${ruleSetName} status: ${statusSummary}.`}
-            >
-              {model.status.map((s) => {
-                const words = STATUS_WORDS[s.status];
-                const share = (s.to - s.from) / n;
-                return (
-                  <div
-                    key={s.from}
-                    className={`mg-status-${s.status}`}
-                    style={{ flex: `${s.to - s.from} 1 0` }}
-                  >
-                    <span className="mg-long">
-                      {words.symbol}
-                      {share > 0.12
-                        ? ` ${words.long(ruleSetName ?? '')}`
-                        : share > 0.06
-                          ? ` ${words.short}`
-                          : ''}
-                    </span>
-                    <span className="mg-short">
-                      {words.symbol}
-                      {share > 0.22 ? ` ${words.short}` : ''}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
+        {model.statuses.map((strip) => (
+          <StatusRow
+            key={strip.ruleSetId}
+            strip={strip}
+            hours={model.hours}
+            several={model.statuses.length > 1}
+          />
+        ))}
 
         {model.rows.map((row) => (
           <div key={row.id} className="mg-row mg-data-row" data-row={row.id}>

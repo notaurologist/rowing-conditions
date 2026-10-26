@@ -71,11 +71,21 @@ export interface MeteogramRow {
   readouts: string[]; // one per hour
 }
 
+export interface StatusStrip {
+  ruleSetId: string;
+  name: string;
+  sub: string; // the boat class when the rule set has several, else "all limits"
+  selected: boolean;
+  spans: { from: number; to: number; status: EvaluationStatus }[]; // empty: no limits to compare
+}
+
 export interface MeteogramModel {
   hours: { time: string; label: string }[];
   rows: MeteogramRow[];
   light: { from: number; to: number; light: 'twilight' | 'night' }[];
-  status: { from: number; to: number; status: EvaluationStatus }[] | null;
+  // One strip per attached rule set, in the location's order. The selected one also drives the
+  // limit lines and windows.
+  statuses: StatusStrip[];
   windows: { from: number; to: number; label: string }[];
   days: { at: number; label: string }[];
   ticks: { at: number; label: string }[];
@@ -88,6 +98,8 @@ export interface MeteogramInput {
   units: DisplaySystem;
   now: string;
   evaluated: LocationEvaluation | null;
+  // Every attached rule set's evaluation, for the status strips. Omitted: just `evaluated`.
+  alongside?: readonly LocationEvaluation[];
 }
 
 type RowSpec = {
@@ -209,6 +221,7 @@ function lightSpans(
 
 export function meteogramModel(input: MeteogramInput): MeteogramModel {
   const { conditions, location, units, now, evaluated } = input;
+  const alongside = input.alongside ?? (evaluated ? [evaluated] : []);
   const forecast = conditions.forecast;
   const timeZone = conditions.location.timezone;
   const n = forecast.length;
@@ -430,20 +443,27 @@ export function meteogramModel(input: MeteogramInput): MeteogramModel {
     };
   });
 
-  // Status spans from the evaluation, one per run of hours with the same status.
-  let status: MeteogramModel['status'] = null;
-  const evaluatedHours = evaluated?.timeline.hasLimits ? evaluated.evaluation.hours : [];
-  if (evaluatedHours.length > 0) {
-    const byTime = new Map(evaluatedHours.map((h) => [h.time, h.status]));
-    status = [];
+  // Status spans for each rule set, one per run of hours with the same status.
+  const statuses: StatusStrip[] = alongside.map((e) => {
+    const byTime = new Map(
+      (e.timeline.hasLimits ? e.evaluation.hours : []).map((h) => [h.time, h.status]),
+    );
+    const spans: StatusStrip['spans'] = [];
     forecast.forEach((p, i) => {
       const s = byTime.get(p.time);
       if (!s) return;
-      const last = status?.at(-1);
+      const last = spans.at(-1);
       if (last && last.status === s && last.to === i) last.to = i + 1;
-      else status?.push({ from: i, to: i + 1, status: s });
+      else spans.push({ from: i, to: i + 1, status: s });
     });
-  }
+    return {
+      ruleSetId: e.ruleSet.id,
+      name: e.ruleSet.name,
+      sub: e.ruleSet.boatClasses.length > 1 ? e.boatClassName : 'all limits',
+      selected: e.ruleSet.id === evaluated?.ruleSet.id,
+      spans,
+    };
+  });
 
   const windows: MeteogramModel['windows'] = [];
   if (evaluated?.timeline.hasLimits) {
@@ -491,7 +511,7 @@ export function meteogramModel(input: MeteogramInput): MeteogramModel {
     hours,
     rows,
     light: lightSpans(conditions.daylight, start, n, location.lat, location.lon),
-    status,
+    statuses,
     windows,
     days,
     ticks,
