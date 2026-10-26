@@ -11,7 +11,7 @@ const HOUR = 3_600_000;
 // treated as stale rather than as perfectly fresh.
 export const futureToleranceHours = 1;
 
-type InputMetric = Exclude<Metric, 'combinedTempF'>;
+export type InputMetric = Exclude<Metric, 'combinedTempF'>;
 
 // Maximum age of a value's asOf before it counts as stale. Starting values; tune in M9.
 // Weather observations have no agreed limit yet, so they share the 12-hour forecast limit.
@@ -33,6 +33,23 @@ export const disqualifyingQualifiers: readonly Qualifier[] = [
   'estimated',
   'unreliable',
 ];
+
+export type Freshness = 'fresh' | 'stale' | 'future';
+
+// Whether a value dated `asOf` is still usable at `now`. 'future' (dated more than
+// futureToleranceHours ahead) points to a clock or adapter error. Evaluation treats both
+// 'stale' and 'future' as stale; the UI uses the same rule to mark readings.
+export function freshness(
+  metric: InputMetric,
+  kind: ValueProvenance['kind'],
+  asOf: string,
+  now: string,
+): Freshness {
+  const age = Date.parse(now) - Date.parse(asOf);
+  if (!Number.isFinite(age)) return 'stale';
+  if (age < -futureToleranceHours * HOUR) return 'future';
+  return age > maxAgeHours[metric][kind] * HOUR ? 'stale' : 'fresh';
+}
 
 export interface HourContext {
   ruleSet: RuleSet;
@@ -58,12 +75,7 @@ function usable(point: ForecastPoint, metric: InputMetric, ctx: HourContext): Us
   if (provenance.qualifiers?.some((q) => disqualifyingQualifiers.includes(q))) {
     return { ok: false, metric, reason: 'qualified' };
   }
-  const age = Date.parse(ctx.now) - Date.parse(provenance.asOf);
-  if (
-    !Number.isFinite(age) ||
-    age > maxAgeHours[metric][provenance.kind] * HOUR ||
-    age < -futureToleranceHours * HOUR
-  ) {
+  if (freshness(metric, provenance.kind, provenance.asOf, ctx.now) !== 'fresh') {
     return { ok: false, metric, reason: 'stale' };
   }
   return { ok: true, value };

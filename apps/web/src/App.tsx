@@ -1,5 +1,7 @@
 import type { SavedLocation } from '@rowing/core';
 import { useState } from 'react';
+import { UnitToggle } from './components/UnitToggle.tsx';
+import { CurrentConditions } from './features/conditions/CurrentConditions.tsx';
 import { LocationSetup } from './features/location-setup/LocationSetup.tsx';
 import { useAppStorage, useStoredData } from './lib/useStoredData.ts';
 
@@ -20,6 +22,14 @@ export function App() {
     }
   };
 
+  const setUnits = (units: 'us' | 'metric') => {
+    try {
+      storage.savePreferences({ ...preferences, units });
+    } catch (error) {
+      setProblem(`Couldn't save the unit choice: ${String(error)}`);
+    }
+  };
+
   const remove = (location: SavedLocation) => {
     if (!window.confirm(`Remove ${location.name}?`)) return;
     try {
@@ -33,6 +43,7 @@ export function App() {
     <div className="app">
       <header className="app-header">
         <h1>Rowing Conditions</h1>
+        <UnitToggle units={preferences.units} onChange={setUnits} />
       </header>
       <main className="page">
         {problem && (
@@ -73,6 +84,9 @@ export function App() {
               Remove
             </button>
           </section>
+        )}
+        {!adding && selected && (
+          <CurrentConditions key={selected.id} location={selected} units={preferences.units} />
         )}
       </main>
     </div>
