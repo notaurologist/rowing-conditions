@@ -5,6 +5,7 @@ export * from './evaluation/periods.ts';
 export * from './evaluation/windows.ts';
 export * from './geo/defaultGauge.ts';
 export * from './geo/geo.ts';
+export * from './rules/entry.ts';
 export * from './series/interpolate.ts';
 export * from './types/alert.ts';
 export * from './types/evaluation.ts';
