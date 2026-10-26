@@ -181,12 +181,15 @@ function Plot({ row, n, sel }: { row: MeteogramRow; n: number; sel: number }) {
             className="mg-dot"
             style={{ left: pct(row.observed.at, n), top: `${observedTop(row, y)}%` }}
           />
-          <span
-            className="mg-dot-label"
-            style={{ left: pct(row.observed.at, n), top: `${observedTop(row, y)}%` }}
-          >
-            {row.observed.label}
-          </span>
+          {/* Near the readout line the two labels would collide; the readout wins. */}
+          {Math.abs(x(sel) - (row.observed.at / n) * 100) > 12 && (
+            <span
+              className="mg-dot-label"
+              style={{ left: pct(row.observed.at, n), top: `${observedTop(row, y)}%` }}
+            >
+              {row.observed.label}
+            </span>
+          )}
         </>
       )}
       <span className="mg-sel" style={{ left: `${x(sel)}%` }} />
@@ -235,7 +238,12 @@ export function Meteogram({
           <div className="mg-label mg-empty" />
           <div className="mg-axis">
             {model.days.map((d) => (
-              <span key={d.at} className="mg-day" style={{ left: pct(d.at, n) }}>
+              <span
+                key={d.at}
+                // The hour chip covers a day label it sits on; phones hide the chip, so they keep it.
+                className={`mg-day${Math.abs(((hour + 0.5) / n) * 100 - (d.at / n) * 100 - 3) < 7 ? ' mg-day-near' : ''}`}
+                style={{ left: pct(d.at, n) }}
+              >
                 {d.label}
               </span>
             ))}
