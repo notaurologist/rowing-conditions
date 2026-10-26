@@ -116,7 +116,7 @@ describe('conditionRows', () => {
     });
   });
 
-  it('explains river metrics in weather-only mode', () => {
+  it('explains gauge metrics in weather-only mode', () => {
     const conditions = base();
     delete conditions.gauge;
     conditions.current = conditions.current.filter((r) => r.source !== 'usgs');

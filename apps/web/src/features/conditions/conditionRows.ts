@@ -22,10 +22,11 @@ import {
 // Turns a /conditions response into what the current conditions panel shows. Every value
 // carries its source and observation time, and every gap says why it's a gap.
 
-const RIVER_METRICS = ['waterTemp', 'flow', 'gaugeHeight'] as const;
+// Metrics a gauge supplies, on a river or a lake. Weather metrics come from NWS.
+const GAUGE_METRICS = ['waterTemp', 'flow', 'gaugeHeight'] as const;
 const WEATHER_METRICS = ['airTemp', 'windSpeed', 'windGust', 'windDirection'] as const;
 // Water temperature first: cold water is the most significant temperature risk.
-const ROW_ORDER = [...RIVER_METRICS, ...WEATHER_METRICS];
+const ROW_ORDER = [...GAUGE_METRICS, ...WEATHER_METRICS];
 
 export type RowMetric = (typeof ROW_ORDER)[number];
 
@@ -85,7 +86,7 @@ const SOURCE_NAMES: Record<SourceId, string> = {
   nws: 'the National Weather Service',
 };
 
-const isRiver = (metric: RowMetric) => (RIVER_METRICS as readonly string[]).includes(metric);
+const isGaugeMetric = (metric: RowMetric) => (GAUGE_METRICS as readonly string[]).includes(metric);
 
 function sourceText(conditions: Conditions, reading: Reading, units: DisplaySystem): string {
   if (reading.source === 'usgs') {
@@ -112,10 +113,12 @@ export function conditionRows(
   return ROW_ORDER.map((metric): ConditionRow => {
     const label = LABELS[metric];
     const reading = conditions.current.find((r) => r.metric === metric);
-    const source: SourceId = isRiver(metric) ? 'usgs' : 'nws';
+    // Assumes USGS is the only gauge source. A second one (UK EA, tide stations) should take
+    // the source from the location's gauge ref instead.
+    const source: SourceId = isGaugeMetric(metric) ? 'usgs' : 'nws';
 
     if (!reading) {
-      if (isRiver(metric) && !conditions.gauge) {
+      if (isGaugeMetric(metric) && !conditions.gauge) {
         return {
           metric,
           label,
@@ -137,7 +140,7 @@ export function conditionRows(
         metric,
         label,
         state: 'notReported',
-        message: isRiver(metric)
+        message: isGaugeMetric(metric)
           ? `This gauge doesn't report ${metricName(metric)}`
           : `Not reported for this location`,
         qualifiers: [],
