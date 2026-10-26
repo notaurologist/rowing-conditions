@@ -71,8 +71,8 @@ function deciding(
   const many = plural(limiting.metric);
   const first =
     limiting.reason === 'mostHoursOutside'
-      ? `${name} ${many ? 'decide' : 'decides'} it, with ${limiting.hoursOutside} rowing ${limiting.hoursOutside === 1 ? 'hour' : 'hours'} past ${many ? 'their' : 'its'} limit.`
-      : `${name} ${many ? 'decide' : 'decides'} it, coming closest to ${many ? 'their' : 'its'} limit.`;
+      ? `${name} ${many ? 'are' : 'is'} past ${many ? 'their' : 'its'} limit for ${limiting.hoursOutside} rowing ${limiting.hoursOutside === 1 ? 'hour' : 'hours'}, the most of any limit.`
+      : `${name} ${many ? 'come' : 'comes'} closest to ${many ? 'their' : 'its'} limit.`;
   const sentences = [first];
 
   // The closest the deciding metric comes to its limit during the window, in the limit's unit.

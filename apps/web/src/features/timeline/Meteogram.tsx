@@ -402,7 +402,9 @@ export function Meteogram({ model }: { model: MeteogramModel }) {
             value={hour}
             onChange={(e) => setSel(Number(e.target.value))}
           />
-          <span className="mg-scrub-time">{model.hours[hour]?.label}</span>
+          <span className="mg-scrub-time">
+            {model.hours[hour]?.label} · {model.hours[hour]?.light.toLowerCase()}
+          </span>
         </label>
       </div>
     </div>

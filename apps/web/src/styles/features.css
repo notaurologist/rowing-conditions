@@ -634,6 +634,7 @@
 
 .mg-scrub {
   display: flex;
+  flex-wrap: wrap; /* on phones the hour and its light go below the slider */
   align-items: center;
   gap: var(--space-3);
   font-size: var(--text-sm);
@@ -641,12 +642,13 @@
 }
 
 .mg-scrub input {
-  flex: 1;
+  flex: 1 1 10em;
   min-width: 0;
   accent-color: var(--ink);
 }
 
 .mg-scrub-time {
+  margin-left: auto;
   min-width: 8em;
   text-align: right;
   white-space: nowrap;
