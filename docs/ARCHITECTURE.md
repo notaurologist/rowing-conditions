@@ -613,4 +613,4 @@ Test files sit next to the code they test as `*.test.ts` or `*.test.tsx`. `pnpm 
 
 ## Hosting (MVP)
 
-API and Postgres on Railway or Render; static web build on the same platform or any static host. Decide at deploy milestone and record a decision.
+Decision 0017: one Vercel project (Hobby plan) with the web build at `/` and the API as Vercel Functions at `/api/*`, and Postgres 18 on Neon's free plan.
