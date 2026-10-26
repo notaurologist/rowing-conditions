@@ -90,7 +90,7 @@ Most reliability codes come with a null value, so those readings are already `mi
 - **Reporting interval:** readings are typically every 15 minutes, but telemetry delays vary by gauge, and some gauges lag by hours.
 - **Revisions:** recent data is provisional and can be revised. Preserve qualifiers.
 - **Winter:** gauges may report ice-affected values or none at all. Ice-affected readings usually come with a null value and the `ICE` qualifier.
-- **Water temperature:** many gauges don't report it. Check `time-series-metadata` rather than assuming. For example, the Connecticut River at Montague City (`USGS-01170500`) reports flow and gauge height but not water temperature, while the gauge near Northfield (`USGS-01161280`), about 10 km upstream, reports all three.
+- **Water temperature:** many gauges don't report it. Check `time-series-metadata` rather than assuming. For example, the Connecticut River at Montague City (`USGS-01170500`) reports flow and gauge height but not water temperature, while the gauge near Northfield (`USGS-01161280`), about 14 km upstream, reports all three.
 - **`time-series-metadata` `end` lags.** For Montague City it was about 12 hours behind the latest reading. Use it to see which parameters a gauge reports, not how fresh they are.
 - **Trend:** rising or falling needs recent history from `continuous`, not just `latest-continuous`. At Montague City on October 25, flow fell from 3,370 to 2,120 ft³/s over 5 hours.
 

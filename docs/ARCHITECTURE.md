@@ -372,12 +372,19 @@ Partial success is normal. If NWS fails but USGS succeeds, return what is availa
 
 ### Adapters
 
+Every adapter method returns a `SourceResult<T>` and never throws:
+
 ```ts
+type SourceResult<T> = { ok: true; data: T } | { ok: false; error: SourceError };
+interface SourceError { source: SourceId; kind: 'timeout' | 'network' | 'http' | 'parse'; message: string; status?: number }
+
+// apps/api/src/adapters/types.ts. Implemented by apps/api/src/adapters/usgs/usgs.ts.
 interface FlowSource {
   id: SourceId;
-  findNearby(lat: number, lon: number, radiusKm: number): Promise<Gauge[]>;
-  getLatest(gaugeId: string): Promise<Reading[]>;
-  getHistory(gaugeId: string, from: string, to: string): Promise<Reading[]>;
+  findNearby(lat: number, lon: number, radiusKm: number): Promise<SourceResult<NearbyGauge[]>>;  // nearest first
+  getGauge(gaugeId: string): Promise<SourceResult<Gauge | null>>;   // null when the gauge doesn't exist
+  getLatest(gaugeId: string): Promise<SourceResult<Reading[]>>;
+  getHistory(gaugeId: string, metric: Metric, from: string, to: string): Promise<SourceResult<Reading[]>>;  // one metric per request
 }
 
 interface FlowForecastSource {
@@ -396,7 +403,10 @@ interface WeatherSource {
 
 Adapter rules:
 
-- Parse every response with a Zod schema. On parse failure, log the raw payload shape and return an error status, never throw raw errors upward.
+- Parse every response with a Zod schema. On parse failure, log the raw payload shape and return an error status, never throw raw errors upward. `fetchJson` in `apps/api/src/adapters/http.ts` does this for every adapter: it handles timeouts, network and HTTP errors, and schema mismatches. It logs only the payload's shape (keys and types), never its values.
+- Adapters take `fetch`, `logger` and `now` as options. Tests inject a `routedFetch` (`apps/api/test/fixtures.ts`) that serves recorded fixtures and fails on any request it doesn't expect, so no test can reach the network.
+- `Gauge` and `NearbyGauge` (a gauge plus `distanceKm`) are Zod schemas in `packages/core/src/types/gauge.ts`. `distanceKm` and `boundingBox` are in `packages/core/src/geo/geo.ts`.
+- A reading the core `Reading` schema rejects, for example a negative discharge, is kept with a null value and logged. That makes it `missing`, never dropped silently.
 - Convert to SI inside the adapter. Nothing outside an adapter knows a source's native units.
 - Set timeouts on every request (default 10 s).
 - Send required headers (NWS requires a `User-Agent` with contact info).
