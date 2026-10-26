@@ -347,9 +347,11 @@ Hono on Node. Export the app type so clients use `hono/client` for typed calls. 
 | Method | Path | Purpose |
 |---|---|---|
 | GET | `/health` | Liveness check |
-| GET | `/gauges/nearby?lat&lon&radiusKm` | Gauges near a point, with which metrics each reports and whether a flow forecast exists |
-| GET | `/gauges/:ref` | Gauge metadata (`usgs:` or `nwps:` ref) |
+| GET | `/gauges/nearby?lat&lon&radiusKm` | `{ gauges: NearbyGauge[] }`, nearest first, each with the metrics it reports. `radiusKm` defaults to 25, max 100. Whether a flow forecast exists is added with the NWPS adapter (#18). |
+| GET | `/gauges/:ref` | `{ gauge, latest: Reading[], sources }` for a `usgs:` ref. Returns 404 if there's no such gauge. If the readings fail, it still returns the gauge, with that source marked `error`. `nwps:` refs get 501 until #18. |
 | GET | `/conditions?lat&lon&gaugeRef?&flowGaugeRefs?` | Current readings plus 48-hour hourly forecast (including forecast flow where available) and daylight data. `flowGaugeRefs` adds flow series for gauges named by rule sets. |
+
+Routes validate input with `@hono/zod-validator` and answer 400 on invalid input. An adapter failure becomes 502 with `{ error: { source, kind, message } }`. `createApp(deps)` takes the adapters, so route tests pass in fake ones.
 
 `/conditions` returns raw normalized data. It does not evaluate rule sets, because rule sets live on the device in the MVP. Clients call `packages/core` evaluation locally. When accounts and notifications arrive, the server runs the same core functions.
 
