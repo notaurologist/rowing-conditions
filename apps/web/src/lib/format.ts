@@ -1,4 +1,4 @@
-import { type Metric, type Unit, unitDecimals } from '@rowing/core';
+import { type GaugeRef, type Metric, type Unit, unitDecimals } from '@rowing/core';
 
 const METRIC_NAMES: Record<Metric, string> = {
   flow: 'flow',
@@ -111,6 +111,12 @@ export function formatTime(time: string, now: string, timeZone: string | null): 
     minute: '2-digit',
   });
   return day(time) === day(now) ? clock : `${day(time)}, ${clock}`;
+}
+
+/** "usgs:USGS-01170500" → "USGS 01170500", "nwps:MNTM3" → "NWPS MNTM3". */
+export function gaugeId(ref: GaugeRef): string {
+  const id = ref.slice(ref.indexOf(':') + 1);
+  return ref.startsWith('usgs:') ? `USGS ${id.replace(/^USGS-/, '')}` : `NWPS ${id}`;
 }
 
 const SMALL = new Set([

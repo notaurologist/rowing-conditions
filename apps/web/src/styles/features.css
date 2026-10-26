@@ -964,3 +964,29 @@ button.danger {
     grid-template-areas: "name inputs remove";
   }
 }
+
+/* Club wording examples in the rule set editor (features/rules/LimitExamples.tsx). */
+.limit-examples summary {
+  cursor: pointer;
+  color: var(--accent);
+}
+
+.limit-examples h3 {
+  margin: var(--space-3) 0 var(--space-1);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.limit-examples > .hint {
+  margin-top: var(--space-2);
+}
+
+.limit-examples ul {
+  margin: 0;
+  padding-left: var(--space-4);
+  font-size: var(--text-sm);
+}
+
+.limit-examples li + li {
+  margin-top: var(--space-1);
+}

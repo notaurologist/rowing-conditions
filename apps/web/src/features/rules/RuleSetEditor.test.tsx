@@ -106,4 +106,19 @@ describe('RuleSetEditor', () => {
       render({ ...clubA, boatClasses: [{ id: 'small', name: 'All boats' }], thresholds: [] }),
     ).not.toContain('Applies to');
   });
+
+  it('shows how some clubs word their limits, collapsed, cited, and with nothing to apply', () => {
+    const html = render(undefined);
+    const examples = /<details class="limit-examples">([\s\S]*?)<\/details>/.exec(html)?.[1] ?? '';
+    expect(examples).toContain('<summary>How some clubs word their limits</summary>');
+    expect(examples).toContain('Des Moines Rowing Club');
+    expect(examples).toContain('href="https://desmoinesrowing.org/?p=116"');
+    expect(examples).toContain(
+      'Measured at Ohio River at Sewickley, PA (USGS 03086000), so it applies to that gauge on that river only.',
+    );
+    expect(examples).not.toMatch(/<(button|input|select)\b/);
+    expect(examples).not.toMatch(/\b(safe|recommended|typical|suggested)\b/i);
+    // Nothing is prefilled: a new rule set still starts empty.
+    expect(html).toContain('No limits yet.');
+  });
 });
