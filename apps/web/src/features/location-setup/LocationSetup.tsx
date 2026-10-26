@@ -5,6 +5,7 @@ import { api, apiErrorMessage, type Coordinates, fetchNearbyGauges } from '../..
 import { useAppStorage, useStoredData } from '../../lib/useStoredData.ts';
 import { GaugeChoice, type NearbyState } from './GaugeChoice.tsx';
 import { newLocation } from './newLocation.ts';
+import { PlaceSearch } from './PlaceSearch.tsx';
 
 // Leaflet touches `window` when imported, so the map loads only in the browser.
 const LocationMap = lazy(() => import('./LocationMap.tsx'));
@@ -90,9 +91,16 @@ export function LocationSetup({ onSaved, onCancel }: Props) {
   };
 
   return (
-    <form className="location-setup" onSubmit={save} aria-labelledby="setup-heading">
+    <section className="location-setup" aria-labelledby="setup-heading">
       <h2 id="setup-heading">Add a location</h2>
-      <p className="hint">Tap the map where you row, or use your current location.</p>
+      <p className="hint">Search for a place, tap the map where you row, or use your location.</p>
+
+      <PlaceSearch
+        onPick={(place) => {
+          pick({ lat: place.lat, lon: place.lon });
+          if (name.trim() === '') setName(place.name);
+        }}
+      />
 
       <div className="setup-actions">
         <button type="button" onClick={locateMe} disabled={locating}>
@@ -116,40 +124,43 @@ export function LocationSetup({ onSaved, onCancel }: Props) {
         </p>
       )}
 
-      {point && (
-        <>
-          <GaugeChoice
-            nearby={nearby}
-            selected={selected}
-            suggested={suggested}
-            units={preferences.units}
-            onSelect={setOverride}
-          />
-
-          <label className="field">
-            <span>Name</span>
-            <input
-              type="text"
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              placeholder="e.g. Home boathouse"
-              required
-              maxLength={80}
+      {/* Its own form, so Enter in the search box searches rather than saving. */}
+      <form className="location-setup" onSubmit={save}>
+        {point && (
+          <>
+            <GaugeChoice
+              nearby={nearby}
+              selected={selected}
+              suggested={suggested}
+              units={preferences.units}
+              onSelect={setOverride}
             />
-          </label>
-        </>
-      )}
 
-      <div className="setup-actions">
-        <button type="submit" className="primary" disabled={!canSave}>
-          Save location
-        </button>
-        {onCancel && (
-          <button type="button" onClick={onCancel}>
-            Cancel
-          </button>
+            <label className="field">
+              <span>Name</span>
+              <input
+                type="text"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                placeholder="e.g. Home boathouse"
+                required
+                maxLength={80}
+              />
+            </label>
+          </>
         )}
-      </div>
-    </form>
+
+        <div className="setup-actions">
+          <button type="submit" className="primary" disabled={!canSave}>
+            Save location
+          </button>
+          {onCancel && (
+            <button type="button" onClick={onCancel}>
+              Cancel
+            </button>
+          )}
+        </div>
+      </form>
+    </section>
   );
 }

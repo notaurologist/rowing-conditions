@@ -216,3 +216,52 @@ describe('GET /conditions', () => {
     expect(conditions).not.toHaveBeenCalled();
   });
 });
+
+describe('GET /places/search', () => {
+  const place = { name: 'Turners Falls', displayName: 'Turners Falls, MA', lat: 42.6, lon: -72.55 };
+  const searchApp = (searchPlaces?: (q: string) => Promise<SourceResult<(typeof place)[]>>) =>
+    createApp({
+      usgs: fakeUsgs(),
+      conditions: fakeConditions(),
+      ...(searchPlaces ? { searchPlaces } : {}),
+    });
+
+  it('returns matching places', async () => {
+    const searchPlaces = vi.fn(async () => ok([place]));
+    const res = await searchApp(searchPlaces).request('/places/search?q=Turners%20Falls');
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ places: [place] });
+    expect(searchPlaces).toHaveBeenCalledWith('Turners Falls');
+  });
+
+  it.each([
+    ['missing', '/places/search'],
+    ['blank', '/places/search?q=%20%20'],
+    ['one character', '/places/search?q=a'],
+    ['too long', `/places/search?q=${'a'.repeat(201)}`],
+  ])('rejects a query that is %s', async (_, path) => {
+    const searchPlaces = vi.fn(async () => ok([place]));
+    const res = await searchApp(searchPlaces).request(path);
+    expect(res.status).toBe(400);
+    expect(searchPlaces).not.toHaveBeenCalled();
+  });
+
+  it('answers 503 when place search is turned off', async () => {
+    const res = await searchApp().request('/places/search?q=Turners');
+    expect(res.status).toBe(503);
+    expect(await res.json()).toEqual({
+      error: { message: 'Place search is turned off. Pick the location on the map.' },
+    });
+  });
+
+  it('answers 502 when the geocoder fails', async () => {
+    const res = await searchApp(async () => ({
+      ok: false,
+      error: { source: 'nominatim', kind: 'timeout', message: 'timed out' },
+    })).request('/places/search?q=Turners');
+    expect(res.status).toBe(502);
+    expect(await res.json()).toEqual({
+      error: { source: 'nominatim', kind: 'timeout', message: 'timed out' },
+    });
+  });
+});

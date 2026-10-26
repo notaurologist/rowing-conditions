@@ -27,6 +27,12 @@ export async function fetchNearbyGauges(client: ApiClient, at: Coordinates) {
   return body.gauges;
 }
 
+/** Called only when the user submits a search: the geocoder's policy forbids autocomplete. */
+export async function fetchPlaces(client: ApiClient, query: string) {
+  const body = await parseResponse(client.places.search.$get({ query: { q: query } }));
+  return body.places;
+}
+
 export function fetchConditions(client: ApiClient, at: Coordinates & { gaugeRef?: GaugeRef }) {
   return parseResponse(
     client.conditions.$get({

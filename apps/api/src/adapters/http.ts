@@ -3,8 +3,11 @@ import type { z } from 'zod';
 
 export type FetchFn = (url: string, init?: RequestInit) => Promise<Response>;
 
+// Data sources, plus services that aren't data sources, such as place search.
+export type ErrorSource = SourceId | 'nominatim';
+
 export interface SourceError {
-  source: SourceId;
+  source: ErrorSource;
   kind: 'timeout' | 'network' | 'http' | 'parse';
   message: string;
   status?: number;
@@ -23,7 +26,7 @@ export const consoleLogger: Logger = {
 export const DEFAULT_TIMEOUT_MS = 10_000;
 
 export interface RequestOptions {
-  source: SourceId;
+  source: ErrorSource;
   fetch: FetchFn;
   logger: Logger;
   timeoutMs?: number;

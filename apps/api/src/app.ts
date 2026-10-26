@@ -5,10 +5,12 @@ import { z } from 'zod';
 import type { SourceError } from './adapters/http.ts';
 import type { FlowSource } from './adapters/types.ts';
 import type { ConditionsInput, ConditionsResponse } from './services/conditions.ts';
+import type { SearchPlaces } from './services/places.ts';
 
 export interface AppDeps {
   usgs: FlowSource;
   conditions: (input: ConditionsInput) => Promise<ConditionsResponse>;
+  searchPlaces?: SearchPlaces; // absent when place search is turned off (GEOCODING_ENABLED=false)
 }
 
 export const MAX_RADIUS_KM = 100;
@@ -49,6 +51,8 @@ const ConditionsQuery = z.object({
     .optional(),
 });
 
+const PlaceQuery = z.object({ q: z.string().trim().min(2).max(200) });
+
 const upstreamError = (error: SourceError) => ({
   error: { source: error.source, kind: error.kind, message: error.message },
 });
@@ -69,6 +73,19 @@ export function createApp(deps: AppDeps) {
           ...(flowGaugeRefs?.length ? { flowGaugeRefs } : {}),
         });
         return c.json(response, 200);
+      })
+
+      // Search runs only when the user submits, never per keystroke: Nominatim forbids autocomplete.
+      .get('/places/search', zValidator('query', PlaceQuery), async (c) => {
+        if (!deps.searchPlaces) {
+          return c.json(
+            { error: { message: 'Place search is turned off. Pick the location on the map.' } },
+            503,
+          );
+        }
+        const result = await deps.searchPlaces(c.req.valid('query').q);
+        if (!result.ok) return c.json(upstreamError(result.error), 502);
+        return c.json({ places: result.data }, 200);
       })
 
       .get('/gauges/nearby', zValidator('query', NearbyQuery), async (c) => {

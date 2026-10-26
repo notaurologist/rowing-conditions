@@ -350,6 +350,7 @@ Hono on Node. Export the app type so clients use `hono/client` for typed calls. 
 | GET | `/gauges/nearby?lat&lon&radiusKm` | `{ gauges: NearbyGauge[] }`, nearest first, each with the metrics it reports. `radiusKm` defaults to 25, max 100. Whether a flow forecast exists is added with the NWPS adapter (#18). |
 | GET | `/gauges/:ref` | `{ gauge, latest: Reading[], sources }` for a `usgs:` ref. Returns 404 if there's no such gauge. If the readings fail, it still returns the gauge, with that source marked `error`. `nwps:` refs get 501 until #18. |
 | GET | `/conditions?lat&lon&gaugeRef?&flowGaugeRefs?` | Current readings plus 48-hour hourly forecast (including forecast flow where available) and daylight data. `flowGaugeRefs` (comma-separated, up to 5) adds flow series for gauges named by rule sets. Always 200 on valid input; failures are reported per source. |
+| GET | `/places/search?q` | `{ places: Place[] }` from Nominatim, US only, at most 5. `q` is 2 to 200 characters. Clients call it only when the user submits a search (the usage policy forbids autocomplete). Returns 503 when `GEOCODING_ENABLED=false`. |
 
 Routes validate input with `@hono/zod-validator` and answer 400 on invalid input. An adapter failure becomes 502 with `{ error: { source, kind, message } }`. `createApp(deps)` takes the adapters, so route tests pass in fake ones.
 
@@ -435,6 +436,7 @@ Adapter rules:
   - **Quality control:** station values that NWS quality control marked rejected (`X`) or questioned (`Q`) are `unreliable`.
   - **Alerts:** times are normalized to UTC. A missing `ends` falls back to `expires`, and an unknown severity becomes `Unknown`.
   - **`Alert`** is a schema in `packages/core/src/types/alert.ts`.
+- **Nominatim** (place search, not a data source): every request goes through an in-process gate, one at a time, each starting at least 1.1 s after the previous one, so the app stays under the policy's one request per second. The gate is per process; the API runs as one. Results are cached for 30 days by normalized query (trimmed, single-spaced, lowercase). A result with coordinates out of range is dropped and logged.
 - **NWPS forecast:** `getStageFlow` turns the 6-hourly forecast into hourly `ForecastPoint`s with `interpolateHourly` (`packages/core/src/series/interpolate.ts`). It's linear between steps and never extrapolates. An hour next to a missing step is null. Hours between steps carry `interpolated: true`, and every hour's provenance `asOf` is the forecast issue time. A gauge without a forecast returns `forecast: []` and `issuedAt: null`.
 - Convert to SI inside the adapter. Nothing outside an adapter knows a source's native units.
 - Set timeouts on every request (default 10 s).
@@ -454,6 +456,7 @@ Fetch on demand, cache in Postgres. No scheduled jobs in the MVP.
   - NWS alerts: 5 min
   - NWS points lookup: 30 days
   - Gauge metadata: 7 days
+  - Nominatim place search: 30 days (places don't move, and the usage policy asks for caching)
 - **On upstream failure**, serve the last cached value marked `stale` if one exists.
 - **Concurrent fetches** for the same key are deduplicated in process.
 - **Implementation:** `createSourceCache({ db, logger, now })` in `apps/api/src/services/sourceCache.ts`. `cache.get(key, ttlMs, schema, fetch)` returns one of three results:
@@ -487,6 +490,7 @@ Environment variables, validated with Zod at startup (fail fast if missing). It'
 - `DATABASE_URL`: a `postgres://` or `postgresql://` URL
 - `NWS_USER_AGENT`: app name plus contact email. Required, because NWS answers 403 without it.
 - `USGS_API_KEY`: optional. An empty value counts as no key.
+- `GEOCODING_ENABLED`: optional, `true` by default. `false` turns place search off without a code change, as Nominatim's policy requires. Nominatim requests send `NWS_USER_AGENT` to identify the app.
 - `PORT`: defaults to 3000
 
 `.env.example` at the repo root lists them. `pnpm dev` and `start` load `.env` from the repo root if it exists (`node --env-file-if-exists`).

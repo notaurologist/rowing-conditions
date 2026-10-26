@@ -7,10 +7,18 @@ const valid = {
 };
 
 describe('loadConfig', () => {
+  it('turns place search on unless GEOCODING_ENABLED is false', () => {
+    expect(loadConfig(valid).geocodingEnabled).toBe(true);
+    expect(loadConfig({ ...valid, GEOCODING_ENABLED: 'true' }).geocodingEnabled).toBe(true);
+    expect(loadConfig({ ...valid, GEOCODING_ENABLED: 'false' }).geocodingEnabled).toBe(false);
+    expect(() => loadConfig({ ...valid, GEOCODING_ENABLED: 'no' })).toThrow('GEOCODING_ENABLED');
+  });
+
   it('reads required values and defaults the port', () => {
     expect(loadConfig(valid)).toEqual({
       databaseUrl: valid.DATABASE_URL,
       nwsUserAgent: valid.NWS_USER_AGENT,
+      geocodingEnabled: true,
       port: 3000,
     });
   });

@@ -164,6 +164,7 @@ describe('cacheTtlMs', () => {
       nwsAlerts: 5 * MINUTE,
       nwsPoint: 30 * 24 * 60 * MINUTE,
       gaugeMetadata: 7 * 24 * 60 * MINUTE,
+      placeSearch: 30 * 24 * 60 * MINUTE,
     });
   });
 });

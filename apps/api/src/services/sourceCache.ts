@@ -18,6 +18,7 @@ export const cacheTtlMs = {
   nwsAlerts: 5 * MINUTE,
   nwsPoint: 30 * DAY,
   gaugeMetadata: 7 * DAY,
+  placeSearch: 30 * DAY,
 } as const;
 
 export type CachedResult<T> =
