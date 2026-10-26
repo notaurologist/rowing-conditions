@@ -2,6 +2,7 @@ import type { SavedLocation } from '@rowing/core';
 import { useState } from 'react';
 import { UnitToggle } from './components/UnitToggle.tsx';
 import { CurrentConditions } from './features/conditions/CurrentConditions.tsx';
+import { INTRO_VERSION, Intro } from './features/intro/Intro.tsx';
 import { LocationSetup } from './features/location-setup/LocationSetup.tsx';
 import { RuleSetBar } from './features/rules/RuleSetBar.tsx';
 import { RuleSetEditor } from './features/rules/RuleSetEditor.tsx';
@@ -21,6 +22,9 @@ export function App() {
   // The rule set being edited: an id, 'new', or null when not editing.
   const [editing, setEditing] = useState<string | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
+  const [showingAbout, setShowingAbout] = useState(false);
+  const introDue = (preferences.introVersion ?? 0) < INTRO_VERSION;
+  const introOpen = introDue || showingAbout;
 
   const selected =
     locations.find((location) => location.id === preferences.selectedLocationId) ?? locations[0];
@@ -61,6 +65,16 @@ export function App() {
     }
   };
 
+  const closeIntro = () => {
+    setShowingAbout(false);
+    if (!introDue) return;
+    try {
+      storage.savePreferences({ ...preferences, introVersion: INTRO_VERSION });
+    } catch (error) {
+      setProblem(`Couldn't save that you've read this: ${String(error)}`);
+    }
+  };
+
   const remove = (location: SavedLocation) => {
     if (!window.confirm(`Remove ${location.name}?`)) return;
     try {
@@ -74,7 +88,14 @@ export function App() {
     <div className="app">
       <header className="app-header">
         <p className="app-title">Rowing Conditions</p>
-        <UnitToggle units={preferences.units} onChange={setUnits} />
+        <div className="app-header-actions">
+          {!introOpen && (
+            <button type="button" className="link-button" onClick={() => setShowingAbout(true)}>
+              About
+            </button>
+          )}
+          <UnitToggle units={preferences.units} onChange={setUnits} />
+        </div>
       </header>
       <main className="page">
         {problem && (
@@ -82,7 +103,9 @@ export function App() {
             {problem}
           </p>
         )}
-        {adding || !selected ? (
+        {introOpen ? (
+          <Intro firstUse={introDue} onContinue={closeIntro} />
+        ) : adding || !selected ? (
           <>
             {!selected && <p>No saved locations yet.</p>}
             <LocationSetup
@@ -114,7 +137,7 @@ export function App() {
             </button>
           </section>
         )}
-        {!adding && selected && editing !== null && (
+        {!introOpen && !adding && selected && editing !== null && (
           <RuleSetEditor
             key={`${selected.id}:${editing}`}
             ruleSet={ruleSets.find((r) => r.id === editing)}
@@ -123,7 +146,7 @@ export function App() {
             onDone={() => setEditing(null)}
           />
         )}
-        {!adding && selected && editing === null && (
+        {!introOpen && !adding && selected && editing === null && (
           <>
             <RuleSetBar
               choices={choices}

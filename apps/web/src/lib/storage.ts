@@ -27,6 +27,8 @@ export const Preferences = z.object({
   selectedRuleSetIds: z.record(Id, Id).optional(),
   // The boat class chosen in each rule set, wherever it is used. Omitted: the rule set's first.
   boatClassIds: z.record(Id, Id).optional(),
+  // The version of the intro and disclaimer last seen (features/intro). Omitted: never seen.
+  introVersion: z.number().int().positive().optional(),
 });
 export type Preferences = z.infer<typeof Preferences>;
 
