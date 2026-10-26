@@ -201,6 +201,41 @@ Computed locally with the `suncalc` library. No external API.
 
 ---
 
+## Backtesting only: historical weather (decision 0019, proposed)
+
+Checked against docs and live requests on October 26, 2026 (issue #35). Used by the fixture recorder and backtesting, never by the live app.
+
+### Open-Meteo Previous Runs API (forecasts as they stood)
+
+- **Docs:** https://open-meteo.com/en/docs/previous-runs-api
+- **URL:** `https://previous-runs-api.open-meteo.com/v1/forecast?latitude=…&longitude=…&start_date=YYYY-MM-DD&end_date=YYYY-MM-DD&hourly=…&models=ncep_nbm_conus&wind_speed_unit=ms&timezone=GMT`
+- **Variables:** `temperature_2m`, `wind_speed_10m`, `wind_gusts_10m`, `wind_direction_10m`, `precipitation_probability`, each with a `_previous_dayN` suffix: the value predicted N×24 hours before the hour (N from 1 to 7). Without a suffix, it's the latest run.
+- **History:** most models from January 2024. A model only fills offsets within its forecast range; HRRR had no `_previous_day2`.
+- **Grid:** the response's `latitude` and `longitude` are the grid point used, not the requested point. NBM's point for Turners Falls was about 1 km away.
+- **Units:** °C, m/s with `wind_speed_unit=ms`, and percent for chance of rain (convert to a 0–1 fraction). Times are `YYYY-MM-DDTHH:MM` in the requested time zone, with no offset; request GMT and append `Z`.
+- **Terms:** free for non-commercial use, under 10,000 calls a day, 5,000 an hour, 600 a minute. Data under CC BY 4.0. No key.
+
+### Open-Meteo Historical Weather API (modeled history, fallback)
+
+- **Docs:** https://open-meteo.com/en/docs/historical-weather-api
+- **URL:** `https://archive-api.open-meteo.com/v1/archive?latitude=…&longitude=…&start_date=…&end_date=…&hourly=temperature_2m,wind_speed_10m,wind_gusts_10m,wind_direction_10m&wind_speed_unit=ms&timezone=GMT`
+- **Data:** ERA5 (about 25 km, 5-day delay), ERA5-Land (about 11 km), and ECMWF IFS (9 km, from 2017). Modeled, so label it that way.
+- **Terms:** as above.
+
+### Iowa Environmental Mesonet ASOS archive (what happened)
+
+- **Docs:** https://mesonet.agron.iastate.edu/request/download.phtml (scripting help at `/cgi-bin/request/asos.py?help`)
+- **URL:** `https://mesonet.agron.iastate.edu/cgi-bin/request/asos.py?station=ORE&data=tmpc&data=sknt&data=gust&data=drct&year1=…&month1=…&day1=…&year2=…&month2=…&day2=…&tz=Etc/UTC&format=onlycomma&latlon=no&missing=empty&report_type=3`
+- **Station IDs** drop the `K`: KORE is `ORE`.
+- **Fields:** `tmpc` (°C), `sknt` and `gust` (knots; convert to m/s), and `drct` (degrees). `missing=empty` leaves missing values blank. `report_type=3` selects routine hourly reports, which Orange files at :52.
+- **Quality:** as-is, with very little quality control. Missing, failed checks, and never-reported values can't be told apart, so all are unknown.
+- **Terms:** public domain; attribution to the Iowa Environmental Mesonet of Iowa State University is appreciated. No stated rate limits; space requests anyway.
+
+### Not used
+
+- **NCEI Global Hourly:** KORE's record ends August 2025, and 2026 requests returned nothing.
+- **NWS NDFD archive:** the forecasts as issued, but GRIB2 needs a decoding library.
+
 ## Not used: Weather Underground
 
 Some clubs point members to Weather Underground's hourly forecast pages. We use the NWS API instead, which is free and covers the same forecast data. Users may still compare against it, so expect occasional differences between forecast providers.
