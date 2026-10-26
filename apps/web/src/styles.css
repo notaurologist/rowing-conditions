@@ -275,3 +275,154 @@ input[type="search"] {
 .attribution a {
   color: inherit;
 }
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.unit-toggle {
+  display: flex;
+  gap: 0;
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.unit-toggle button {
+  padding: 4px 10px;
+  border-radius: 0;
+}
+
+.unit-toggle button:first-of-type {
+  border-radius: 6px 0 0 6px;
+}
+
+.unit-toggle button:last-of-type {
+  border-radius: 0 6px 6px 0;
+  border-left: 0;
+}
+
+.unit-toggle button[aria-pressed="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--bg);
+  font-weight: 600;
+}
+
+.conditions h2 {
+  margin-bottom: 4px;
+}
+
+.conditions h3 {
+  font-size: 1rem;
+  margin: 20px 0 8px;
+}
+
+.readings {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px;
+}
+
+.reading {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+}
+
+.reading-prominent {
+  border-width: 2px;
+  border-color: var(--accent);
+}
+
+.reading-flagged {
+  border-style: dashed;
+}
+
+.reading-label {
+  font-weight: 600;
+}
+
+.reading-number {
+  font-size: 1.6rem;
+  font-weight: 600;
+}
+
+.reading-missing {
+  font-style: italic;
+  color: var(--muted);
+  padding: 6px 0;
+}
+
+.reading-meta {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.qualifiers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.qualifiers .tag {
+  margin-left: 0;
+}
+
+.tag-warning {
+  border-style: dashed;
+}
+
+.flag {
+  margin: 4px 0 0;
+  font-size: 0.85rem;
+}
+
+.daylight {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.daylight dt {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.daylight dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.alerts {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.alerts p {
+  margin: 4px 0 0;
+}
+
+.refresh-row {
+  margin-top: 20px;
+}
+
+.location-bar {
+  margin-bottom: 8px;
+}

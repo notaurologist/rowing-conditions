@@ -216,6 +216,7 @@ The code is in `packages/core/src/evaluation/evaluate.ts`.
   - `unavailableMetrics` lists metrics with an applicable threshold but no provenance at any hour (`noSource`), so the UI can show one notice per rule set instead of 48 unknowns. For a combined temperature limit, it lists the part with no source (for example `waterTemp`).
   - `flowByGauge` holds flow series by gauge ref. If the rule set names a flow gauge, each hour's flow is replaced with that gauge's flow for the same hour. If the gauge has no data, flow is `noSource`. It never falls back to the location's display gauge. Only flow moves to the named gauge; a gauge height limit is still evaluated at the display gauge, until a club needs otherwise.
   - `hasLimits` is false when the rule set has no thresholds for the boat class and no daylight window. Every hour would then be vacuously `within`, so `hours` is returned empty: no client can show "within Club A's limits" for a club with none. The UI shows its empty state ("enter your or your club's limits") instead.
+- `freshness(metric, kind, asOf, now) → 'fresh' | 'stale' | 'future'` applies the maximum ages below and the future tolerance. Evaluation treats `stale` and `future` alike, and the web app uses the same function to flag current readings.
 - `findWindows(hours, { ruleSet, lat, lon }) → { start, end }[]` returns ISO 8601 UTC times, with `end` exclusive. It's in `packages/core/src/evaluation/windows.ts`.
   - A window is a contiguous run of `within` hours. An `outside` or `unknown` hour ends a run, and so does a gap in the timeline.
   - With a daylight window, edges are cut at the rule set's daylight window, inward to whole minutes. A window never starts before the daylight window opens or ends after it closes.
@@ -506,6 +507,14 @@ No secrets in code or fixtures.
   - Each value is `{ version, data }`. On read, older versions are migrated one step at a time (`migrations[n]` turns version n into n + 1) and the data is validated with Zod.
   - Data that can't be read (bad JSON, no envelope, no migration path, failed validation) is discarded and logged. In a list, only the invalid items are dropped. Data from a newer version is left in place and defaults are used. Reading never throws.
   - Writes are validated first. A failed write (quota, blocked storage) throws to the caller, which must show it.
+- **Current conditions** (`src/features/conditions/`): `conditionRows` turns a `/conditions` response into one row per metric. Water temperature comes first, then flow, gauge height, air temperature, wind, gusts and direction.
+  - **Values:** each value is in the chosen units (`displayValue`, `displayUnits`), with its source (USGS gauge, NWS station and distance, or "NWS forecast for this hour") and its observation time in the location's time zone.
+  - **Freshness:** a stale or future-dated reading is flagged in words using core `freshness`, the same rule evaluation uses.
+  - **Qualifiers** are shown in words, and the ones that keep a value out of limits say so.
+  - **Gaps say why:** the source reported no value, the gauge doesn't measure it, the location is weather-only, or the source failed.
+  - **Calm wind:** NWS reports calm as 0 m/s from 0°, which is shown as "Calm, no direction".
+  - **The panel also shows** today's daylight times by the location's local date, active alerts with severity in words, and a notice for each failed or stale source.
+  - **Units:** the US/Metric toggle saves to preferences and marks the current choice with `aria-pressed` and a check mark.
 - A root error boundary shows a message and a reload button instead of a blank page.
 - Charts with visx. The 48-hour timeline is a feature folder of its own (`features/timeline/`) with its chart components kept independent of data fetching, so they can be tested with fixture data.
 - Map with Leaflet (react-leaflet), OpenStreetMap tiles, respecting the tile usage policy and attribution. The tile URL is configurable (`VITE_TILE_URL`), as the policy asks, and Leaflet loads lazily because it needs `window`.
