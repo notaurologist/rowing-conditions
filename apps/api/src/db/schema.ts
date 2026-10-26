@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm';
 import {
+  bigint,
   boolean,
   check,
   doublePrecision,
@@ -52,3 +53,21 @@ export const requestGates = pgTable('request_gates', {
   name: text('name').primaryKey(), // e.g. 'nominatim'
   lastStart: timestamp('last_start', { withTimezone: true }).notNull(), // the latest reserved start
 });
+
+// Warnings and errors the API logged, kept 30 days (decision 0018). Only fixed messages and the
+// small structured details the code chooses; never request contents or personal data.
+export const errorEvents = pgTable(
+  'error_events',
+  {
+    id: bigint('id', { mode: 'number' }).primaryKey().generatedAlwaysAsIdentity(),
+    occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull().defaultNow(),
+    level: text('level').notNull(),
+    message: text('message').notNull(),
+    details: jsonb('details'),
+    route: text('route'), // the matched route pattern, e.g. '/gauges/:ref', when known
+  },
+  (t) => [
+    check('error_events_level', sql`${t.level} in ('warn', 'error')`),
+    index('error_events_occurred_at').on(t.occurredAt),
+  ],
+);

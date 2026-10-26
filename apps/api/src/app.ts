@@ -1,16 +1,19 @@
 import { zValidator } from '@hono/zod-validator';
 import { type ConditionsResponse, GaugeRef } from '@rowing/core';
 import { Hono } from 'hono';
+import { HTTPException } from 'hono/http-exception';
 import { z } from 'zod';
 import type { SourceError } from './adapters/http.ts';
 import type { FlowSource } from './adapters/types.ts';
 import type { ConditionsInput } from './services/conditions.ts';
+import type { ErrorLog } from './services/errorLog.ts';
 import type { SearchPlaces } from './services/places.ts';
 
 export interface AppDeps {
   usgs: FlowSource;
   conditions: (input: ConditionsInput) => Promise<ConditionsResponse>;
   searchPlaces?: SearchPlaces; // absent when place search is turned off (GEOCODING_ENABLED=false)
+  errorLog?: Pick<ErrorLog, 'record' | 'flush'>; // absent in tests that don't need it
 }
 
 export const MAX_RADIUS_KM = 100;
@@ -61,6 +64,25 @@ const upstreamError = (error: SourceError) => ({
 export function createApp(deps: AppDeps) {
   return (
     new Hono()
+      // Unhandled exceptions are recorded (decision 0018) with the route pattern, never the
+      // request's path or query, which can hold a location. The response says nothing more.
+      .onError((error, c) => {
+        if (error instanceof HTTPException) return error.getResponse();
+        deps.errorLog?.record({
+          level: 'error',
+          message: 'unhandled exception',
+          route: c.req.routePath,
+          details: { name: error.name, message: error.message, stack: error.stack },
+        });
+        return c.json({ error: { message: 'Something went wrong on the server.' } }, 500);
+      })
+      // Recorded events are written before the response goes out, so a function instance isn't
+      // frozen with writes pending.
+      .use(async (_c, next) => {
+        await next();
+        await deps.errorLog?.flush();
+      })
+
       .get('/health', (c) => c.json({ status: 'ok' }))
 
       // Always 200: each source's failure is reported in `sources`, never as a failed request.

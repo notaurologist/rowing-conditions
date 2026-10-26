@@ -489,6 +489,7 @@ MVP tables:
 
 - `source_cache`: `key` (pk), `payload` (jsonb, normalized data), `fetched_at`, `expires_at`.
 - `request_gates`: `name` (pk, e.g. `nominatim`), `last_start` (the latest reserved start time). One row per rate-limited service.
+- `error_events`: `id`, `occurred_at`, `level` (`warn` or `error`), `message`, `details` (jsonb), `route`. Kept 30 days. See Error logging.
 - `gauges`: `ref` (pk, e.g. `usgs:USGS-01170500`, `nwps:MNTM3`), `source`, `name`, `lat`, `lon`, `metrics` (text[]), `has_flow_forecast` (bool), `linked_ref` (the matching gauge in the other source, when known), `updated_at`. Populated lazily from nearby searches.
 
 Migrations via `drizzle-kit`, committed to the repo:
@@ -499,6 +500,18 @@ Migrations via `drizzle-kit`, committed to the repo:
 - **`has_flow_forecast`** is nullable: null means NWPS hasn't been checked yet.
 - **Local database:** `docker-compose.yml` runs `postgres:18` (decision 0013). `drizzle.config.ts` falls back to that container's URL when `DATABASE_URL` is unset.
 - **Migrating:** `pnpm db:migrate` applies migrations. Re-running it is a no-op.
+
+### Error logging
+
+Decision 0018. Vercel keeps runtime logs for one hour, so warnings and errors are also recorded in `error_events`.
+
+- **Warnings:** `createErrorLog` (`apps/api/src/services/errorLog.ts`) provides the `logger` every adapter and the cache use. Each `logger.warn` goes to the console and becomes a row.
+- **Unhandled exceptions:** the app's `onError` records the error's name, message, and stack with the route pattern (for example `/gauges/:ref`), never the request path or query, which can hold a location. It answers 500 with a generic message. A Hono `HTTPException` passes through unrecorded.
+- **Before each response,** a middleware waits for pending writes, so a function instance isn't frozen with writes outstanding.
+- **A failed write** goes to the console only and never fails the request. Errors while the database is down therefore reach only Vercel's one-hour logs.
+- **Retention:** rows older than 30 days are deleted as part of recording, at most once an hour per instance.
+- **What's recorded:** fixed messages and the structured details the code passes. Never request bodies, headers, query strings, or IP addresses. An exception's own message is recorded as thrown, so code shouldn't put request values in error messages.
+- **Reading:** SQL in Neon's console, for example `select occurred_at, level, message, route, details from error_events order by id desc limit 50;`.
 
 ### Configuration
 
@@ -622,3 +635,21 @@ Decision 0017: one Vercel project (Hobby plan) with the web build at `/` and the
 - **Database connection:** the deployed API uses Neon's pooled connection string (the host with `-pooler`), with prepared statements off and at most 5 connections per function instance (`POOLED_CONNECTION` in `bootstrap.ts`). Create the Neon project in AWS `us-east-1`, near Vercel's default function region (Washington, D.C.).
 - **Environment (Vercel project settings):** `DATABASE_URL` (pooled), `NWS_USER_AGENT`, and optionally `USGS_API_KEY` and `GEOCODING_ENABLED`. Never in the repository.
 - **Migrations:** run from a machine with the repository, against Neon's direct (unpooled) connection string, because Neon advises against schema changes through the pooler: `DATABASE_URL='<direct URL>' pnpm db:migrate`. Run them before deploying code that needs them. Re-running is a no-op.
+
+### Deploying
+
+The owner's steps; they need accounts, so an agent can't do them. Free tiers only (0015).
+
+1. **Neon:** create a free project on Postgres 18 in AWS `us-east-1`. Copy both connection strings: direct and pooled (Connection pooling on).
+2. **Migrate:** from a checkout of `main`, run `DATABASE_URL='<direct URL>' pnpm db:migrate`.
+3. **Vercel:** on the Hobby plan, import the GitHub repository with the repository root as the root directory, so `vercel.json` applies. Check that the project's Node.js version is 24.x.
+4. **Environment variables** (Production and Preview): `DATABASE_URL` set to the pooled URL, and `NWS_USER_AGENT` set to the app name and a contact email. Preview deployments then share the production database. That's acceptable while migrations are run by hand.
+5. **Deploy** from `main`. Check that `https://<project>.vercel.app/api/health` answers `{"status":"ok"}` and that the app loads conditions for a real location.
+6. **Phone:** open the URL, add it to the home screen, and load conditions for a real location. This is M8's acceptance.
+7. **Measure** and record on the deploy issue:
+   - **Cold start:** after at least 15 minutes without traffic, run `curl -s -o /dev/null -w '%{time_total}\n' <url>/api/health`, then a conditions request.
+   - **Active CPU per conditions request:** from Vercel Observability, against the 4 hours a month on Hobby.
+8. **Errors:** confirm rows appear in `error_events` (see Error logging).
+
+Later schema changes: run `pnpm db:migrate` against the direct URL before merging code that needs them.
+
