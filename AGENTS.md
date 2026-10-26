@@ -34,7 +34,7 @@ Versions are pinned exactly. Libraries like Hono and Drizzle change quickly: che
 
 ## Commands
 
-Keep this list to commands that work today. Requires Node 26 (`.nvmrc`) and pnpm 12.15.0.
+Keep this list to commands that work today. Requires Node 24 (`.nvmrc`) and pnpm 12.15.0.
 
 ```
 pnpm install        # also turns on the pre-push hook
