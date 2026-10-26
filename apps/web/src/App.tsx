@@ -1,4 +1,4 @@
-import type { SavedLocation } from '@rowing/core';
+import type { ChartMetric, SavedLocation } from '@rowing/core';
 import { useState } from 'react';
 import { UnitToggle } from './components/UnitToggle.tsx';
 import { CurrentConditions } from './features/conditions/CurrentConditions.tsx';
@@ -7,7 +7,7 @@ import { useAppStorage, useStoredData } from './lib/useStoredData.ts';
 
 export function App() {
   const storage = useAppStorage();
-  const { locations, preferences } = useStoredData();
+  const { locations, ruleSets, preferences } = useStoredData();
   const [adding, setAdding] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
 
@@ -27,6 +27,15 @@ export function App() {
       storage.savePreferences({ ...preferences, units });
     } catch (error) {
       setProblem(`Couldn't save the unit choice: ${String(error)}`);
+    }
+  };
+
+  const setPinned = (pinnedChartMetric: ChartMetric | undefined) => {
+    const { pinnedChartMetric: _, ...rest } = preferences;
+    try {
+      storage.savePreferences(pinnedChartMetric ? { ...rest, pinnedChartMetric } : rest);
+    } catch (error) {
+      setProblem(`Couldn't save the pinned chart: ${String(error)}`);
     }
   };
 
@@ -86,7 +95,14 @@ export function App() {
           </section>
         )}
         {!adding && selected && (
-          <CurrentConditions key={selected.id} location={selected} units={preferences.units} />
+          <CurrentConditions
+            key={selected.id}
+            location={selected}
+            units={preferences.units}
+            ruleSet={ruleSets.find((r) => selected.ruleSetIds.includes(r.id))}
+            pinned={preferences.pinnedChartMetric}
+            onPin={setPinned}
+          />
         )}
       </main>
     </div>
