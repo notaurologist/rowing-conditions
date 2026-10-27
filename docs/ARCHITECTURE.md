@@ -643,12 +643,12 @@ The owner's steps; they need accounts, so an agent can't do them. Free tiers onl
 1. **Neon:** create a free project on Postgres 18 in AWS `us-east-1`. Copy both connection strings: direct and pooled (Connection pooling on).
 2. **Migrate:** from a checkout of `main`, run `DATABASE_URL='<direct URL>' pnpm db:migrate`.
 3. **Vercel:** on the Hobby plan, import the GitHub repository with the repository root as the root directory, so `vercel.json` applies. Check that the project's Node.js version is 24.x.
-4. **Environment variables** (Production and Preview): `DATABASE_URL` set to the pooled URL, and `NWS_USER_AGENT` set to the app name and a contact email. Preview deployments then share the production database. That's acceptable while migrations are run by hand.
+4. **Environment variables** (Production and Preview): `DATABASE_URL` set to the pooled URL, and `NWS_USER_AGENT` set to the app name and a contact email. Preview deployments then share the production database. That's acceptable while migrations are run by hand. A deployment keeps the variables it was built with, so redeploy after adding or changing one. Without them, every `/api` request fails with `FUNCTION_INVOCATION_FAILED`, and the runtime log names each missing variable.
 5. **Deploy** from `main`. Check that `https://<project>.vercel.app/api/health` answers `{"status":"ok"}` and that the app loads conditions for a real location.
 6. **Phone:** open the URL, add it to the home screen, and load conditions for a real location. This is M8's acceptance.
 7. **Measure** and record on the deploy issue:
    - **Cold start:** after at least 15 minutes without traffic, run `curl -s -o /dev/null -w '%{time_total}\n' <url>/api/health`, then a conditions request.
-   - **Active CPU per conditions request:** from Vercel Observability, against the 4 hours a month on Hobby.
+   - **Active CPU per request:** Fluid Active CPU and Function Invocations on the Usage page, against the 4 hours a month on Hobby. The CLI's `vercel metrics` needs Observability Plus, which Hobby can't buy.
 8. **Errors:** confirm rows appear in `error_events` (see Error logging).
 
 Later schema changes: run `pnpm db:migrate` against the direct URL before merging code that needs them.
