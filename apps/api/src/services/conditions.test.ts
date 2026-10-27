@@ -200,12 +200,17 @@ describe('getConditions when every source answers', () => {
     expect(r.forecast[35]?.values.flow).toBeNull();
   });
 
-  it('uses the latest observation for every hour when the gauge has no forecast', async () => {
+  it('uses the latest observation for 3 hours when the gauge has no forecast (#117)', async () => {
     vi.mocked(deps.nwps.getGauge).mockResolvedValue(ok({ ...mntm3, hasFlowForecast: false }));
     const r = await conditions();
     expect(deps.nwps.getStageFlow).not.toHaveBeenCalled();
-    expect(r.forecast.every((p) => p.values.flow === toSI(5060, 'cfs'))).toBe(true);
-    expect(r.forecast[40]?.provenance.flow?.kind).toBe('observation');
+    // The 11:45 reading covers 12:00 to 14:00; 15:00 starts more than 3 hours after it.
+    expect(r.forecast.slice(0, 3).every((p) => p.values.flow === toSI(5060, 'cfs'))).toBe(true);
+    expect(r.forecast.slice(3).every((p) => p.values.flow === null)).toBe(true);
+    expect(r.forecast[40]?.provenance.flow).toMatchObject({
+      kind: 'observation',
+      withheld: 'noForecast',
+    });
   });
 
   it('combines current weather from the station with the gauge reading', async () => {
@@ -302,13 +307,69 @@ describe('getConditions: the current hour uses the latest measurements (#75)', (
   });
 
   it('keeps the forecast for every later hour, even with a reading from this hour', async () => {
+    const agreeing = toSI(3600, 'cfs'); // 6% above the 3.4 kcfs forecast
+    vi.mocked(deps.usgs.getLatest).mockResolvedValue(
+      ok([
+        { ...(usgsLatest[0] as Reading), value: agreeing, observedAt: '2026-10-26T12:10:00.000Z' },
+      ]),
+    );
+    const r = await conditions();
+    expect(r.forecast[0]?.values.flow).toBe(agreeing);
+    expect(r.forecast.slice(1, 30).every((p) => p.values.flow === toSI(3.4, 'kcfs'))).toBe(true);
+    expect(r.forecast.slice(1).every((p) => p.values.windSpeed === 3)).toBe(true);
+  });
+
+  it("sets aside a forecast more than 25% from this hour's reading (#82)", async () => {
+    // 5,060 cfs measured at 12:10 against a 3.4 kcfs forecast for 12:00: 33% apart.
     vi.mocked(deps.usgs.getLatest).mockResolvedValue(
       ok([{ ...(usgsLatest[0] as Reading), observedAt: '2026-10-26T12:10:00.000Z' }]),
     );
     const r = await conditions();
-    expect(r.forecast[0]?.values.flow).toBe(toSI(5060, 'cfs'));
-    expect(r.forecast.slice(1, 30).every((p) => p.values.flow === toSI(3.4, 'kcfs'))).toBe(true);
-    expect(r.forecast.slice(1).every((p) => p.values.windSpeed === 3)).toBe(true);
+    expect(r.forecast.slice(0, 4).every((p) => p.values.flow === toSI(5060, 'cfs'))).toBe(true);
+    expect(r.forecast.slice(4).every((p) => p.values.flow === null)).toBe(true);
+    expect(r.forecast[10]?.provenance.flow?.withheld).toBe('forecastDisagrees');
+  });
+
+  it("sets aside the forecast for a rule set's flow gauge the same way", async () => {
+    vi.mocked(deps.usgs.getLatest).mockResolvedValue(
+      ok([{ ...(usgsLatest[0] as Reading), observedAt: '2026-10-26T12:10:00.000Z' }]),
+    );
+    const r = await conditions({ flowGaugeRefs: ['usgs:USGS-01170500'] });
+    const points = r.flowSeries[0]?.points ?? [];
+    expect(points[10]?.values.flow).toBeNull();
+    expect(points[10]?.provenance.flow?.withheld).toBe('forecastDisagrees');
+  });
+
+  it('says why flow is unknown in evaluation, not just missing', async () => {
+    vi.mocked(deps.usgs.getLatest).mockResolvedValue(
+      ok([{ ...(usgsLatest[0] as Reading), observedAt: '2026-10-26T12:10:00.000Z' }]),
+    );
+    const r = await conditions();
+    const flowLimit = {
+      id: 'flow',
+      metric: 'flow' as const,
+      comparison: 'max' as const,
+      boundary: 'inclusive' as const,
+      value: toSI(20000, 'cfs'),
+      enteredUnit: 'cfs' as const,
+    };
+    const { hours } = evaluateTimeline({
+      forecast: r.forecast,
+      ruleSet: {
+        id: 'rs',
+        name: 'Club',
+        boatClasses: [{ id: 'all', name: 'All' }],
+        thresholds: [flowLimit],
+      },
+      boatClassId: 'all',
+      lat: LAT,
+      lon: LON,
+      now: clock.toISOString(),
+    });
+    expect(hours[1]?.status).toBe('within');
+    expect(hours[10]?.unknowns).toEqual([
+      { thresholdId: 'flow', metric: 'flow', reason: 'forecastDisagrees' },
+    ]);
   });
 
   it('replaces forecast weather for the current hour with a newer station reading', async () => {

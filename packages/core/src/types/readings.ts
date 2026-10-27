@@ -29,6 +29,8 @@ export const ValueProvenance = z.object({
   sourceRef: z.string().min(1).optional(),
   interpolated: z.boolean().optional(),
   qualifiers: z.array(Qualifier).optional(),
+  // Why a null value was left out on purpose, so evaluation can say so rather than 'missing'.
+  withheld: z.enum(['noForecast', 'forecastDisagrees']).optional(),
 });
 export type ValueProvenance = z.infer<typeof ValueProvenance>;
 

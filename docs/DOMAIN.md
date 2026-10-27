@@ -122,7 +122,7 @@ Combined air plus water temperature is the sum of the two readings each rounded 
 
 ### Old readings
 
-A reading that is too old is treated as missing, so the hour shows as unknown, not within. The latest flow observation is carried across all 48 hours when there is no forecast. That is only reasonable while the observation is recent. Gauges lag or go offline, especially in winter.
+A reading that is too old is treated as missing, so the hour shows as unknown, not within. Gauges lag or go offline, especially in winter. Without a flow forecast, the latest reading stands in only for the next 3 hours, the same as its maximum age; later hours are unknown, with "no forecast" as the reason (#117). Releases change flow within hours: at Montague in 2026, flow moved more than 25% within 3 hours of a reading about a quarter of the time.
 
 Starting values (to be tuned during backtesting, M9):
 
@@ -135,7 +135,7 @@ Hours past the end of a flow forecast are unknown for flow. The app does not fal
 
 ### Measured now beats forecast for now
 
-For the current hour, a real measurement replaces the forecast: the gauge's latest flow, gauge height and water temperature, and the nearby weather station's air temperature and wind. On October 26, 2026 the gauge at Montague measured 7,440 cfs while a 22-hour-old forecast still said 3,183 for that hour, and the app showed a window that the river had already closed. Later hours keep the forecast, because a measurement says nothing directly about them. The summary says in plain numbers when the latest reading and the forecast for its hour disagree by more than 10%, so a forecast that has drifted is visible. Two limits:
+For the current hour, a real measurement replaces the forecast: the gauge's latest flow, gauge height and water temperature, and the nearby weather station's air temperature and wind. On October 26, 2026 the gauge at Montague measured 7,440 cfs while a 22-hour-old forecast still said 3,183 for that hour, and the app showed a window that the river had already closed. Later hours keep the forecast, because a measurement says nothing directly about them, unless the forecast for the measurement's hour is more than 25% off it. Then the forecast is set aside, and flow is treated as if there were no forecast: the reading for 3 hours, then unknown (#82). At Montague the forecast doesn't capture releases from the Turners Falls dam and the Northfield Mountain pumped-storage station, and was found about half the measured flow. The summary says in plain numbers when the latest reading and the forecast for its hour disagree by more than 10%, so a forecast that has drifted is visible. Two limits:
 
 - **Recency:** only a measurement taken in the current hour or the one before counts. An older reading served from a cache doesn't stand in for now.
 - **Newer forecasts win:** a forecast issued after the measurement keeps its value.

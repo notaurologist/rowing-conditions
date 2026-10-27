@@ -9,6 +9,8 @@ export const UnknownReason = z.enum([
   'stale', // older than the metric's maximum age
   'qualified', // carries a qualifier that makes it unreliable
   'noSource', // no source at this location reports the metric
+  'noForecast', // no forecast for this hour, and the last reading is too far back to stand in (#117)
+  'forecastDisagrees', // the forecast was set aside: it disagreed with the latest reading (#82)
 ]);
 export type UnknownReason = z.infer<typeof UnknownReason>;
 
