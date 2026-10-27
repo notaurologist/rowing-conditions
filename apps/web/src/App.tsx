@@ -87,7 +87,7 @@ export function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <p className="app-title">Rowing Conditions</p>
+        <p className="app-title">Launch Window</p>
         <div className="app-header-actions">
           {!introOpen && (
             <button type="button" className="link-button" onClick={() => setShowingAbout(true)}>

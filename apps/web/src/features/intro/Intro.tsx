@@ -6,7 +6,7 @@ export const INTRO_VERSION = 1;
 export function Intro({ onContinue, firstUse }: { onContinue: () => void; firstUse: boolean }) {
   return (
     <section className="intro" aria-labelledby="intro-heading">
-      <h2 id="intro-heading">About Rowing Conditions</h2>
+      <h2 id="intro-heading">About Launch Window</h2>
 
       <h3>What it does</h3>
       <ul>
@@ -39,7 +39,7 @@ export function Intro({ onContinue, firstUse }: { onContinue: () => void; firstU
 
       <h3>Disclaimer</h3>
       <p className="intro-disclaimer">
-        Rowing Conditions is provided as is, without warranty of any kind. It is information, not
+        Launch Window is provided as is, without warranty of any kind. It is information, not
         advice. You are responsible for your own safety and your crew's. Follow your club's rules
         and look at the water before you go out.
       </p>
