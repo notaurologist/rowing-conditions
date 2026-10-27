@@ -27,6 +27,20 @@ export const NwsGrid = z.object({
     windGust: series.optional(),
     windDirection: series.optional(),
     probabilityOfPrecipitation: series.optional(),
+    dewpoint: series.optional(),
+    // The forecaster's weather words per interval. An entry with weather null means none (#42).
+    weather: z
+      .object({
+        values: z.array(
+          z.object({
+            validTime: z.string(),
+            value: z.array(
+              z.object({ coverage: z.string().nullable(), weather: z.string().nullable() }),
+            ),
+          }),
+        ),
+      })
+      .optional(),
   }),
 });
 export type NwsGrid = z.infer<typeof NwsGrid>;
