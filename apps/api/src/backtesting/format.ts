@@ -158,7 +158,12 @@ export function formatReplay(replay: Replay, options: FormatOptions): string {
     '- Flow forecast: none, since NWPS keeps no past forecasts. Later hours repeat the last measured flow, as the app does for a gauge without a forecast.',
   );
   lines.push('- Alerts: not recorded.');
-  for (const warning of replay.warnings) lines.push(`- Warning: ${warning}`);
+  // The same warning can repeat for every reading, so each is listed once with a count.
+  const warnings = new Map<string, number>();
+  for (const warning of replay.warnings) warnings.set(warning, (warnings.get(warning) ?? 0) + 1);
+  for (const [warning, count] of warnings) {
+    lines.push(`- Warning${count > 1 ? ` (${count} times)` : ''}: ${warning}`);
+  }
   lines.push('');
 
   if (!timeline.hasLimits) {

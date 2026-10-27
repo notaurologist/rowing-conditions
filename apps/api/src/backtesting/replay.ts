@@ -319,6 +319,9 @@ async function measuredTimeline(input: MeasuredInput): Promise<MeasuredTimeline>
     lat: meta.lat,
     lon: meta.lon,
     now: times[0] ?? new Date(0).toISOString(),
+    // The points already carry flow from the rule set's gauge. Without this, evaluation would
+    // drop it and treat flow as having no source.
+    ...(flowRef ? { flowByGauge: { [flowRef]: points } } : {}),
   });
   const hours = timeline.hasLimits
     ? points.map((point) =>

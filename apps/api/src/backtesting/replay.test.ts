@@ -174,6 +174,24 @@ describe('replayCase', () => {
     expect(r.measured.hours.some((h, i) => h.status !== r.timeline.hours[i]?.status)).toBe(true);
   });
 
+  it('compares measured flow from the gauge the rule set names', async () => {
+    // Test Club measures flow at Montague, the case's only gauge. 20 kcfs is under May 15's flow.
+    const low = RuleSet.parse({
+      ...ruleSet,
+      thresholds: ruleSet.thresholds.map((t) =>
+        t.id === 't-flow' ? { ...t, value: 566.33693184, enteredUnit: 'kcfs' } : t,
+      ),
+    });
+    const r = await replay({ ruleSet: low });
+    for (const hour of r.measured.hours) {
+      expect(hour.unknowns.some((u) => u.metric === 'flow')).toBe(false);
+    }
+    const flowFailures = r.measured.hours.filter((h) =>
+      h.failures.some((f) => f.kind === 'limit' && f.thresholdId === 't-flow'),
+    );
+    expect(flowFailures.length).toBeGreaterThan(40);
+  });
+
   it('leaves out rain limits from the measured status, and says so', async () => {
     const plain = await replay();
     expect(plain.measured.leftOut).toEqual([]);

@@ -82,6 +82,16 @@ describe('formatReplay', () => {
     );
   });
 
+  it('lists a repeated warning once, with a count', () => {
+    const repeated = {
+      ...replay,
+      warnings: ['usgs: reading out of range', 'usgs: reading out of range', 'other'],
+    };
+    const text = formatReplay(repeated, { caseName: 'replay-test', timeZone, units: 'us' });
+    expect(text).toContain('- Warning (2 times): usgs: reading out of range');
+    expect(text).toContain('- Warning: other');
+  });
+
   it('labels the observed columns by where they came from', () => {
     expect(us).toContain('Observed columns: the station report filed in each hour.');
   });
