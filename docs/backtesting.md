@@ -113,6 +113,19 @@ What this means for the app:
 
 Headroom scales: reviewed and unchanged. Flow's scale is the limit itself, and 20 kcfs is the only limit in this rule set. A release can use up about a third of that in an hour, so headroom says little about the next few hours on this river. The fixed temperature and gauge height scales couldn't be checked, since the club has no limits on them.
 
+## Archived NWPS forecasts
+
+Since #81 (October 2026) the API keeps each NWPS flow forecast it fetches, for 90 days, in `forecast_archive`. Only forecasts fetched while someone viewed a location are there, so the record has gaps. To compare a forecast with what was measured, read it from the database and the measurements from USGS history:
+
+```sql
+select issued_at, p->>'time' as hour, (p->'values'->>'flow')::float * 35.3147 as flow_cfs
+from forecast_archive, jsonb_array_elements(points) as p
+where ref = 'MNTM3' and issued_at between '2026-10-27' and '2026-10-28'
+order by issued_at, hour;
+```
+
+`createForecastArchive(...).issuedBetween(ref, from, to)` returns the same rows to code. Replays don't use the archive yet.
+
 ## Limits
 
 - **Weather forecasts are model forecasts, not the NWS forecasts as issued.** NWS forecasters edit the NBM, so a crew that checked the forecast that morning may have seen something different (decision 0019).

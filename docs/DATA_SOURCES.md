@@ -157,6 +157,8 @@ Verified against the live API on October 25, 2026 (issue #19).
    - `windSpeed` and `windGust`: `wmoUnit:km_h-1`. Values are knot multiples converted to km/h (1.852, 3.704, …).
    - `windDirection`: `wmoUnit:degree_(angle)`
    - `probabilityOfPrecipitation`: `wmoUnit:percent`. Convert to a 0–1 fraction.
+   - `dewpoint`: `wmoUnit:degC`.
+   - `weather`: no `uom`. Each value is a list of `{ coverage, weather, intensity, visibility, attributes }`; `weather` is `"fog"`, `"rain"` and so on, and an entry with `weather: null` means none. Coverage words seen: `patchy`, `areas`, `widespread`, `slight_chance`, `chance`, `likely`, `definite` (Medford, OR, October 27, 2026, recorded as `nws/grid-mfr-90-80`).
    - The data covers `validTimes`, here 7½ days from 13:00Z.
 3. `GET /alerts/active?point={lat},{lon}` returns `{ features: [...] }`. Each alert's `properties` include `id`, `event`, `headline`, `severity`, `onset`, `ends`, `expires` and `effective`. `ends` can be null, so fall back to `expires`.
 4. **Current observations:** `GET /gridpoints/{office}/{x},{y}/stations` lists observation stations nearest first, followed by `GET /stations/{id}/observations/latest`. Each value is `{ unitCode, value, qualityControl }`, and `windGust` is null when there's no gust. The nearest station to Turners Falls is Orange Municipal Airport (`KORE`), 22 km away.
@@ -194,6 +196,14 @@ Chosen by the owner for location search in #25. Checked against the live API on 
 - **Quirks:** coordinates are strings. Convert them in the adapter, and fall back to `display_name` when `name` is empty.
 
 ---
+
+## OpenStreetMap Overpass API (river centerlines for courses)
+
+Used only to set up a course (#103): `GET https://overpass-api.de/api/interpreter?data=…` with the query `way["waterway"~"^(river|canal)$"](box);out body geom;`. `out body geom` returns each way's node ids (to join ways where they share a node) and coordinates in parallel lists; a coordinate can be null at the box edge.
+
+- **Usage policy:** identify the app with a User-Agent (the API sends `NWS_USER_AGENT`), keep queries small, and expect 429/502/504 when the public server is busy. The adapter retries once after 3 s on a 5xx.
+- **Speed:** the query for about 12 by 10 km around Turners Falls took 32 to 34 s on October 27, 2026, and failed with 502 twice. The adapter waits up to 60 s. Results are cached 30 days by box, since rivers don't move.
+- **Data:** OpenStreetMap, © OpenStreetMap contributors, under the ODbL. The map already shows that attribution. No rowing courses are mapped near Turners Falls or on the Charles (checked October 27, 2026), but river centerlines are mapped everywhere in the US.
 
 ## Sunrise and sunset
 

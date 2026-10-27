@@ -124,6 +124,7 @@ button.primary:hover:not(:disabled) {
 
 input[type="text"],
 input[type="search"],
+textarea,
 select {
   font: inherit;
   min-height: var(--control-height);
@@ -135,6 +136,7 @@ select {
 }
 
 input[type="text"],
+textarea,
 select {
   width: 100%;
 }

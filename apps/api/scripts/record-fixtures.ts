@@ -19,6 +19,7 @@ import {
   pointsUrl,
   stationsUrl,
 } from '../src/adapters/nws/requests.ts';
+import { waterwaysUrl } from '../src/adapters/overpass/requests.ts';
 import {
   historyUrl,
   latestReadingsUrl,
@@ -27,6 +28,8 @@ import {
   timeSeriesMetadataUrl,
   usgsParameterCodes,
 } from '../src/adapters/usgs/requests.ts';
+import { courseBox } from '../src/services/courseSnap.ts';
+import { COURSE_START, COURSE_TURN } from '../test/course.ts';
 import { recordFixture, type Trim } from './recorder.ts';
 
 const MONTAGUE = 'USGS-01170500'; // Connecticut River at Montague City, MA: no water temperature
@@ -52,6 +55,7 @@ const fixtures: Record<string, string> = {
   'nwps/stageflow-nfdm3': stageFlowUrl('NFDM3'), // no forecast: sentinel issuedTime, -999 flows
   'nws/points-turners-falls': pointsUrl(42.6, -72.55),
   'nws/grid-box-20-103': gridUrl('BOX', 20, 103), // has PT3H and P1D intervals
+  'nws/grid-mfr-90-80': gridUrl('MFR', 90, 80), // Medford, OR: fog (patchy, areas) and dew point
   'nws/stations-box-20-103': stationsUrl('BOX', 20, 103),
   'nws/observation-kore': latestObservationUrl('KORE'), // windGust null: no gust reported
   'nws/alerts-turners-falls': alertsUrl(42.6, -72.55), // usually empty
@@ -63,6 +67,8 @@ const fixtures: Record<string, string> = {
     sixHoursAgo.toISOString(),
     now.toISOString(),
   ),
+  // The Connecticut River above the Turners Falls dam, from a start to a turn about 6 km upriver.
+  'overpass/waterways-turners-falls': waterwaysUrl(courseBox(COURSE_START, COURSE_TURN)),
   'nominatim/search-turners-falls': searchUrl('Turners Falls'),
   'nominatim/search-no-results': searchUrl('qqzzxx no such place'),
   // Backtesting sources (decision 0019), for fixed past dates so re-recording gives the same data.
@@ -92,23 +98,27 @@ for (const name of ['nwps/stageflow-mntm3', 'nwps/stageflow-nfdm3']) {
   };
 }
 
-// NWS grid data has about 60 series; the adapter reads five.
+// NWS grid data has about 60 series; the adapter reads these.
 const NWS_SERIES = [
   'temperature',
   'windSpeed',
   'windGust',
   'windDirection',
   'probabilityOfPrecipitation',
+  'dewpoint',
+  'weather',
 ];
-trims['nws/grid-box-20-103'] = {
-  note: `properties trimmed to updateTime, validTimes, and ${NWS_SERIES.join(', ')}`,
-  apply: (body) => {
-    const b = body as { properties: Record<string, unknown> };
-    const keep = ['updateTime', 'validTimes', ...NWS_SERIES];
-    b.properties = Object.fromEntries(keep.map((k) => [k, b.properties[k]]));
-    return b;
-  },
-};
+for (const name of ['nws/grid-box-20-103', 'nws/grid-mfr-90-80']) {
+  trims[name] = {
+    note: `properties trimmed to updateTime, validTimes, and ${NWS_SERIES.join(', ')}`,
+    apply: (body) => {
+      const b = body as { properties: Record<string, unknown> };
+      const keep = ['updateTime', 'validTimes', ...NWS_SERIES];
+      b.properties = Object.fromEntries(keep.map((k) => [k, b.properties[k]]));
+      return b;
+    },
+  };
+}
 for (const [name, count] of [
   ['nws/stations-box-20-103', 5],
   ['nws/alerts-sample-ak', 3],

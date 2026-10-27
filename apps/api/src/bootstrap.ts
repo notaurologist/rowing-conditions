@@ -3,12 +3,15 @@ import { createNominatimAdapter } from './adapters/nominatim/nominatim.ts';
 import { NOMINATIM_MIN_INTERVAL_MS } from './adapters/nominatim/requests.ts';
 import { createNwpsAdapter } from './adapters/nwps/nwps.ts';
 import { createNwsAdapter } from './adapters/nws/nws.ts';
+import { createOverpassAdapter } from './adapters/overpass/overpass.ts';
 import { createUsgsAdapter } from './adapters/usgs/usgs.ts';
 import { createApp } from './app.ts';
 import { type Config, loadConfig } from './config.ts';
 import { type ConnectionOptions, createDatabase } from './db/client.ts';
 import { getConditions } from './services/conditions.ts';
+import { createCourseSnap } from './services/courseSnap.ts';
 import { createErrorLog } from './services/errorLog.ts';
+import { createForecastArchive } from './services/forecastArchive.ts';
 import { createPlaceSearch } from './services/places.ts';
 import { createDatabaseGate } from './services/requestGate.ts';
 import { createSourceCache } from './services/sourceCache.ts';
@@ -38,6 +41,7 @@ export function createApi(config: Config, connection: ConnectionOptions = {}) {
   const nwps = createNwpsAdapter({ logger });
   const nws = createNwsAdapter({ userAgent: config.nwsUserAgent, logger });
   const cache = createSourceCache({ db, logger });
+  const archive = createForecastArchive({ db, logger });
   const now = () => new Date();
 
   // Nominatim asks for a User-Agent that identifies the app; NWS_USER_AGENT already does.
@@ -49,8 +53,13 @@ export function createApi(config: Config, connection: ConnectionOptions = {}) {
 
   return createApp({
     usgs,
-    conditions: (input) => getConditions(input, { usgs, nwps, nws, cache, now }),
+    conditions: (input) => getConditions(input, { usgs, nwps, nws, cache, now, archive }),
     ...(config.geocodingEnabled ? { searchPlaces: createPlaceSearch({ geocoder, cache }) } : {}),
+    // Overpass asks for a User-Agent that identifies the app; NWS_USER_AGENT already does.
+    snapCourse: createCourseSnap({
+      overpass: createOverpassAdapter({ userAgent: config.nwsUserAgent, logger }),
+      cache,
+    }),
     errorLog,
   });
 }

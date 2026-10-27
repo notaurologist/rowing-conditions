@@ -5,7 +5,7 @@ import northfield from '../../../test/fixtures/conditions-northfield.json' with 
 import { NAMED_GAUGE, withNamedGauge } from '../../../test/namedGauge.ts';
 import type { Conditions } from '../../lib/api.ts';
 import { evaluateLocation } from './evaluateLocation.ts';
-import { type MeteogramRow, meteogramModel } from './meteogramModel.ts';
+import { dewPointGapWords, fogWords, type MeteogramRow, meteogramModel } from './meteogramModel.ts';
 
 // Recorded from the live API. Montague (USGS-01170500) has an NWPS flow forecast and no water
 // temperature; Northfield (USGS-01161280) has no forecast but measures water temperature.
@@ -468,5 +468,65 @@ describe('meteogramModel with a rule set that names its flow gauge', () => {
       kind: 'message',
       message: 'No flow values from USGS 01169000.',
     });
+  });
+});
+
+describe('course wind (#103)', () => {
+  const course = {
+    points: [
+      [42.6, -72.55],
+      [42.609, -72.55],
+    ] as [number, number][],
+    notes: 'Keep to the east bank going upstream.',
+  };
+
+  it('words the wind along a saved course for each hour, with its notes', () => {
+    const m = model({ location: { ...location, course } });
+    expect(m.course?.words).toHaveLength(m.hours.length);
+    expect(m.course?.words[0]).toMatch(
+      /^(Out: .*\. Back: .*\.|Calm on the course|Course wind unknown)$/,
+    );
+    expect(m.course?.notes).toBe('Keep to the east bank going upstream.');
+  });
+
+  it('has no course without one saved', () => {
+    expect(model().course).toBeUndefined();
+  });
+});
+
+describe('fog and dew point (#42)', () => {
+  it('words the NWS fog coverage, and never calls an uncovered hour fog-free', () => {
+    expect(fogWords('patchy')).toEqual({ state: 'fog', text: 'Patchy fog' });
+    expect(fogWords('areas')).toEqual({ state: 'fog', text: 'Areas of fog' });
+    expect(fogWords('unspecified')).toEqual({ state: 'fog', text: 'Fog' });
+    expect(fogWords('frequent')).toEqual({ state: 'fog', text: 'Fog (frequent)' });
+    expect(fogWords(null)).toEqual({ state: 'none', text: 'No fog forecast' });
+    expect(fogWords(undefined)).toEqual({ state: 'unknown', text: 'Fog forecast unknown' });
+  });
+
+  it('gives the dew point gap as a temperature difference, without the 32° offset', () => {
+    expect(dewPointGapWords(5, 'degF')).toBe('9° above dew point');
+    expect(dewPointGapWords(5, 'degC')).toBe('5.0° above dew point');
+    expect(dewPointGapWords(0.2, 'degF')).toBe('at dew point');
+    expect(dewPointGapWords(-0.5, 'degF')).toBe('at dew point');
+  });
+
+  it('labels each hour with its fog, and adds the dew point gap to the air temperature readout', () => {
+    const conditions = data();
+    for (const [i, p] of conditions.forecast.entries()) {
+      p.values.dewPoint = (p.values.airTemp ?? 0) - 2;
+      p.provenance.dewPoint = { kind: 'forecast', asOf: NOW, source: 'nws' };
+      if (i === 3) p.fog = 'patchy';
+      else if (i < 6) p.fog = null;
+    }
+    const m = model({ conditions });
+    expect(m.hours[3]?.fog).toEqual({ state: 'fog', text: 'Patchy fog' });
+    expect(m.hours[4]?.fog.state).toBe('none');
+    expect(m.hours[10]?.fog.state).toBe('unknown');
+    expect(row(m, 'airTemp').readouts[5]).toMatch(/· 4° above dew point$/);
+  });
+
+  it('leaves the gap out when there is no dew point', () => {
+    expect(row(model(), 'airTemp').readouts[5]).not.toContain('dew point');
   });
 });

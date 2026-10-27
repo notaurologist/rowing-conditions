@@ -48,16 +48,26 @@ const STATIONS_TRIED = 3;
 
 type WeatherMetric = Extract<
   Metric,
-  'airTemp' | 'windSpeed' | 'windGust' | 'windDirection' | 'precipChance'
+  'airTemp' | 'windSpeed' | 'windGust' | 'windDirection' | 'precipChance' | 'dewPoint'
 >;
 
-const gridSeries: Record<WeatherMetric, keyof NwsGrid['properties']> = {
+type NumericSeries = Exclude<keyof NwsGrid['properties'], 'updateTime' | 'weather'>;
+
+const gridSeries: Record<WeatherMetric, NumericSeries> = {
   airTemp: 'temperature',
   windSpeed: 'windSpeed',
   windGust: 'windGust',
   windDirection: 'windDirection',
   precipChance: 'probabilityOfPrecipitation',
+  dewPoint: 'dewpoint',
 };
+
+// The fog in an interval's weather words: its coverage ("patchy", "areas"), or null for none.
+// Fog without a coverage word is still fog.
+function fogIn(entries: readonly { coverage: string | null; weather: string | null }[]) {
+  const fog = entries.find((e) => e.weather === 'fog');
+  return fog ? (fog.coverage ?? 'unspecified') : null;
+}
 
 const severities = ['Extreme', 'Severe', 'Moderate', 'Minor', 'Unknown'] as const;
 
@@ -133,10 +143,7 @@ export function createNwsAdapter(options: NwsAdapterOptions): WeatherSource {
     const sourceRef = `${grid.gridId}/${grid.gridX},${grid.gridY}`;
 
     const expanded = new Map<WeatherMetric, Map<string, number | null>>();
-    for (const [metric, key] of Object.entries(gridSeries) as [
-      WeatherMetric,
-      keyof typeof props,
-    ][]) {
+    for (const [metric, key] of Object.entries(gridSeries) as [WeatherMetric, NumericSeries][]) {
       const s = props[key];
       if (s === undefined || typeof s === 'string') continue;
       if (wmoUnit(s.uom) === undefined) {
@@ -149,6 +156,9 @@ export function createNwsAdapter(options: NwsAdapterOptions): WeatherSource {
       }));
       expanded.set(metric, expandToHours(converted));
     }
+    const fogByHour = props.weather
+      ? expandToHours(props.weather.values.map((v) => ({ ...v, value: fogIn(v.value) })))
+      : new Map<string, string | null>();
 
     const start = Math.floor(now().getTime() / HOUR) * HOUR;
     const points: ForecastPoint[] = [];
@@ -160,6 +170,9 @@ export function createNwsAdapter(options: NwsAdapterOptions): WeatherSource {
         point.values[metric] = byHour.get(time) ?? null;
         point.provenance[metric] = { kind: 'forecast', asOf, source: 'nws', sourceRef };
       }
+      // An hour the weather layer doesn't cover has no fog field: unknown, not "no fog".
+      const fog = fogByHour.get(time);
+      if (fog !== undefined) point.fog = fog;
       points.push(ForecastPoint.parse(point));
     }
     return { ok: true, data: points };

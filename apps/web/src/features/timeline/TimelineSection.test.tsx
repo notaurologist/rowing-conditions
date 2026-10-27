@@ -51,12 +51,13 @@ const clubA: RuleSet = {
 function render(
   ruleSet: RuleSet | null = clubA,
   conditions = structuredClone(montague) as Conditions,
+  at: SavedLocation = location,
 ) {
   const html = renderToStaticMarkup(
     <TimelineSection
       conditions={conditions}
-      location={location}
-      evaluated={evaluateLocation(conditions, location, ruleSet ?? undefined, NOW)}
+      location={at}
+      evaluated={evaluateLocation(conditions, at, ruleSet ?? undefined, NOW)}
       units="us"
       now={NOW}
     />,
@@ -309,5 +310,28 @@ describe('TimelineSection flow note without a usable forecast (#117, #82)', () =
     expect(text).toContain(
       'Flow: the National Water Prediction Service forecast was set aside, because it was more than 25% off the latest reading. The latest observation, from 8:15 AM, stands in',
     );
+  });
+});
+
+describe('TimelineSection course (#103)', () => {
+  it('adds the course wind to the readout and the hourly table, with the course notes', () => {
+    const course = {
+      points: [
+        [42.6, -72.55],
+        [42.609, -72.55],
+      ] as [number, number][],
+      notes: 'Keep to the east bank going upstream.',
+    };
+    const { html, text } = render(clubA, undefined, { ...location, course });
+    expect(html).toContain('<th scope="col">Course wind</th>');
+    expect(text).toMatch(/Course: (Out: |Calm on the course|Course wind unknown)/);
+    expect(text).toContain('Course notes: Keep to the east bank going upstream.');
+    expect(text).toContain("the forecast doesn't see that");
+  });
+
+  it('shows no course wind without a saved course', () => {
+    const { html, text } = render();
+    expect(html).not.toContain('Course wind');
+    expect(text).not.toContain('Course:');
   });
 });

@@ -22,6 +22,13 @@
       "when": 1793051894611,
       "tag": "0002_error_events",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1793127048001,
+      "tag": "0003_forecast_archive",
+      "breakpoints": true
     }
   ]
 }

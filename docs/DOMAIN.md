@@ -39,6 +39,10 @@ The main river hazard. Fast water increases turbulence (often below the surface)
 
 The app shows each one's trend (#73) as rising, falling, or stable, with the rate per hour, measured over the last 3 hours of readings. Flow is stable when it changes less than 2% of its starting value per hour, since rivers range from about 100 cfs to tens of thousands. Gauge height is stable when it changes less than 0.01 m (about 0.03 ft) per hour. These cutoffs only choose a word. They are not limits, and nothing is evaluated against them. With less than 2 hours of usable readings, or a stale latest reading, the trend is unknown, never stable.
 
+### Wind along the course
+
+Crews row out and back, so a headwind one way is a tailwind the other. With a course saved for a location, the app splits the course into its stretches and classifies the forecast wind on each: within 45° of dead ahead is a headwind, within 45° of dead astern a tailwind, and the quarters between are crosswind. It shows the share of the course length for each, out and back. One forecast wind covers the whole course, so shelter from banks and trees isn't in it. Calm is its own state, and missing wind direction is unknown, never calm. Local rules, such as which bank to keep to, are notes on the course, shown and not modeled. Context only: it never affects whether an hour is within limits. (Decided in #103, October 2026.)
+
 ### Dam operations and low water
 
 On regulated rivers, dam releases can raise flow quickly, and drawdowns can leave water too shallow to row (locally on the Connecticut, sometimes nearly walkable). Observed flow and gauge height capture these once they happen, so a minimum flow or gauge height limit flags low water. Advance release schedules are published inconsistently by dam operators (web pages, phone lines, rarely APIs), so they are out of scope for the MVP. Source: member experience on the Connecticut River [19].
@@ -165,7 +169,13 @@ So the app treats light as context by default:
 - A rule set's daylight window is optional and meant only for clubs with a hard rule. If one is set, hours entirely outside it are outside that rule set's limits, with darkness given as the reason, and windows that start or end partway through an hour are cut at the exact boundary. The editor describes it that way ("only if your club forbids rowing outside these hours").
 - When the app needs a default span of "hours you might row" (choosing which metric to chart, listing periods within limits), it uses civil dawn to civil dusk, or the rule set's window if it has one. This keeps cold, calm overnight hours from deciding the default chart while still including pre-sunrise outings in twilight.
 
-Open question: fog and visibility. The NWS grid data includes visibility and a weather layer that reports fog. Showing visibility as context, and allowing an optional minimum-visibility limit, would treat fog the same way as light. That would expand the MVP, so it is not in the plan yet.
+### Fog
+
+Fog is shown as context, like light, and never changes whether an hour is within limits (decided in #42, October 2026):
+
+- **The forecaster's call:** the NWS forecast's weather layer names fog with a coverage word ("patchy", "areas", "widespread"). Each hour shows it in words, for example "Patchy fog (NWS)". An hour the layer doesn't cover is "fog forecast unknown", never "no fog". Dense Fog Advisories already show under alerts.
+- **Dew point gap:** air temperature minus dew point, shown with the air temperature. Radiation fog forms as air cools to its dew point, so a small gap is one input to fog. No credible source gives a threshold that turns it into "fog likely", so the app shows the number only.
+- **Not used:** the NWS hourly visibility series is one flat value or missing at most grid points, so there is no visibility limit. The water-minus-air gap (steam fog) is left for later: water temperature is a single observation and many gauges don't measure it.
 
 ## Units
 

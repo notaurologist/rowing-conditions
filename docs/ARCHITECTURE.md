@@ -85,7 +85,8 @@ type Metric =
   | 'windGust'        // m/s
   | 'windDirection'   // degrees, meteorological (direction wind comes FROM)
   | 'precipChance'    // 0..1
-  | 'combinedTempF';  // °F, computed: airTemp°F + waterTemp°F
+  | 'combinedTempF'   // °F, computed: airTemp°F + waterTemp°F
+  | 'dewPoint';       // °C, NWS forecast; context for fog, never a limit (#42)
 
 interface Reading {
   metric: Metric;
@@ -109,6 +110,7 @@ interface ForecastPoint {
   time: string;                // start of hour, ISO 8601, UTC
   values: Partial<Record<Metric, number | null>>;
   provenance: Partial<Record<Metric, ValueProvenance>>;  // absent = no source supplies this metric
+  fog?: string | null;         // NWS coverage word ("patchy"), null = no fog forecast, absent = unknown (#42)
 }
 
 interface ValueProvenance {
@@ -369,6 +371,7 @@ Hono on Node. Export the app type so clients use `hono/client` for typed calls. 
 | GET | `/gauges/:ref` | `{ gauge, latest: Reading[], sources }` for a `usgs:` ref. Returns 404 if there's no such gauge. If the readings fail, it still returns the gauge, with that source marked `error`. `nwps:` refs get 501 until #18. |
 | GET | `/conditions?lat&lon&gaugeRef?&flowGaugeRefs?` | Current readings plus 48-hour hourly forecast (including forecast flow where available) and daylight data. `flowGaugeRefs` (comma-separated, up to 5) adds flow series for gauges named by rule sets. Always 200 on valid input; failures are reported per source. |
 | GET | `/places/search?q` | `{ places: Place[] }` from Nominatim, US only, at most 5. `q` is 2 to 200 characters. Clients call it only when the user submits a search (the usage policy forbids autocomplete). Returns 503 when `GEOCODING_ENABLED=false`. |
+| GET | `/course/snap?startLat&startLon&turnLat&turnLon` | `{ points: [lat, lon][] }`: a course following the river from the node nearest the start to the node nearest the turn (#103). Waterways come from OpenStreetMap through Overpass, cached 30 days by box. Answers 422 with `{ error: { kind, message } }` when a point is more than 300 m from a mapped river (`noRiver`), the two aren't on connected waterways (`notConnected`), or they're more than 30 km apart (`tooFar`). 502 when Overpass fails after one retry. Can take a minute. |
 
 Routes validate input with `@hono/zod-validator` and answer 400 on invalid input. An adapter failure becomes 502 with `{ error: { source, kind, message } }`. `createApp(deps)` takes the adapters, so route tests pass in fake ones.
 
@@ -479,6 +482,7 @@ Fetch on demand, cache in Postgres. No scheduled jobs in the MVP.
   - NWS points lookup: 30 days
   - Gauge metadata: 7 days
   - Nominatim place search: 30 days (places don't move, and the usage policy asks for caching)
+  - OpenStreetMap waterways for snapping a course: 30 days (rivers don't move)
 - **On upstream failure**, serve the last cached value marked `stale` if one exists.
 - **Concurrent fetches** for the same key are deduplicated in process.
 - **Implementation:** `createSourceCache({ db, logger, now })` in `apps/api/src/services/sourceCache.ts`. `cache.get(key, ttlMs, schema, fetch)` returns one of three results:
@@ -496,6 +500,7 @@ MVP tables:
 - `source_cache`: `key` (pk), `payload` (jsonb, normalized data), `fetched_at`, `expires_at`.
 - `request_gates`: `name` (pk, e.g. `nominatim`), `last_start` (the latest reserved start time). One row per rate-limited service.
 - `error_events`: `id`, `occurred_at`, `level` (`warn` or `error`), `message`, `details` (jsonb), `route`. Kept 30 days. See Error logging.
+- `forecast_archive`: `source` (`nwps`), `ref` (the NWPS gauge), `issued_at`, `recorded_at`, `points` (jsonb, the hourly forecast as the adapter returned it). One row per gauge and issue time. Written when the app fetches a new NWPS forecast, kept 90 days and pruned on write, at most once an hour (`createForecastArchive`, #81). NWPS serves only its current forecast, so this is the only way to compare a forecast with what was measured later. Fetching is on demand, so only forecasts fetched while someone viewed a location are kept.
 - `gauges`: `ref` (pk, e.g. `usgs:USGS-01170500`, `nwps:MNTM3`), `source`, `name`, `lat`, `lon`, `metrics` (text[]), `has_flow_forecast` (bool), `linked_ref` (the matching gauge in the other source, when known), `updated_at`. Populated lazily from nearby searches.
 
 Migrations via `drizzle-kit`, committed to the repo:

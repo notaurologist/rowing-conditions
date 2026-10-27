@@ -10,6 +10,7 @@ const METRIC_NAMES: Record<Metric, string> = {
   windDirection: 'wind direction',
   precipChance: 'rain chance',
   combinedTempF: 'combined air and water temperature',
+  dewPoint: 'dew point',
 };
 
 export function metricName(metric: Metric): string {
