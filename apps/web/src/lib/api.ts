@@ -33,20 +33,18 @@ export async function fetchPlaces(client: ApiClient, query: string) {
   return body.places;
 }
 
-/** A course following the river between the tapped start and turn (#103). Can take a minute. */
-export async function fetchCourse(client: ApiClient, start: Coordinates, turn: Coordinates) {
+/** Legs following the river between each pair of taps, in rowing order (#103, #142). Can take a
+ * minute: the river data comes from a public service that is slow when busy. */
+export async function fetchCourse(client: ApiClient, taps: readonly Coordinates[]) {
   const body = await parseResponse(
     client.course.snap.$get({
-      query: {
-        startLat: String(start.lat),
-        startLon: String(start.lon),
-        turnLat: String(turn.lat),
-        turnLon: String(turn.lon),
-      },
+      query: { taps: taps.map(({ lat, lon }) => `${lat.toFixed(6)},${lon.toFixed(6)}`).join(';') },
     }),
   );
-  return body.points;
+  return body.legs;
 }
+
+export type SnappedLeg = Awaited<ReturnType<typeof fetchCourse>>[number];
 
 export function fetchConditions(
   client: ApiClient,

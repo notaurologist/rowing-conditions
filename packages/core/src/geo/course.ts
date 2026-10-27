@@ -1,8 +1,8 @@
-import type { Course } from '../types/location.ts';
+import type { Course, CourseLeg } from '../types/location.ts';
 import { distanceKm } from './geo.ts';
 
-// Wind relative to a course rowed out and back (#103). Context only, like light: it never
-// affects whether an hour is within limits.
+// Wind relative to a course (#103, #142). Context only, like light: it never affects whether an
+// hour is within limits.
 
 const radians = (degrees: number) => (degrees * Math.PI) / 180;
 const degrees = (radians: number) => (radians * 180) / Math.PI;
@@ -18,22 +18,30 @@ export function bearingDegrees(lat1: number, lon1: number, lat2: number, lon2: n
 }
 
 export interface CourseStretch {
-  headingDegrees: number; // direction of travel on the way out
+  headingDegrees: number; // direction of travel, in rowing order
   lengthKm: number;
 }
 
-// The course as stretches between its points, in the order rowed on the way out. Stretches of no
-// length (repeated points) are dropped.
-export function courseStretches(course: Course): CourseStretch[] {
+// A leg as stretches between its points, in rowing order. Stretches of no length are dropped.
+export function legStretches(leg: Pick<CourseLeg, 'points'>): CourseStretch[] {
   const stretches: CourseStretch[] = [];
-  for (let i = 1; i < course.points.length; i += 1) {
-    const [lat1, lon1] = course.points[i - 1] as [number, number];
-    const [lat2, lon2] = course.points[i] as [number, number];
+  for (let i = 1; i < leg.points.length; i += 1) {
+    const [lat1, lon1] = leg.points[i - 1] as [number, number];
+    const [lat2, lon2] = leg.points[i] as [number, number];
     const lengthKm = distanceKm(lat1, lon1, lat2, lon2);
     if (lengthKm > 0)
       stretches.push({ headingDegrees: bearingDegrees(lat1, lon1, lat2, lon2), lengthKm });
   }
   return stretches;
+}
+
+// Every leg's stretches, in rowing order.
+export function courseStretches(course: Pick<Course, 'legs'>): CourseStretch[] {
+  return course.legs.flatMap(legStretches);
+}
+
+export function courseLengthKm(course: Pick<Course, 'legs'>): number {
+  return courseStretches(course).reduce((sum, s) => sum + s.lengthKm, 0);
 }
 
 export type RelativeWind = 'head' | 'cross' | 'tail';
@@ -47,38 +55,56 @@ export function relativeWind(headingDegrees: number, windFromDegrees: number): R
   return 'cross';
 }
 
-export type LegShares = Record<RelativeWind, number>; // fractions of the course length, summing to 1
+export type LegShares = Record<RelativeWind, number>; // fractions of the length, summing to 1
 
 export type CourseWind =
-  | { state: 'wind'; out: LegShares; back: LegShares }
+  // Out and back along the course: out in tap order, back reversed.
+  | { state: 'wind'; kind: 'outAndBack'; out: LegShares; back: LegShares }
+  // A loop: the whole of it, and each leg between taps, in rowing order.
+  | { state: 'wind'; kind: 'loop'; whole: LegShares; legs: LegShares[] }
   | { state: 'calm' } // no wind to be head, cross or tail
   | { state: 'unknown' }; // speed or direction missing: never treated as calm
 
-function shares(stretches: readonly CourseStretch[], windFrom: number, back: boolean): LegShares {
+function shares(
+  stretches: readonly CourseStretch[],
+  windFrom: number,
+  reversed: boolean,
+): LegShares | undefined {
   const total = stretches.reduce((sum, s) => sum + s.lengthKm, 0);
+  if (total === 0) return undefined;
   const result: LegShares = { head: 0, cross: 0, tail: 0 };
   for (const s of stretches) {
-    const heading = back ? (s.headingDegrees + 180) % 360 : s.headingDegrees;
+    const heading = reversed ? (s.headingDegrees + 180) % 360 : s.headingDegrees;
     result[relativeWind(heading, windFrom)] += s.lengthKm / total;
   }
   return result;
 }
 
-// The share of the course with a headwind, crosswind and tailwind, out and back, for one hour's
-// wind. A single forecast wind applies to the whole course; shelter from banks isn't in it.
+const NONE: LegShares = { head: 0, cross: 0, tail: 0 };
+
+// The share of the course with a headwind, crosswind and tailwind for one hour's wind. A single
+// forecast wind applies to the whole course; shelter from banks isn't in it.
 export function courseWind(
-  course: Course,
+  course: Pick<Course, 'legs' | 'loop'>,
   windSpeed: number | null | undefined,
   windFromDegrees: number | null | undefined,
 ): CourseWind {
   if (typeof windSpeed !== 'number') return { state: 'unknown' };
   if (windSpeed === 0) return { state: 'calm' };
   if (typeof windFromDegrees !== 'number') return { state: 'unknown' };
-  const stretches = courseStretches(course);
-  if (stretches.length === 0) return { state: 'unknown' };
+  const all = courseStretches(course);
+  const whole = shares(all, windFromDegrees, false);
+  if (!whole) return { state: 'unknown' };
+  if (course.loop) {
+    const legs = course.legs.map(
+      (leg) => shares(legStretches(leg), windFromDegrees, false) ?? NONE,
+    );
+    return { state: 'wind', kind: 'loop', whole, legs };
+  }
   return {
     state: 'wind',
-    out: shares(stretches, windFromDegrees, false),
-    back: shares(stretches, windFromDegrees, true),
+    kind: 'outAndBack',
+    out: whole,
+    back: shares(all, windFromDegrees, true) as LegShares,
   };
 }

@@ -1,35 +1,37 @@
 import 'leaflet/dist/leaflet.css';
 import { divIcon, type LatLngBoundsExpression } from 'leaflet';
-import { useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { MapContainer, Marker, Polyline, TileLayer, useMap, useMapEvents } from 'react-leaflet';
 import type { Coordinates } from '../../lib/api.ts';
 
-// The course on the map: tap the start, then the turn; drag either to move it (#103).
+// The course on the map: tap points in rowing order; drag any to move it (#103, #142).
 // Same tiles and attribution as the location map (LocationMap.tsx).
 const TILE_URL = import.meta.env.VITE_TILE_URL ?? 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 const ATTRIBUTION =
   '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 
-// Text markers: Leaflet's default marker images don't survive bundling, and a letter says which
-// end is which without relying on color.
-const endIcon = (letter: 'S' | 'T', label: string) =>
+// Text markers: Leaflet's default marker images don't survive bundling, and a label says which
+// point is which without relying on color.
+const tapIcon = (label: string, name: string) =>
   divIcon({
     className: 'course-end',
-    html: `<span class="course-end-letter" aria-label="${label}">${letter}</span>`,
+    html: `<span class="course-end-letter" aria-label="${name}">${label}</span>`,
     iconSize: [26, 26],
     iconAnchor: [13, 13],
   });
-const START_ICON = endIcon('S', 'Start');
-const TURN_ICON = endIcon('T', 'Turn');
+
+export interface MapLeg {
+  points: readonly [number, number][];
+  straight: boolean;
+}
 
 interface Props {
   center: Coordinates;
-  start: Coordinates | null;
-  turn: Coordinates | null;
-  points: readonly [number, number][]; // the course along the river, once found
+  taps: readonly Coordinates[]; // in rowing order; a loop's last tap is its first, drawn once
+  loop: boolean;
+  legs: readonly MapLeg[];
   onTap: (point: Coordinates) => void;
-  onMoveStart: (point: Coordinates) => void;
-  onMoveTurn: (point: Coordinates) => void;
+  onMoveTap: (index: number, point: Coordinates) => void;
 }
 
 function TapToPlace({ onTap }: Pick<Props, 'onTap'>) {
@@ -42,13 +44,16 @@ function TapToPlace({ onTap }: Pick<Props, 'onTap'>) {
   return null;
 }
 
-// Fits the view to the course when one is found.
-function FitCourse({ points }: Pick<Props, 'points'>) {
+// Fits the view to a saved course when the editor opens. Not after each tap: the view moving under
+// the rower's finger would put the next tap somewhere else.
+function FitSavedCourse({ legs }: Pick<Props, 'legs'>) {
   const map = useMap();
+  const [initial] = useState(legs);
   useEffect(() => {
+    const points = initial.flatMap((l) => l.points);
     if (points.length < 2) return;
     map.fitBounds(points as unknown as LatLngBoundsExpression, { padding: [24, 24] });
-  }, [map, points]);
+  }, [map, initial]);
   return null;
 }
 
@@ -58,7 +63,20 @@ const toCoordinates = (target: { getLatLng(): { lat: number; lng: number } }): C
 };
 
 export default function CourseMap(props: Props) {
-  const { center, start, turn, points } = props;
+  const { center, taps, loop, legs } = props;
+  // A loop's closing tap is its start; it isn't drawn twice.
+  const shown = loop ? taps.slice(0, -1) : taps;
+  const icons = useMemo(
+    () =>
+      shown.map((_, i) =>
+        i === 0
+          ? tapIcon('S', 'Start')
+          : !loop && i === shown.length - 1 && shown.length > 1
+            ? tapIcon('T', 'Turn')
+            : tapIcon(String(i), `Point ${i}`),
+      ),
+    [shown, loop],
+  );
   return (
     <MapContainer
       className="location-map"
@@ -68,29 +86,31 @@ export default function CourseMap(props: Props) {
     >
       <TileLayer url={TILE_URL} attribution={ATTRIBUTION} />
       <TapToPlace onTap={props.onTap} />
-      <FitCourse points={points} />
-      {points.length >= 2 && (
+      <FitSavedCourse legs={legs} />
+      {legs.map((leg, i) => (
         <Polyline
-          positions={points as [number, number][]}
-          pathOptions={{ color: '#1f5fa8', weight: 4 }}
+          // biome-ignore lint/suspicious/noArrayIndexKey: legs are positional, between taps i and i + 1
+          key={i}
+          positions={leg.points as [number, number][]}
+          // A straight leg is dashed, so it isn't told apart by color alone.
+          pathOptions={{
+            color: '#1f5fa8',
+            weight: 4,
+            // Set every time: Leaflet keeps a dash that's left out when a leg stops being straight.
+            dashArray: leg.straight ? '6 8' : '',
+          }}
         />
-      )}
-      {start && (
+      ))}
+      {shown.map((tap, i) => (
         <Marker
-          position={[start.lat, start.lon]}
-          icon={START_ICON}
+          // biome-ignore lint/suspicious/noArrayIndexKey: a tap's place in the order is its identity
+          key={i}
+          position={[tap.lat, tap.lon]}
+          icon={icons[i]}
           draggable
-          eventHandlers={{ dragend: (e) => props.onMoveStart(toCoordinates(e.target)) }}
+          eventHandlers={{ dragend: (e) => props.onMoveTap(i, toCoordinates(e.target)) }}
         />
-      )}
-      {turn && (
-        <Marker
-          position={[turn.lat, turn.lon]}
-          icon={TURN_ICON}
-          draggable
-          eventHandlers={{ dragend: (e) => props.onMoveTurn(toCoordinates(e.target)) }}
-        />
-      )}
+      ))}
     </MapContainer>
   );
 }
