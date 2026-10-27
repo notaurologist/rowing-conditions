@@ -23,6 +23,7 @@ const UNKNOWN_WORDS: Record<UnknownReason, (name: string) => string> = {
   missing: (name) => `no ${name} value`,
   stale: (name) => `${name} reading too old`,
   qualified: (name) => `${name} reading flagged as possibly wrong`,
+  reversed: (name) => `${name} running backward, so not compared`,
   noSource: (name) => `no source reports ${name} here`,
   noForecast: (name) => `no ${name} forecast, and the last reading is over 3 hours earlier`,
   forecastDisagrees: (name) => `${name} forecast set aside: over 25% off the latest reading`,

@@ -1,6 +1,15 @@
 import { z } from 'zod';
 import { isValueInRange, Metric, Qualifier, SourceId, UtcTime } from './measurement.ts';
 
+// Negative flow is in range only when marked reversedFlow, which keeps it out of every comparison.
+function isReversedFlow(
+  metric: Metric,
+  value: number,
+  qualifiers: readonly Qualifier[] | undefined,
+): boolean {
+  return metric === 'flow' && value < 0 && (qualifiers ?? []).includes('reversedFlow');
+}
+
 export const Reading = z
   .object({
     metric: Metric,
@@ -12,7 +21,11 @@ export const Reading = z
     qualifiers: z.array(Qualifier).optional(),
   })
   .superRefine((reading, ctx) => {
-    if (reading.value !== null && !isValueInRange(reading.metric, reading.value)) {
+    if (
+      reading.value !== null &&
+      !isValueInRange(reading.metric, reading.value) &&
+      !isReversedFlow(reading.metric, reading.value, reading.qualifiers)
+    ) {
       ctx.addIssue({
         code: 'custom',
         path: ['value'],
@@ -58,7 +71,11 @@ export const ForecastPoint = z
           message: 'Value has no provenance',
         });
       }
-      if (typeof value === 'number' && !isValueInRange(metric, value)) {
+      if (
+        typeof value === 'number' &&
+        !isValueInRange(metric, value) &&
+        !isReversedFlow(metric, value, point.provenance[metric]?.qualifiers)
+      ) {
         ctx.addIssue({
           code: 'custom',
           path: ['values', metric],

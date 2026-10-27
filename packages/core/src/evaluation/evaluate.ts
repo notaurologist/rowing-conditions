@@ -32,6 +32,7 @@ export const disqualifyingQualifiers: readonly Qualifier[] = [
   'equipmentMalfunction',
   'estimated',
   'unreliable',
+  'reversedFlow',
 ];
 
 export type Freshness = 'fresh' | 'stale' | 'future';
@@ -71,6 +72,9 @@ function usable(point: ForecastPoint, metric: InputMetric, ctx: HourContext): Us
   const provenance = point.provenance[metric];
   if (value === null || value === undefined || provenance === undefined) {
     return { ok: false, metric, reason: provenance?.withheld ?? 'missing' };
+  }
+  if (provenance.qualifiers?.includes('reversedFlow')) {
+    return { ok: false, metric, reason: 'reversed' };
   }
   if (provenance.qualifiers?.some((q) => disqualifyingQualifiers.includes(q))) {
     return { ok: false, metric, reason: 'qualified' };

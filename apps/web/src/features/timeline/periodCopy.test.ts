@@ -48,6 +48,7 @@ describe('reasonText', () => {
     ['missing', 'no water temperature value'],
     ['stale', 'water temperature reading too old'],
     ['qualified', 'water temperature reading flagged as possibly wrong'],
+    ['reversed', 'water temperature running backward, so not compared'],
     ['noSource', 'no source reports water temperature here'],
     ['noForecast', 'no water temperature forecast, and the last reading is over 3 hours earlier'],
     ['forecastDisagrees', 'water temperature forecast set aside: over 25% off the latest reading'],

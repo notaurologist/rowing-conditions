@@ -198,7 +198,7 @@ The schemas also enforce these rules:
 - **Times** are ISO 8601 written with `Z`. Offsets such as `-04:00` are rejected, so adapters convert to UTC.
 - **`ForecastPoint.time`** must be the start of an hour.
 - **Provenance:** every metric present in `ForecastPoint.values` needs a matching `provenance` entry.
-- **Value ranges** apply to readings and forecast values. Flow, wind speed and gusts can't be negative, rain chance runs from 0 to 1, and wind direction from 0 to below 360.
+- **Value ranges** apply to readings and forecast values. Flow, wind speed and gusts can't be negative, except flow marked with the `reversedFlow` qualifier (#116), rain chance runs from 0 to 1, and wind direction from 0 to below 360.
 - **A threshold's `enteredUnit`** must be one of its metric's units (`metricUnits`). Wind direction has no units, so it can't have a limit until directional rules arrive. Combined temperature is entered only in °F.
 - **Threshold values:** limits on flow, wind and rain chance must be greater than zero, and rain chance must be at most 1.
 - **Boat class scope:** `boatClassIds` is either omitted (every class) or non-empty.
@@ -449,7 +449,8 @@ Adapter rules:
 - Parse every response with a Zod schema. On parse failure, log the raw payload shape and return an error status, never throw raw errors upward. `fetchJson` in `apps/api/src/adapters/http.ts` does this for every adapter: it handles timeouts, network and HTTP errors, and schema mismatches. It logs only the payload's shape (keys and types), never its values.
 - Adapters take `fetch`, `logger` and `now` as options. Tests inject a `routedFetch` (`apps/api/test/fixtures.ts`) that serves recorded fixtures and fails on any request it doesn't expect, so no test can reach the network.
 - `Gauge` and `NearbyGauge` (a gauge plus `distanceKm`) are Zod schemas in `packages/core/src/types/gauge.ts`. `distanceKm` and `boundingBox` are in `packages/core/src/geo/geo.ts`.
-- A reading the core `Reading` schema rejects, for example a negative discharge, is kept with a null value and logged. That makes it `missing`, never dropped silently.
+- A negative discharge gets the `reversedFlow` qualifier (USGS and NWPS observations), which is disqualifying, so evaluation reports it as unknown (`reversed`) and never compares it (#116).
+- A reading the core `Reading` schema rejects otherwise is kept with a null value and logged. That makes it `missing`, never dropped silently.
 - **NWS:**
   - **Requests:** the adapter sends `NWS_USER_AGENT` on every request and retries a 5xx once after a pause. It never retries a 4xx.
   - **Forecast:** grid intervals (`PT3H`, `P1D`, …) are expanded to hours. An hour that no interval covers is `null`, which means missing, not absent. Units are converted from their WMO codes, and a series in an unknown unit is skipped and logged.

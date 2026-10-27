@@ -59,6 +59,13 @@ describe('Reading', () => {
     }
   });
 
+  it('accepts negative flow only when marked as reversed (#116)', () => {
+    const reversed = { ...reading, value: -45.9, qualifiers: ['provisional', 'reversedFlow'] };
+    expect(Reading.safeParse(reversed).success).toBe(true);
+    expect(Reading.safeParse({ ...reversed, qualifiers: ['provisional'] }).success).toBe(false);
+    expect(Reading.safeParse({ ...reversed, metric: 'windSpeed' }).success).toBe(false);
+  });
+
   it('accepts negative temperatures and gauge heights', () => {
     expect(Reading.safeParse({ ...reading, metric: 'airTemp', value: -12 }).success).toBe(true);
     expect(Reading.safeParse({ ...reading, metric: 'gaugeHeight', value: -0.3 }).success).toBe(
@@ -79,6 +86,20 @@ describe('ForecastPoint', () => {
   it('rejects out-of-range values', () => {
     const values = { ...point.values, flow: -5 };
     expect(ForecastPoint.safeParse({ ...point, values }).success).toBe(false);
+  });
+
+  it('accepts a negative flow whose provenance marks it as reversed', () => {
+    const values = { ...point.values, flow: -5 };
+    const provenance = {
+      ...point.provenance,
+      flow: {
+        kind: 'observation',
+        asOf: '2026-10-25T14:15:00Z',
+        source: 'usgs',
+        qualifiers: ['reversedFlow'],
+      },
+    };
+    expect(ForecastPoint.safeParse({ ...point, values, provenance }).success).toBe(true);
   });
 
   it('rejects a value without provenance, since its source and age would be unknown', () => {

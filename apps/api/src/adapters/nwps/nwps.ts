@@ -78,13 +78,18 @@ export function createNwpsAdapter(options: NwpsAdapterOptions = {}): FlowForecas
     for (const point of series.data) {
       for (const [metric, convert] of fields) {
         if (convert === undefined) continue;
+        const value = convert(metric === 'flow' ? point.secondary : point.primary);
         const reading = {
           metric,
-          value: convert(metric === 'flow' ? point.secondary : point.primary),
+          value,
           observedAt: new Date(point.validTime).toISOString(),
           fetchedAt,
           source: 'nwps' as const,
           sourceRef: lid,
+          // Negative flow is the river running backward (#116): shown, never compared.
+          ...(metric === 'flow' && value !== null && value < 0
+            ? { qualifiers: ['reversedFlow' as const] }
+            : {}),
         };
         if (Reading.safeParse(reading).success) {
           readings.push(reading);

@@ -90,6 +90,17 @@ describe('conditionRows', () => {
     ]);
   });
 
+  it('shows a reversed flow with its value, and says it is not compared (#116)', () => {
+    const conditions = base();
+    for (const r of conditions.current)
+      if (r.metric === 'flow') Object.assign(r, { value: -45.87, qualifiers: ['reversedFlow'] });
+    expect(row(conditionRows(conditions, { units: 'us', now: NOW }), 'flow')).toMatchObject({
+      state: 'value',
+      value: '-1,620',
+      qualifiers: [{ qualifier: 'reversedFlow', label: 'Flowing backward', disqualifying: true }],
+    });
+  });
+
   it('marks a reading older than its maximum age as stale', () => {
     const rows = conditionRows(base(), { units: 'us', now: '2026-10-26T07:30:00.000Z' });
     expect(row(rows, 'flow').freshness).toBe('stale'); // 6.5 h old; limit 3 h

@@ -148,6 +148,8 @@ USGS marks recent data as provisional. That is normal and does not affect evalua
 
 USGS also flags maintenance, flood damage, backwater, a rating still being developed, debris, dam failure, test data, and values below what's shown ("less than", "below minimum"). These count as unreliable too, and so does any code the app doesn't recognize, so a new USGS code can never let a doubtful value through. Only codes known to be informational, such as "discontinued" or "regulated", are ignored. A "less than" value matters most for low-water minimums: the true flow is lower than the number shown. The full code table is in `DATA_SOURCES.md`. (Decided in issue #13, October 2026.)
 
+Negative flow means the river is running backward. USGS 01161280 at Northfield reports it often, from the Northfield Mountain pumped-storage station and the Turners Falls dam pool. The app shows the value with "Flowing backward" and never compares it against a limit, max or min, so those hours are unknown with that reason. (Decided in issue #116, October 2026.)
+
 ### Limits the location cannot check
 
 A limit can only be checked if some source reports its metric at that location. For example, a gauge without a water temperature sensor cannot check a water temperature minimum, and a lake in weather-only mode cannot check flow. Every hour is then unknown for that rule set. That is correct: a missing reading is never treated as passing. But the app says so once, in plain words ("Club A's water temperature limit can't be checked here: this gauge doesn't report water temperature"), instead of only showing 48 unknown hours.

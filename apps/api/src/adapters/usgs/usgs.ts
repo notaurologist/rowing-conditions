@@ -95,18 +95,25 @@ export function createUsgsAdapter(options: UsgsAdapterOptions = {}): FlowSource 
     }
 
     const native = p.value === null ? Number.NaN : Number(p.value);
+    const value = Number.isFinite(native) ? toSI(native, unit) : null;
+    // Negative discharge is the river running backward, as at Northfield below the pumped
+    // storage station (#116): shown, and marked so it's never compared against a limit.
+    const qualifiers =
+      metric === 'flow' && value !== null && value < 0
+        ? [...mapped.qualifiers, 'reversedFlow' as const]
+        : mapped.qualifiers;
     const reading = {
       metric,
-      value: Number.isFinite(native) ? toSI(native, unit) : null,
+      value,
       observedAt: new Date(p.time).toISOString(),
       fetchedAt,
       source: 'usgs' as const,
       sourceRef: p.monitoring_location_id,
-      ...(mapped.qualifiers.length > 0 ? { qualifiers: mapped.qualifiers } : {}),
+      ...(qualifiers.length > 0 ? { qualifiers } : {}),
     };
     const parsed = Reading.safeParse(reading);
     if (parsed.success) return parsed.data;
-    // For example a negative discharge at a tidal gauge: shown as missing rather than dropped.
+    // For example a negative gauge reading where none is possible: shown as missing, not dropped.
     logger.warn('usgs: reading out of range, treated as missing', {
       gauge: p.monitoring_location_id,
       parameter: p.parameter_code,
