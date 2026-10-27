@@ -697,7 +697,9 @@
 }
 
 @container (max-width: 600px) {
-  .meteogram {
+  /* Not on .meteogram: it is the container, and a container query can't style its container.
+     Set there, the pointer layer kept the 156 px label column and missed touches on the left. */
+  .meteogram > * {
     --lw: 0px;
   }
 
