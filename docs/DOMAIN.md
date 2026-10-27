@@ -124,7 +124,7 @@ A reading that is too old is treated as missing, so the hour shows as unknown, n
 
 Starting values (to be tuned during backtesting, M9):
 
-- Flow and gauge height observations: older than 6 hours is stale. Flow can change substantially within a day [13].
+- Flow and gauge height observations: older than 3 hours is stale. Flow can change substantially within a day [13]. On the Connecticut at Montague, dam releases raised flow by up to 6,900 cfs in an hour during 2026, while the gauge never went more than 2 hours between readings (backtesting, M9). Lowered from 6 hours in October 2026.
 - Water temperature observations: older than 24 hours is stale. Water temperature changes slowly.
 - NWPS flow forecasts: an issue time older than 36 hours is stale. River Forecast Centers usually issue at least daily.
 - NWS weather forecasts: an update time older than 12 hours is stale.

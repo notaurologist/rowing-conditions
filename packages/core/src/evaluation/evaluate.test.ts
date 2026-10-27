@@ -192,8 +192,8 @@ describe('unknown reasons', () => {
   });
 
   it('marks an observation older than its maximum age as stale, and accepts one exactly at it', () => {
-    expect(reasonFor({ kind: 'observation', asOf: ago(6) })).toBeUndefined();
-    expect(reasonFor({ kind: 'observation', asOf: ago(6.01) })).toBe('stale');
+    expect(reasonFor({ kind: 'observation', asOf: ago(3) })).toBeUndefined();
+    expect(reasonFor({ kind: 'observation', asOf: ago(3.01) })).toBe('stale');
   });
 
   it('uses 36 hours for a flow forecast', () => {
@@ -354,8 +354,8 @@ describe('hourOutsideSpan', () => {
 describe('maximum ages', () => {
   // The table in ARCHITECTURE.md ("Maximum ages"), every metric and kind.
   const spec: [Exclude<Metric, 'combinedTempF'>, 'observation' | 'forecast', number][] = [
-    ['flow', 'observation', 6],
-    ['gaugeHeight', 'observation', 6],
+    ['flow', 'observation', 3],
+    ['gaugeHeight', 'observation', 3],
     ['waterTemp', 'observation', 24],
     ['flow', 'forecast', 36],
     ['gaugeHeight', 'forecast', 36],

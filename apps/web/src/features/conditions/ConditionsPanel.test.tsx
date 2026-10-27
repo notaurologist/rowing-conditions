@@ -39,7 +39,7 @@ describe('ConditionsPanel', () => {
 
   it('flags a stale reading in words, not only by style', () => {
     const t = text(render(base(), 'us', '2026-10-26T07:30:00.000Z'));
-    expect(t).toContain("Stale: older than 6 h, so it isn't compared against limits.");
+    expect(t).toContain("Stale: older than 3 h, so it isn't compared against limits.");
   });
 
   it('never calls conditions safe or unsafe', () => {
