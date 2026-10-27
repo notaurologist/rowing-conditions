@@ -8,6 +8,7 @@ import type {
   MeteogramRow,
   StatusStrip,
 } from './meteogramModel.ts';
+import { readoutSide } from './readoutPlacement.ts';
 
 // Draws the meteogram from its model. Each row shares the time axis; percentages place
 // everything horizontally, so the chart fits any width without measuring. Status is always
@@ -100,11 +101,23 @@ function Plot({ row, n, sel }: { row: MeteogramRow; n: number; sel: number }) {
   const flip = x(sel) > 50;
   // A measured current hour is the dot; the lines start at the forecast that follows it.
   const defined = (p: MeteogramPoint) => p.value !== null && !(p.measured && row.observed);
-  // Above the point, unless that would leave the row; bars sit in a short row, so centre it.
+  // Above or below the point, whichever leaves the row's limit labels readable
+  // (readoutPlacement.ts); bars sit in a short row, so centre it.
   const readoutTop =
     row.kind === 'bars' ? 50 : Math.max(0, Math.min(100, y(selValue ?? row.domain[0])));
+  const px = (percent: number) => (percent / 100) * rowHeight(row);
   const place =
-    row.kind === 'bars' ? ' mg-readout-middle' : readoutTop < 35 ? ' mg-readout-below' : '';
+    row.kind === 'bars'
+      ? ' mg-readout-middle'
+      : readoutSide({
+            pointPx: px(readoutTop),
+            rowPx: rowHeight(row),
+            limitsPx: row.limits.map((l) => px(y(l.value))),
+            arrows: (row.arrows?.length ?? 0) > 0,
+            left: flip,
+          }) === 'below'
+        ? ' mg-readout-below'
+        : '';
 
   return (
     <>
