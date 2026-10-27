@@ -99,13 +99,15 @@ describe('createDatabaseGate', () => {
     const { db } = await setup();
     const starts: number[] = [];
     const run = async () => {
-      await createDatabaseGate({ db, name: 'real', minIntervalMs: 50 })();
+      await createDatabaseGate({ db, name: 'real', minIntervalMs: 100 })();
       starts.push(performance.now());
     };
     await Promise.all([run(), run(), run()]);
     starts.sort((a, b) => a - b);
-    // The database clock and performance.now() can differ by a millisecond or so.
-    expect((starts[1] ?? 0) - (starts[0] ?? 0)).toBeGreaterThanOrEqual(45);
-    expect((starts[2] ?? 0) - (starts[1] ?? 0)).toBeGreaterThanOrEqual(45);
+    // The gate spaces start times on the database clock; these are the times each caller resumes,
+    // which also differ by the callers' query round trips (several ms on a busy CI runner).
+    // Without the gate the calls would land a millisecond or two apart.
+    expect((starts[1] ?? 0) - (starts[0] ?? 0)).toBeGreaterThanOrEqual(80);
+    expect((starts[2] ?? 0) - (starts[1] ?? 0)).toBeGreaterThanOrEqual(80);
   });
 });
