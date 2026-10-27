@@ -471,22 +471,34 @@ describe('meteogramModel with a rule set that names its flow gauge', () => {
   });
 });
 
-describe('course wind (#103)', () => {
+describe('course wind (#103, #142)', () => {
+  const A: [number, number] = [42.6, -72.55];
+  const B: [number, number] = [42.609, -72.55];
   const course = {
-    points: [
-      [42.6, -72.55],
-      [42.609, -72.55],
-    ] as [number, number][],
+    taps: [A, B],
+    legs: [{ points: [A, B] }],
     notes: 'Keep to the east bank going upstream.',
   };
 
   it('words the wind along a saved course for each hour, with its notes', () => {
     const m = model({ location: { ...location, course } });
     expect(m.course?.words).toHaveLength(m.hours.length);
-    expect(m.course?.words[0]).toMatch(
+    expect(m.course?.words[0]?.summary).toMatch(
       /^(Out: .*\. Back: .*\.|Calm on the course|Course wind unknown)$/,
     );
     expect(m.course?.notes).toBe('Keep to the east bank going upstream.');
+  });
+
+  it('gives a loop its legs in the table words', () => {
+    const C: [number, number] = [42.609, -72.5378];
+    const loop = {
+      taps: [A, B, C, A],
+      legs: [{ points: [A, B] }, { points: [B, C] }, { points: [C, A] }],
+      loop: true,
+    };
+    const m = model({ location: { ...location, course: loop } });
+    const windy = m.course?.words.find((w) => w.summary.startsWith('Loop:'));
+    expect(windy?.detail).toMatch(/Leg 1: .*Leg 2: .*Leg 3: /);
   });
 
   it('has no course without one saved', () => {

@@ -316,10 +316,18 @@ describe('TimelineSection flow note without a usable forecast (#117, #82)', () =
 describe('TimelineSection course (#103)', () => {
   it('adds the course wind to the readout and the hourly table, with the course notes', () => {
     const course = {
-      points: [
+      taps: [
         [42.6, -72.55],
         [42.609, -72.55],
       ] as [number, number][],
+      legs: [
+        {
+          points: [
+            [42.6, -72.55],
+            [42.609, -72.55],
+          ] as [number, number][],
+        },
+      ],
       notes: 'Keep to the east bank going upstream.',
     };
     const { html, text } = render(clubA, undefined, { ...location, course });

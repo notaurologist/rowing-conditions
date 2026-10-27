@@ -58,20 +58,32 @@ const ConditionsQuery = z.object({
 
 const PlaceQuery = z.object({ q: z.string().trim().min(2).max(200) });
 
+// Taps as "lat,lon;lat,lon;…" in rowing order.
 const SnapQuery = z.object({
-  startLat: decimal(-90, 90),
-  startLon: decimal(-180, 180),
-  turnLat: decimal(-90, 90),
-  turnLon: decimal(-180, 180),
+  taps: z
+    .string()
+    .max(1000)
+    .transform((value, ctx) => {
+      const taps = value.split(';').map((pair) => pair.split(',').map(Number));
+      const valid = taps.every(
+        (t) =>
+          t.length === 2 &&
+          t.every(Number.isFinite) &&
+          Math.abs(t[0] as number) <= 90 &&
+          Math.abs(t[1] as number) <= 180,
+      );
+      if (!valid || taps.length < 2) {
+        ctx.addIssue({ code: 'custom', message: 'Expected at least two "lat,lon" pairs' });
+        return z.NEVER;
+      }
+      return taps as [number, number][];
+    }),
 });
 
-// Why a course couldn't follow the river, in words the app shows as they are.
+// Why a course couldn't be found, in words the app shows as they are.
 const SNAP_PROBLEMS = {
-  tooFar: 'The start and the turn are more than 30 km apart.',
-  noRiver:
-    'There is no mapped river within 300 m of the start or the turn. Tap closer to the river.',
-  notConnected:
-    "The start and the turn aren't on the same mapped river. Pick both on the water you row.",
+  tooFar: 'The points are more than 30 km apart.',
+  tooMany: 'A course can have at most 12 points.',
 } as const;
 
 const upstreamError = (error: SourceError) => ({
@@ -128,14 +140,14 @@ export function createApp(deps: AppDeps) {
         return c.json({ places: result.data }, 200);
       })
 
-      // A course following the river between the tapped start and turn (#103).
+      // A course following the river between each pair of taps, or straight where it can't
+      // (#103, #142). Can take a minute: Overpass is slow when busy.
       .get('/course/snap', zValidator('query', SnapQuery), async (c) => {
         if (!deps.snapCourse) {
           return c.json({ error: { message: 'Course snapping is turned off.' } }, 503);
         }
-        const { startLat, startLon, turnLat, turnLon } = c.req.valid('query');
-        const result = await deps.snapCourse([startLat, startLon], [turnLat, turnLon]);
-        if (result.ok) return c.json({ points: result.points }, 200);
+        const result = await deps.snapCourse(c.req.valid('query').taps);
+        if (result.ok) return c.json({ legs: result.legs }, 200);
         if (result.reason === 'sourceError') {
           const { error } = upstreamError(result.error);
           // The public Overpass server is often busy for a few minutes.

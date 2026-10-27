@@ -267,8 +267,8 @@ describe('GET /places/search', () => {
   });
 });
 
-describe('GET /course/snap (#103)', () => {
-  const path = '/course/snap?startLat=42.605&startLon=-72.5448&turnLat=42.6422&turnLon=-72.4819';
+describe('GET /course/snap (#103, #142)', () => {
+  const path = '/course/snap?taps=42.335,-72.6203;42.3366,-72.6150;42.3444,-72.632;42.335,-72.6203';
   const snapApp = (snapCourse?: SnapCourse) =>
     createApp({
       usgs: fakeUsgs(),
@@ -276,22 +276,43 @@ describe('GET /course/snap (#103)', () => {
       ...(snapCourse ? { snapCourse } : {}),
     });
 
-  it('returns the course following the river', async () => {
-    const points: [number, number][] = [
-      [42.6048, -72.5454],
-      [42.642, -72.4825],
+  it('returns a leg between each pair of taps, straight ones saying why', async () => {
+    const legs = [
+      {
+        points: [
+          [42.335, -72.6203],
+          [42.3366, -72.615],
+        ] as [number, number][],
+        straight: 'detour' as const,
+      },
+      {
+        points: [
+          [42.3366, -72.6177],
+          [42.3444, -72.632],
+        ] as [number, number][],
+      },
+      {
+        points: [
+          [42.3444, -72.632],
+          [42.3353, -72.6192],
+        ] as [number, number][],
+      },
     ];
-    const snapCourse = vi.fn<SnapCourse>(async () => ({ ok: true, points }));
+    const snapCourse = vi.fn<SnapCourse>(async () => ({ ok: true, legs }));
     const res = await snapApp(snapCourse).request(path);
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ points });
-    expect(snapCourse).toHaveBeenCalledWith([42.605, -72.5448], [42.6422, -72.4819]);
+    expect(await res.json()).toEqual({ legs });
+    expect(snapCourse).toHaveBeenCalledWith([
+      [42.335, -72.6203],
+      [42.3366, -72.615],
+      [42.3444, -72.632],
+      [42.335, -72.6203],
+    ]);
   });
 
   it.each([
-    ['noRiver', 'There is no mapped river within 300 m of the start or the turn.'],
-    ['notConnected', "aren't on the same mapped river"],
     ['tooFar', 'more than 30 km apart'],
+    ['tooMany', 'at most 12 points'],
   ] as const)('explains %s in words, as 422', async (reason, words) => {
     const res = await snapApp(async () => ({ ok: false, reason })).request(path);
     expect(res.status).toBe(422);
@@ -300,7 +321,7 @@ describe('GET /course/snap (#103)', () => {
     expect(body.error.message).toContain(words);
   });
 
-  it('reports a failed source as 502', async () => {
+  it('reports a busy source as 502, in words', async () => {
     const error = { source: 'overpass' as const, kind: 'timeout' as const, message: 'timed out' };
     const res = await snapApp(async () => ({ ok: false, reason: 'sourceError', error })).request(
       path,
@@ -315,14 +336,15 @@ describe('GET /course/snap (#103)', () => {
     });
   });
 
-  it('rejects missing or out-of-range points', async () => {
+  it.each([
+    ['missing', '/course/snap'],
+    ['one tap', '/course/snap?taps=42.6,-72.5'],
+    ['not numbers', '/course/snap?taps=a,b;c,d'],
+    ['out of range', '/course/snap?taps=95,-72.5;42.6,-72.5'],
+    ['three numbers', '/course/snap?taps=42.6,-72.5,1;42.6,-72.5'],
+  ])('rejects taps that are %s', async (_, badPath) => {
     const snapCourse = vi.fn<SnapCourse>();
-    expect(
-      (await snapApp(snapCourse).request('/course/snap?startLat=42.6&startLon=-72.5')).status,
-    ).toBe(400);
-    expect(
-      (await snapApp(snapCourse).request(path.replace('turnLat=42.6422', 'turnLat=95'))).status,
-    ).toBe(400);
+    expect((await snapApp(snapCourse).request(badPath)).status).toBe(400);
     expect(snapCourse).not.toHaveBeenCalled();
   });
 });

@@ -5,40 +5,53 @@ import { Waterway, type WaterwaySource } from '../adapters/overpass/overpass.ts'
 import type { Box } from '../adapters/overpass/requests.ts';
 import { cacheTtlMs, type SourceCache } from './sourceCache.ts';
 
-// Snapping a course to the river (#103): the user taps the start and the turn, and the course
-// follows OpenStreetMap's river centerline between them. Rivers don't move, so the waterways are
-// cached for weeks.
+// Snapping a course to the river (#103, #142): the rower taps points in rowing order, and each leg
+// between two taps follows OpenStreetMap's river centerline. Where the map can't give a sensible
+// route, the leg is a straight line and says why. Rivers don't move, so the waterways are cached
+// for weeks, one fetch for the area around every tap.
 
-// A tapped point must be this close to a river node to snap to it. Banks and docks sit beside the
+// A tap must be this close to a river node to snap to it. Banks and docks sit beside the
 // centerline; farther than this, the point probably isn't on the river.
 export const SNAP_MAX_KM = 0.3;
-// Beyond this between start and turn, the query would cover too much map to be worth it.
+// The taps must fit in this span, so the query stays small.
 export const COURSE_MAX_KM = 30;
-// Waterways are fetched this far around the two points, so a bend outside them is included.
+export const COURSE_MAX_TAPS = 12;
+// A route this many times the straight line, and at least DETOUR_MIN_KM longer, is taken as a gap
+// in the map rather than the way rowed: for example a side channel mapped as not rejoining the
+// river, which sends the route around an island. Meanders rarely double the distance.
+export const DETOUR_RATIO = 2.5;
+export const DETOUR_MIN_KM = 0.5;
+// Waterways are fetched this far around the taps, so a bend outside them is included.
 const MARGIN_KM = 2;
 
 const Waterways = z.array(Waterway);
 
-type LatLon = readonly [number, number];
+export type LatLon = readonly [number, number];
+
+export interface SnappedLeg {
+  points: [number, number][];
+  // Why the leg is a straight line between its taps, when it is: no mapped river near a tap, the
+  // two taps on waterways that don't meet, or a route that looks like a gap in the map.
+  straight?: 'noRiver' | 'notConnected' | 'detour';
+}
 
 export type SnapResult =
-  | { ok: true; points: [number, number][] }
-  | { ok: false; reason: 'tooFar' | 'noRiver' | 'notConnected' }
+  | { ok: true; legs: SnappedLeg[] }
+  | { ok: false; reason: 'tooFar' | 'tooMany' }
   | { ok: false; reason: 'sourceError'; error: SourceError };
 
-export type SnapCourse = (start: LatLon, turn: LatLon) => Promise<SnapResult>;
+export type SnapCourse = (taps: readonly LatLon[]) => Promise<SnapResult>;
 
-// The box around both points, widened by the margin, rounded so nearby taps share a cache entry.
-export function courseBox(start: LatLon, turn: LatLon): Box {
-  const [aMinLon, aMinLat, aMaxLon, aMaxLat] = boundingBox(start[0], start[1], MARGIN_KM);
-  const [bMinLon, bMinLat, bMaxLon, bMaxLat] = boundingBox(turn[0], turn[1], MARGIN_KM);
+// The box around every tap, widened by the margin, rounded so nearby courses share a cache entry.
+export function courseBox(taps: readonly LatLon[]): Box {
+  const boxes = taps.map(([lat, lon]) => boundingBox(lat, lon, MARGIN_KM));
   const down = (v: number) => Math.floor(v * 100) / 100;
   const up = (v: number) => Math.ceil(v * 100) / 100;
   return [
-    down(Math.min(aMinLon, bMinLon)),
-    down(Math.min(aMinLat, bMinLat)),
-    up(Math.max(aMaxLon, bMaxLon)),
-    up(Math.max(aMaxLat, bMaxLat)),
+    down(Math.min(...boxes.map((b) => b[0]))),
+    down(Math.min(...boxes.map((b) => b[1]))),
+    up(Math.max(...boxes.map((b) => b[2]))),
+    up(Math.max(...boxes.map((b) => b[3]))),
   ];
 }
 
@@ -82,9 +95,13 @@ function nearestNode(graph: Graph, [lat, lon]: LatLon): number | undefined {
   return best;
 }
 
-// Shortest path along the waterways (Dijkstra). A few thousand nodes at most, so a linear scan
-// for the next node is fast enough.
-function shortestPath(graph: Graph, from: number, to: number): number[] | undefined {
+// Shortest path along the waterways (Dijkstra), with its length. A few thousand nodes at most, so
+// a linear scan for the next node is fast enough.
+function shortestPath(
+  graph: Graph,
+  from: number,
+  to: number,
+): { path: number[]; km: number } | undefined {
   const dist = new Map<number, number>([[from, 0]]);
   const prev = new Map<number, number>();
   const open = new Set<number>([from]);
@@ -94,8 +111,7 @@ function shortestPath(graph: Graph, from: number, to: number): number[] | undefi
     for (const id of open)
       if (current === undefined || (dist.get(id) ?? Infinity) < (dist.get(current) ?? Infinity))
         current = id;
-    if (current === undefined) break;
-    if (current === to) break;
+    if (current === undefined || current === to) break;
     open.delete(current);
     done.add(current);
     for (const { to: n, km } of graph.next.get(current) ?? []) {
@@ -108,20 +124,45 @@ function shortestPath(graph: Graph, from: number, to: number): number[] | undefi
       }
     }
   }
-  if (!dist.has(to)) return undefined;
+  const km = dist.get(to);
+  if (km === undefined) return undefined;
   const path = [to];
   while (path[0] !== from) path.unshift(prev.get(path[0] as number) as number);
-  return path;
+  return { path, km };
+}
+
+function snapLeg(graph: Graph, a: LatLon, b: LatLon): SnappedLeg {
+  const straight = (why: NonNullable<SnappedLeg['straight']>): SnappedLeg => ({
+    points: [
+      [a[0], a[1]],
+      [b[0], b[1]],
+    ],
+    straight: why,
+  });
+  const from = nearestNode(graph, a);
+  const to = nearestNode(graph, b);
+  if (from === undefined || to === undefined) return straight('noRiver');
+  if (from === to) return straight('notConnected'); // both taps by the same point of the river
+  const route = shortestPath(graph, from, to);
+  if (!route) return straight('notConnected');
+  const direct = distanceKm(a[0], a[1], b[0], b[1]);
+  if (route.km > DETOUR_RATIO * direct && route.km - direct >= DETOUR_MIN_KM)
+    return straight('detour');
+  return { points: route.path.map((id) => [...(graph.at.get(id) as LatLon)]) };
 }
 
 export function createCourseSnap(deps: {
   overpass: WaterwaySource;
   cache: SourceCache;
 }): SnapCourse {
-  return async (start, turn) => {
-    if (distanceKm(start[0], start[1], turn[0], turn[1]) > COURSE_MAX_KM)
-      return { ok: false, reason: 'tooFar' };
-    const box = courseBox(start, turn);
+  return async (taps) => {
+    if (taps.length < 2 || taps.length > COURSE_MAX_TAPS) return { ok: false, reason: 'tooMany' };
+    for (const a of taps)
+      for (const b of taps)
+        if (distanceKm(a[0], a[1], b[0], b[1]) > COURSE_MAX_KM)
+          return { ok: false, reason: 'tooFar' };
+
+    const box = courseBox(taps);
     const result = await deps.cache.get(
       `osm:waterways:${box.join(',')}`,
       cacheTtlMs.waterways,
@@ -131,12 +172,9 @@ export function createCourseSnap(deps: {
     if (result.status === 'error') return { ok: false, reason: 'sourceError', error: result.error };
 
     const graph = graphOf(result.data);
-    const from = nearestNode(graph, start);
-    const to = nearestNode(graph, turn);
-    if (from === undefined || to === undefined) return { ok: false, reason: 'noRiver' };
-    if (from === to) return { ok: false, reason: 'notConnected' };
-    const path = shortestPath(graph, from, to);
-    if (!path) return { ok: false, reason: 'notConnected' };
-    return { ok: true, points: path.map((id) => [...(graph.at.get(id) as LatLon)]) };
+    const legs: SnappedLeg[] = [];
+    for (let i = 1; i < taps.length; i += 1)
+      legs.push(snapLeg(graph, taps[i - 1] as LatLon, taps[i] as LatLon));
+    return { ok: true, legs };
   };
 }
