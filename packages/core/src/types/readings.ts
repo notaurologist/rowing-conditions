@@ -39,6 +39,9 @@ export const ForecastPoint = z
     time: UtcTime, // start of the hour
     values: z.partialRecord(Metric, z.number().nullable()),
     provenance: z.partialRecord(Metric, ValueProvenance), // absent = no source supplies the metric
+    // The NWS forecaster's fog call for the hour, as context only (#42): its coverage word, such as
+    // "patchy" or "areas"; null when NWS forecasts no fog; absent when the forecast doesn't say.
+    fog: z.string().min(1).nullable().optional(),
   })
   .superRefine((point, ctx) => {
     const time = new Date(point.time);

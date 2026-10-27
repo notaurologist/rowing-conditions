@@ -12,10 +12,10 @@ export function durationMs(duration: string): number | null {
 
 // Expands NWS grid values ("start/duration") to one value per UTC hour each interval covers.
 // Hours no interval covers are absent; entries that can't be parsed are skipped.
-export function expandToHours(
-  values: readonly { validTime: string; value: number | null }[],
-): Map<string, number | null> {
-  const hours = new Map<string, number | null>();
+export function expandToHours<T = number | null>(
+  values: readonly { validTime: string; value: T }[],
+): Map<string, T> {
+  const hours = new Map<string, T>();
   for (const { validTime, value } of values) {
     const [start, duration] = validTime.split('/');
     const startMs = Date.parse(start ?? '');

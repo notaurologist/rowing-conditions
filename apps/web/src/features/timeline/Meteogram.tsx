@@ -422,6 +422,10 @@ export function Meteogram({ model }: { model: MeteogramModel }) {
           />
           <span className="mg-scrub-time">
             {model.hours[hour]?.label} · {model.hours[hour]?.light.toLowerCase()}
+            {/* Fog shows when forecast or unknown; "no fog forecast" would be noise here. */}
+            {model.hours[hour] && model.hours[hour].fog.state !== 'none'
+              ? ` · ${model.hours[hour].fog.text.toLowerCase()} (NWS)`
+              : ''}
           </span>
         </label>
       </div>

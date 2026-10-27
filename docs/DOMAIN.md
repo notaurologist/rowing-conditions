@@ -163,7 +163,13 @@ So the app treats light as context by default:
 - A rule set's daylight window is optional and meant only for clubs with a hard rule. If one is set, hours entirely outside it are outside that rule set's limits, with darkness given as the reason, and windows that start or end partway through an hour are cut at the exact boundary. The editor describes it that way ("only if your club forbids rowing outside these hours").
 - When the app needs a default span of "hours you might row" (choosing which metric to chart, listing periods within limits), it uses civil dawn to civil dusk, or the rule set's window if it has one. This keeps cold, calm overnight hours from deciding the default chart while still including pre-sunrise outings in twilight.
 
-Open question: fog and visibility. The NWS grid data includes visibility and a weather layer that reports fog. Showing visibility as context, and allowing an optional minimum-visibility limit, would treat fog the same way as light. That would expand the MVP, so it is not in the plan yet.
+### Fog
+
+Fog is shown as context, like light, and never changes whether an hour is within limits (decided in #42, October 2026):
+
+- **The forecaster's call:** the NWS forecast's weather layer names fog with a coverage word ("patchy", "areas", "widespread"). Each hour shows it in words, for example "Patchy fog (NWS)". An hour the layer doesn't cover is "fog forecast unknown", never "no fog". Dense Fog Advisories already show under alerts.
+- **Dew point gap:** air temperature minus dew point, shown with the air temperature. Radiation fog forms as air cools to its dew point, so a small gap is one input to fog. No credible source gives a threshold that turns it into "fog likely", so the app shows the number only.
+- **Not used:** the NWS hourly visibility series is one flat value or missing at most grid points, so there is no visibility limit. The water-minus-air gap (steam fog) is left for later: water temperature is a single observation and many gauges don't measure it.
 
 ## Units
 

@@ -39,6 +39,7 @@ const metricLabels: Record<Metric, string> = {
   windDirection: 'wind direction',
   precipChance: 'rain chance',
   combinedTempF: 'air + water',
+  dewPoint: 'dew point',
 };
 
 const reasonLabels: Record<UnknownReason, string> = {
