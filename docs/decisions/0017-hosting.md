@@ -35,11 +35,11 @@ Free-tier terms as of October 26, 2026, from each provider's own docs:
 
 ## Consequences
 - **Commercial use ends the free tier.** Vercel Hobby is for non-commercial personal use. Charging for the app, taking sponsorship, or running it for a business would mean a paid plan or a move; raise it with the owner first (0015).
-- **Staying free.** Most of a request's time is spent waiting on USGS, NWPS, and NWS, which doesn't count as active CPU. How much CPU one conditions request uses has not been measured, so how many requests fit in 4 hours a month is unknown; measure it in the first deploy. Going over stops functions for 30 days, so usage needs watching once testers start. Neon's 1 GB is far more than the cache and gauge tables need.
+- **Staying free.** Most of a request's time is spent waiting on USGS, NWPS, and NWS, which doesn't count as active CPU. In the first deploy (#34), about a dozen API requests used about 1 second of active CPU in total, so a request uses roughly 0.1 seconds or less and 4 hours covers well over 100,000 requests a month. The Usage page rounds to whole seconds, so this is an upper bound; re-check it after a week of real use. Going over stops functions for 30 days, so usage needs watching once testers start. Neon's 1 GB is far more than the cache and gauge tables need.
 - **Logs.** One hour of runtime logs is too short for error logging (#34). Errors need a separate free service, which is a new dependency and the owner's call.
 - **Work before the first deploy** (each its own issue): move the workspace to Node 24; move the Nominatim gate into Postgres; add the Vercel entry point, project config, and pooled connection settings.
-- **Not verified yet**, to confirm in the first deploy (#34):
-  - Cold start time for the API plus Neon waking. Vercel's docs describe pre-warming and bytecode caching but give no numbers.
-  - How Services routing passes the `/api` prefix to the API. The Hono routes have no `/api` prefix; the dev proxy strips it.
-  - That Services, which is in beta, builds a pnpm workspace where `apps/api` depends on `packages/core`.
+- **Checked in the first deploy** (#34, October 27, 2026):
+  - Cold start: after 17 minutes without traffic, `/api/health` took 0.32 s and the first conditions request 1.82 s, including Neon waking and refetching expired sources. Warm, they took 0.15 s and 0.28 s.
+  - Services routing passes the `/api` prefix through to the API, which is why `vercel.ts` mounts the app under `/api`.
+  - Services builds the pnpm workspace, including `apps/api`'s dependency on `packages/core`.
 - **Reversible.** Only the entry file and project config are Vercel-specific. Render with Neon remains a fallback that needs no other code changes.
