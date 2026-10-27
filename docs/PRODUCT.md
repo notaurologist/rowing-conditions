@@ -121,8 +121,8 @@ The MVP targets the US (USGS and NWS data). The design must not block other coun
 ## Success criteria (end of spring season)
 
 - Jason uses it before every outing instead of checking other sites.
-- A handful of testers across a few clubs use it weekly.
-- At least a couple of testers say they would pay for more (likely club features).
+
+There is no formal user testing. Jason shares it informally and doesn't plan to collect feedback.
 
 ## After the MVP (candidates)
 
