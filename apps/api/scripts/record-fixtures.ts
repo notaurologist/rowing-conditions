@@ -4,9 +4,6 @@
 //   pnpm fixtures:record          record every fixture
 //   pnpm fixtures:record usgs     record only names starting with "usgs"
 
-import { mkdir, writeFile } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import {
   NOMINATIM_BASE_URL,
   NOMINATIM_MIN_INTERVAL_MS,
@@ -29,8 +26,7 @@ import {
   timeSeriesMetadataUrl,
   usgsParameterCodes,
 } from '../src/adapters/usgs/requests.ts';
-
-const fixturesDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'test', 'fixtures');
+import { recordFixture, type Trim } from './recorder.ts';
 
 const MONTAGUE = 'USGS-01170500'; // Connecticut River at Montague City, MA: no water temperature
 const NORTHFIELD = 'USGS-01161280'; // Connecticut River near Northfield, MA: reports water temperature
@@ -73,7 +69,7 @@ const fixtures: Record<string, string> = {
 // Fixtures trimmed to keep the repo small. The trim is recorded in the fixture, so it's never
 // mistaken for the full response. NWPS stageflow returns about 30 days of 15-minute observations.
 const OBSERVED_POINTS_KEPT = 96; // 24 hours
-const trims: Record<string, { note: string; apply: (body: unknown) => unknown }> = {};
+const trims: Record<string, Trim> = {};
 for (const name of ['nwps/stageflow-mntm3', 'nwps/stageflow-nfdm3']) {
   trims[name] = {
     note: `observed.data trimmed to the last ${OBSERVED_POINTS_KEPT} points`,
@@ -133,39 +129,7 @@ for (const [name, url] of selected) {
     if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
     lastNominatimRequest = Date.now();
   }
-  const response = await fetch(url, {
-    signal: AbortSignal.timeout(30_000),
-    // NWS rejects requests without a User-Agent, and Nominatim requires one that identifies
-    // the app. The recorder identifies itself by repository.
-    headers: {
-      'User-Agent':
-        'rowing-conditions fixture recorder (github.com/notaurologist/rowing-conditions)',
-    },
-  });
-  const text = await response.text();
-  let body: unknown;
-  try {
-    body = JSON.parse(text);
-  } catch {
-    body = text;
-  }
-  if (!response.ok) {
-    failed += 1;
-    console.error(`FAILED ${name}: HTTP ${response.status}`);
-    continue;
-  }
-  const file = join(fixturesDir, `${name}.json`);
-  await mkdir(dirname(file), { recursive: true });
-  const trim = trims[name];
-  const record = {
-    url,
-    recordedAt: new Date().toISOString(),
-    status: response.status,
-    ...(trim ? { trimmed: trim.note } : {}),
-    body: trim ? trim.apply(body) : body,
-  };
-  await writeFile(file, `${JSON.stringify(record, null, 2)}\n`);
-  console.log(`recorded ${name}`);
+  if (!(await recordFixture(name, url, trims[name]))) failed += 1;
 }
 
 console.log(`${selected.length - failed} of ${selected.length} fixtures recorded`);
