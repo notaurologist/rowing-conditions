@@ -370,21 +370,46 @@
 }
 
 .mg-status {
-  display: flex;
-  gap: 2px;
-  min-height: 26px;
+  position: relative;
+  height: 26px;
 }
 
+/* Each span sits on its hours. A 1px inset on each side keeps neighbors apart without
+   moving them off the time axis. */
 .mg-status > div {
+  position: absolute;
+  top: 0;
+  bottom: 0;
   display: flex;
   align-items: center;
-  min-width: 0;
+  box-sizing: border-box;
   overflow: hidden;
-  padding: 0 var(--space-2);
+  border-left: 1px solid var(--paper);
+  border-right: 1px solid var(--paper);
   border-radius: var(--radius-sm);
   font-size: var(--text-sm);
   font-weight: 600;
   white-space: nowrap;
+}
+
+/* Padding on the words, not the span, so a one-hour span is no wider than its hour. */
+.mg-status > div > span {
+  padding: 0 3px;
+}
+
+.mg-status > div > span:empty {
+  padding: 0;
+}
+
+/* The symbol and words sit on a solid chip, so the stripes or dots never run behind them. */
+.mg-status-outside > span:not(:empty) {
+  border-radius: var(--radius-sm);
+  background: var(--outside-bg);
+}
+
+.mg-status-unknown > span:not(:empty) {
+  border-radius: var(--radius-sm);
+  background: var(--unknown-bg);
 }
 
 .mg-status-row + .mg-status-row {
@@ -405,12 +430,25 @@
 }
 
 .mg-status-outside {
-  background: var(--outside-bg);
+  background:
+    repeating-linear-gradient(
+      135deg,
+      transparent 0 3px,
+      color-mix(in srgb, var(--outside-ink) 45%, transparent) 3px 5px
+    ),
+    var(--outside-bg);
   color: var(--outside-ink);
 }
 
 .mg-status-unknown {
-  background: var(--unknown-bg);
+  background:
+    radial-gradient(
+      circle,
+      color-mix(in srgb, var(--ink-2) 45%, transparent) 1px,
+      transparent 1.5px
+    )
+    0 0 / 5px 5px,
+    var(--unknown-bg);
   color: var(--ink-2);
 }
 
