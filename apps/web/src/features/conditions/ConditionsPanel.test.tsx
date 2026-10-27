@@ -37,6 +37,23 @@ describe('ConditionsPanel', () => {
     expect(text(render(conditions))).toContain('Estimated: not compared against limits');
   });
 
+  it('shows the flow and gauge height trends in words, with the symbol hidden (#73)', () => {
+    const conditions = base();
+    conditions.trends = [
+      {
+        metric: 'flow',
+        direction: 'rising',
+        ratePerHour: 3.4,
+        from: '2026-10-25T23:00:00.000Z',
+        to: '2026-10-26T02:00:00.000Z',
+      },
+    ];
+    const html = render(conditions);
+    expect(text(html)).toContain('↑ Rising 120 cfs per hour since 7:00 PM');
+    expect(html).toContain('<span aria-hidden="true">↑ </span>');
+    expect(text(html)).toContain('? Trend unknown: no recent readings');
+  });
+
   it('flags a stale reading in words, not only by style', () => {
     const t = text(render(base(), 'us', '2026-10-26T07:30:00.000Z'));
     expect(t).toContain("Stale: older than 3 h, so it isn't compared against limits.");

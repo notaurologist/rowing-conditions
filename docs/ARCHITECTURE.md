@@ -380,6 +380,7 @@ Routes validate input with `@hono/zod-validator` and answer 400 on invalid input
   location: { lat, lon, timezone: string | null, place? },   // timezone from NWS; null if NWS failed
   gauge?: { ref, name, lat, lon },
   current: Reading[],                 // station or forecast weather, plus the gauge's latest readings
+  trends: Trend[],                    // flow and gauge height at the display gauge, for each it reports now (#73)
   currentBasis?: 'station' | 'forecast',
   station?: { id, name, distanceKm },
   forecast: ForecastPoint[],          // 48 hourly points
@@ -400,6 +401,7 @@ How `getConditions` builds it (`apps/api/src/services/conditions.ts`):
   - without a forecast, the latest observation copied to every hour
   - water temperature always from the latest observation
 - **USGS gauges** are linked to NWPS by site number. The stage-and-flow forecast is fetched only when the gauge has one.
+- **`trends`** (#73): for each of flow and gauge height the display gauge reports now, `trendOf` (`packages/core/src/series/trend.ts`) measures from the earliest usable reading in the 3 hours before the latest to the latest. Below 2 hours apart it's `unknown` (`shortHistory`). A USGS gauge's history is its last 4 hours from `getHistory`, one cached call per metric (`usgs:history:<id>:<metric>`); a failure leaves that trend `unknown` (`historyError`) without marking USGS as failed. An NWPS gauge's observations reach back days, so they serve as its history. Rule-set flow gauges get no trend. The web app also shows a trend as unknown when the latest reading is stale. `trends` defaults to `[]`, so a copy kept from before it existed still parses.
 - **`daylight`** covers each local solar date in the window, so it doesn't need a time zone.
 - **`sources`** has one entry per source used: `error` if any call failed with nothing cached, otherwise `stale` if any was served stale, otherwise `ok`. `fetchedAt` is that source's oldest data in the response.
 - **When every source fails** with nothing cached, the response is still 200 and still valid: empty readings, 48 empty forecast hours, and every source `error`.

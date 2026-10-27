@@ -51,6 +51,9 @@ function FreshnessFlag({ row }: { row: ConditionRow }) {
   return null;
 }
 
+// Beside the words, never instead of them.
+const TREND_SYMBOLS = { rising: '↑', falling: '↓', stable: '→', unknown: '?' } as const;
+
 function Row({ row, now, timeZone }: { row: ConditionRow; now: string; timeZone: string | null }) {
   const flagged = row.freshness !== undefined && row.freshness !== 'fresh';
   return (
@@ -64,6 +67,12 @@ function Row({ row, now, timeZone }: { row: ConditionRow; now: string; timeZone:
         </span>
       ) : (
         <span className="reading-missing">{row.message}</span>
+      )}
+      {row.trend && (
+        <span className={`reading-trend reading-trend-${row.trend.direction}`}>
+          <span aria-hidden="true">{TREND_SYMBOLS[row.trend.direction]} </span>
+          {row.trend.text}
+        </span>
       )}
       {(row.source || row.observedAt) && (
         <span className="reading-meta">

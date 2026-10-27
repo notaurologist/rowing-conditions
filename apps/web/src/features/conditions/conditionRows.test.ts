@@ -1,3 +1,4 @@
+import type { DisplaySystem } from '@rowing/core';
 import { describe, expect, it } from 'vitest';
 import recorded from '../../../test/fixtures/conditions-northfield.json' with { type: 'json' };
 import type { Conditions } from '../../lib/api.ts';
@@ -161,6 +162,93 @@ describe('conditionRows', () => {
     const metric = row(conditionRows(conditions, { units: 'metric', now: NOW }), 'windDirection');
     expect(us).toMatchObject({ value: 'NW', unit: '315°', label: 'Wind from' });
     expect(metric).toMatchObject({ value: 'NW', unit: '315°' });
+  });
+});
+
+describe('conditionRows trends (#73)', () => {
+  const FROM = '2026-10-25T23:00:00.000Z'; // 7:00 PM in New York
+  const withTrends = (trends: Conditions['trends']) => ({ ...base(), trends });
+  const trendOf = (
+    conditions: Conditions,
+    metric: 'flow' | 'gaugeHeight',
+    units: DisplaySystem = 'us',
+  ) => row(conditionRows(conditions, { units, now: NOW }), metric).trend;
+
+  it('says which way flow is moving and how fast, in display units', () => {
+    const c = withTrends([
+      { metric: 'flow', direction: 'rising', ratePerHour: 3.4, from: FROM, to: NOW },
+      { metric: 'gaugeHeight', direction: 'falling', ratePerHour: -0.0305, from: FROM, to: NOW },
+    ]);
+    expect(trendOf(c, 'flow')).toEqual({
+      direction: 'rising',
+      text: 'Rising 120 cfs per hour since 7:00 PM',
+    });
+    expect(trendOf(c, 'gaugeHeight')).toEqual({
+      direction: 'falling',
+      text: 'Falling 0.10 ft per hour since 7:00 PM',
+    });
+    expect(trendOf(c, 'flow', 'metric')?.text).toBe('Rising 3.4 m³/s per hour since 7:00 PM');
+  });
+
+  it('gives a stable trend its signed rate', () => {
+    const c = withTrends([
+      { metric: 'flow', direction: 'stable', ratePerHour: -0.3, from: FROM, to: NOW },
+      { metric: 'gaugeHeight', direction: 'stable', ratePerHour: 0, from: FROM, to: NOW },
+    ]);
+    expect(trendOf(c, 'flow')?.text).toBe('Stable since 7:00 PM (−11 cfs per hour)');
+    expect(trendOf(c, 'gaugeHeight')?.text).toBe('Stable since 7:00 PM (0.00 ft per hour)');
+  });
+
+  it('never rounds a nonzero rate down to zero', () => {
+    const c = withTrends([
+      { metric: 'flow', direction: 'stable', ratePerHour: 0.001, from: FROM, to: NOW },
+    ]);
+    expect(trendOf(c, 'flow')?.text).toBe('Stable since 7:00 PM (less than 1 cfs per hour)');
+  });
+
+  it('says why a trend is unknown', () => {
+    const c = withTrends([
+      { metric: 'flow', direction: 'unknown', reason: 'shortHistory' },
+      { metric: 'gaugeHeight', direction: 'unknown', reason: 'historyError' },
+    ]);
+    expect(trendOf(c, 'flow')).toEqual({
+      direction: 'unknown',
+      text: 'Trend unknown: less than 2 hours of recent readings',
+    });
+    expect(trendOf(c, 'gaugeHeight')?.text).toBe("Trend unknown: couldn't load recent readings");
+  });
+
+  it('is unknown, not stable, when the API sent no trend', () => {
+    expect(trendOf(withTrends([]), 'flow')).toEqual({
+      direction: 'unknown',
+      text: 'Trend unknown: no recent readings',
+    });
+  });
+
+  it('is unknown when the latest reading is stale or dated in the future', () => {
+    const c = withTrends([
+      { metric: 'flow', direction: 'stable', ratePerHour: 0, from: FROM, to: NOW },
+    ]);
+    const later = '2026-10-26T06:00:00.000Z'; // the 01:00 flow reading is now 5 hours old
+    expect(row(conditionRows(c, { units: 'us', now: later }), 'flow').trend?.text).toBe(
+      'Trend unknown: the latest reading is stale',
+    );
+    const earlier = '2026-10-25T22:00:00.000Z';
+    expect(row(conditionRows(c, { units: 'us', now: earlier }), 'flow').trend?.text).toBe(
+      'Trend unknown: the latest reading is dated in the future',
+    );
+  });
+
+  it('gives no trend to other rows, or to a row without a value', () => {
+    const c = withTrends([
+      { metric: 'flow', direction: 'rising', ratePerHour: 3.4, from: FROM, to: NOW },
+    ]);
+    const rows = conditionRows(c, { units: 'us', now: NOW });
+    expect(row(rows, 'waterTemp').trend).toBeUndefined();
+    expect(row(rows, 'windSpeed').trend).toBeUndefined();
+    const noValue = base();
+    for (const r of noValue.current) if (r.metric === 'flow') r.value = null;
+    expect(row(conditionRows(noValue, { units: 'us', now: NOW }), 'flow').trend).toBeUndefined();
   });
 });
 

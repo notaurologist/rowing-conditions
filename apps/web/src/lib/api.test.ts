@@ -22,6 +22,7 @@ const gauge: NearbyGauge = {
 const conditions = {
   location: { lat: 42.6, lon: -72.55, timezone: 'America/New_York' },
   current: [],
+  trends: [],
   forecast: [],
   flowSeries: [],
   daylight: [],

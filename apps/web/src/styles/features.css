@@ -206,6 +206,15 @@
   font-size: 0.85rem;
 }
 
+.reading-trend {
+  font-size: 0.9rem;
+}
+
+.reading-trend-unknown {
+  font-style: italic;
+  color: var(--muted);
+}
+
 .qualifiers {
   display: flex;
   flex-wrap: wrap;

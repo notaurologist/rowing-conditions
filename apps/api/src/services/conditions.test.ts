@@ -53,6 +53,15 @@ const usgsLatest: Reading[] = [
     qualifiers: ['provisional'],
   },
 ];
+// Flow every 15 minutes from 08:45 to 11:30, rising toward the latest reading of 5,060 cfs.
+const flowHistory: Reading[] = Array.from({ length: 12 }, (_, i) => ({
+  metric: 'flow',
+  value: toSI(4560 + (500 * i) / 12, 'cfs'),
+  observedAt: new Date(Date.parse('2026-10-26T08:45:00.000Z') + i * 15 * 60_000).toISOString(),
+  fetchedAt: T0,
+  source: 'usgs',
+  sourceRef: 'USGS-01170500',
+}));
 const weather = (hours: number): ForecastPoint[] =>
   Array.from({ length: hours }, (_, h) => ({
     time: at(h),
@@ -82,7 +91,9 @@ function adapters() {
     findNearby: vi.fn(),
     getGauge: vi.fn(async () => ok(montague)),
     getLatest: vi.fn(async () => ok(usgsLatest)),
-    getHistory: vi.fn(),
+    getHistory: vi.fn(async (_id: string, metric: string) =>
+      ok(metric === 'flow' ? flowHistory : []),
+    ),
   };
   const nwps: FlowForecastSource = {
     id: 'nwps',
@@ -459,5 +470,90 @@ describe('getConditions with failures', () => {
     expect(deps.usgs.getLatest).not.toHaveBeenCalled();
     expect(deps.nws.getHourlyForecast).not.toHaveBeenCalled();
     expect(deps.nwps.getStageFlow).not.toHaveBeenCalled();
+    expect(deps.usgs.getHistory).not.toHaveBeenCalled();
+  });
+});
+
+describe('getConditions: flow and gauge height trends (#73)', () => {
+  const latestHeight: Reading = {
+    metric: 'gaugeHeight',
+    value: 3.2,
+    observedAt: '2026-10-26T11:45:00.000Z',
+    fetchedAt: T0,
+    source: 'usgs',
+    sourceRef: 'USGS-01170500',
+  };
+
+  it("measures the display gauge's trend from its last 3 hours of readings", async () => {
+    const r = await conditions();
+    expect(r.trends).toEqual([
+      {
+        metric: 'flow',
+        direction: 'rising',
+        ratePerHour: expect.closeTo(toSI(500, 'cfs') / 3, 9),
+        from: '2026-10-26T08:45:00.000Z',
+        to: '2026-10-26T11:45:00.000Z',
+      },
+    ]);
+    expect(ConditionsResponse.parse(r).trends).toHaveLength(1);
+  });
+
+  it('asks for the 4 hours before now, for flow and gauge height', async () => {
+    await conditions();
+    const from = '2026-10-26T08:20:00.000Z';
+    const to = '2026-10-26T12:20:00.000Z';
+    expect(deps.usgs.getHistory).toHaveBeenCalledWith('USGS-01170500', 'flow', from, to);
+    expect(deps.usgs.getHistory).toHaveBeenCalledWith('USGS-01170500', 'gaugeHeight', from, to);
+  });
+
+  it('has a trend only for metrics the gauge reports now', async () => {
+    vi.mocked(deps.usgs.getLatest).mockResolvedValue(ok([...usgsLatest, latestHeight]));
+    const r = await conditions();
+    expect(r.trends.map((t) => [t.metric, t.direction])).toEqual([
+      ['flow', 'rising'],
+      ['gaugeHeight', 'unknown'],
+    ]);
+    expect(r.trends[1]).toMatchObject({ reason: 'shortHistory' });
+  });
+
+  it("is unknown, not stable, when a metric's history fails, without failing the source", async () => {
+    vi.mocked(deps.usgs.getLatest).mockResolvedValue(ok([...usgsLatest, latestHeight]));
+    vi.mocked(deps.usgs.getHistory).mockImplementation(async (_id, metric) =>
+      metric === 'flow' ? fail('usgs') : ok([]),
+    );
+    const r = await conditions();
+    expect(r.trends).toEqual([
+      { metric: 'flow', direction: 'unknown', reason: 'historyError' },
+      { metric: 'gaugeHeight', direction: 'unknown', reason: 'shortHistory' },
+    ]);
+    expect(r.sources.find((s) => s.id === 'usgs')?.status).toBe('ok');
+  });
+
+  it('has no trends without a gauge reading', async () => {
+    vi.mocked(deps.usgs.getLatest).mockResolvedValue(fail('usgs'));
+    expect((await conditions()).trends).toEqual([]);
+    expect((await conditions({ gaugeRef: undefined })).trends).toEqual([]);
+  });
+
+  it('fetches no history for the flow series of a gauge a rule set names', async () => {
+    await conditions({ gaugeRef: undefined, flowGaugeRefs: ['usgs:USGS-01170500'] });
+    expect(deps.usgs.getHistory).not.toHaveBeenCalled();
+  });
+
+  it("uses an NWPS gauge's own observations as its history", async () => {
+    const observed: Reading[] = [0, 3].map((h) => ({
+      metric: 'flow',
+      value: h === 0 ? 100 : 70,
+      observedAt: new Date(Date.parse('2026-10-26T09:00:00.000Z') + h * HOUR).toISOString(),
+      fetchedAt: T0,
+      source: 'nwps',
+      sourceRef: 'MNTM3',
+    }));
+    vi.mocked(deps.nwps.getStageFlow).mockResolvedValue(
+      ok({ observed, forecast: flowForecast, issuedAt: '2026-10-26T06:00:00.000Z' }),
+    );
+    const r = await conditions({ gaugeRef: 'nwps:MNTM3' });
+    expect(r.trends).toMatchObject([{ metric: 'flow', direction: 'falling', ratePerHour: -10 }]);
+    expect(deps.usgs.getHistory).not.toHaveBeenCalled();
   });
 });

@@ -37,6 +37,8 @@ Speed, gusts, and direction. Clubs commonly cap wind for small boats (15 mph app
 
 The main river hazard. Fast water increases turbulence (often below the surface), makes hazards like bridges, trees and moored boats more dangerous, and makes steering harder. [11][12] Clubs tie flow limits to a specific named gauge, not just "the river." [8][10] Trend matters too: flow can change during a day. [13]
 
+The app shows each one's trend (#73) as rising, falling, or stable, with the rate per hour, measured over the last 3 hours of readings. Flow is stable when it changes less than 2% of its starting value per hour, since rivers range from about 100 cfs to tens of thousands. Gauge height is stable when it changes less than 0.01 m (about 0.03 ft) per hour. These cutoffs only choose a word. They are not limits, and nothing is evaluated against them. With less than 2 hours of usable readings, or a stale latest reading, the trend is unknown, never stable.
+
 ### Dam operations and low water
 
 On regulated rivers, dam releases can raise flow quickly, and drawdowns can leave water too shallow to row (locally on the Connecticut, sometimes nearly walkable). Observed flow and gauge height capture these once they happen, so a minimum flow or gauge height limit flags low water. Advance release schedules are published inconsistently by dam operators (web pages, phone lines, rarely APIs), so they are out of scope for the MVP. Source: member experience on the Connecticut River [19].
