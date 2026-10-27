@@ -4,6 +4,7 @@
 //   pnpm fixtures:record          record every fixture
 //   pnpm fixtures:record usgs     record only names starting with "usgs"
 
+import { archiveUrl, asosUrl, previousRunsUrl } from '../src/adapters/historical/requests.ts';
 import {
   NOMINATIM_BASE_URL,
   NOMINATIM_MIN_INTERVAL_MS,
@@ -64,6 +65,15 @@ const fixtures: Record<string, string> = {
   ),
   'nominatim/search-turners-falls': searchUrl('Turners Falls'),
   'nominatim/search-no-results': searchUrl('qqzzxx no such place'),
+  // Backtesting sources (decision 0019), for fixed past dates so re-recording gives the same data.
+  'historical/previous-runs-turners-falls': previousRunsUrl(
+    42.6,
+    -72.55,
+    '2026-05-14',
+    '2026-05-17',
+  ),
+  'historical/archive-turners-falls': archiveUrl(42.6, -72.55, '2026-05-14', '2026-05-17'),
+  'historical/asos-ore': asosUrl('KORE', '2026-05-14', '2026-05-18'),
 };
 
 // Fixtures trimmed to keep the repo small. The trim is recorded in the fixture, so it's never

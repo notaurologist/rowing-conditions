@@ -12,6 +12,7 @@
     "typecheck": "tsc -p .",
     "fixtures:record": "node scripts/record-fixtures.ts",
     "fixtures:record-case": "node scripts/record-case.ts",
+    "fixtures:replay-case": "node scripts/replay-case.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate"
   },
