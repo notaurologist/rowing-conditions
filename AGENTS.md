@@ -47,6 +47,7 @@ pnpm check          # lint, typecheck, test; what the pre-push hook and CI run
 pnpm coverage       # tests with v8 coverage; add --project @rowing/core for one package
 pnpm fixtures:record [prefix]  # re-record API fixtures (live network); manual only, never in the pre-push check or CI
 pnpm fixtures:record-case --name … --date … --lat … --lon … --gauge … [--station …]  # record a backtesting case (live network, manual only; docs/backtesting.md)
+pnpm fixtures:replay-case --name … --at … --timezone … --rule-set …  # what the app would have shown for a recorded case (no network)
 cp .env.example .env  # once; pnpm dev loads it. Set NWS_USER_AGENT to your contact.
 docker compose up -d  # local Postgres 18 (docker-compose.yml)
 pnpm db:migrate     # apply Drizzle migrations; DATABASE_URL defaults to the local container

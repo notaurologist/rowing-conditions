@@ -85,7 +85,7 @@ export function asosUrl(stationId: string, startDate: string, endDateExclusive: 
   for (const [key, value] of Object.entries({
     tz: 'Etc/UTC',
     format: 'onlycomma',
-    latlon: 'no',
+    latlon: 'yes', // the station's position, for the 30 km rule the app applies
     missing: 'empty',
     report_type: '3',
   })) {

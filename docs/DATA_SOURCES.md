@@ -225,9 +225,9 @@ Checked against docs and live requests on October 26, 2026 (issue #35). Used by 
 ### Iowa Environmental Mesonet ASOS archive (what happened)
 
 - **Docs:** https://mesonet.agron.iastate.edu/request/download.phtml (scripting help at `/cgi-bin/request/asos.py?help`)
-- **URL:** `https://mesonet.agron.iastate.edu/cgi-bin/request/asos.py?station=ORE&data=tmpc&data=sknt&data=gust&data=drct&year1=…&month1=…&day1=…&year2=…&month2=…&day2=…&tz=Etc/UTC&format=onlycomma&latlon=no&missing=empty&report_type=3`
+- **URL:** `https://mesonet.agron.iastate.edu/cgi-bin/request/asos.py?station=ORE&data=tmpc&data=sknt&data=gust&data=drct&year1=…&month1=…&day1=…&year2=…&month2=…&day2=…&tz=Etc/UTC&format=onlycomma&latlon=yes&missing=empty&report_type=3`
 - **Station IDs** drop the `K`: KORE is `ORE`.
-- **Fields:** `tmpc` (°C), `sknt` and `gust` (knots; convert to m/s), and `drct` (degrees). `missing=empty` leaves missing values blank. `report_type=3` selects routine hourly reports, which Orange files at :52.
+- **Fields:** `tmpc` (°C), `sknt` and `gust` (knots; convert to m/s), and `drct` (degrees). `latlon=yes` adds the station's `lon` and `lat` columns after `valid`. `missing=empty` leaves missing values blank. `report_type=3` selects routine hourly reports, which Orange files at :52.
 - **Quality:** as-is, with very little quality control. Missing, failed checks, and never-reported values can't be told apart, so all are unknown.
 - **Terms:** public domain; attribution to the Iowa Environmental Mesonet of Iowa State University is appreciated. No stated rate limits; space requests anyway.
 

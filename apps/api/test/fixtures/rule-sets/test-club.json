@@ -1,0 +1,15 @@
+{
+  "id": "rs-test",
+  "name": "Test Club",
+  "boatClasses": [
+    { "id": "small", "name": "1x and 2x" },
+    { "id": "big", "name": "4+ and 8+" }
+  ],
+  "thresholds": [
+    { "id": "t-wind", "metric": "windSpeed", "comparison": "max", "boundary": "inclusive", "value": 6.7056, "enteredUnit": "mph", "boatClassIds": ["small"] },
+    { "id": "t-water", "metric": "waterTemp", "comparison": "min", "boundary": "inclusive", "value": 10, "enteredUnit": "degF" },
+    { "id": "t-flow", "metric": "flow", "comparison": "max", "boundary": "inclusive", "value": 849.50539776, "enteredUnit": "cfs" }
+  ],
+  "daylight": { "minutesBeforeSunrise": 60, "minutesAfterSunset": 30 },
+  "flowGaugeRef": "usgs:USGS-01170500"
+}

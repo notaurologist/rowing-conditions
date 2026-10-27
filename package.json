@@ -17,6 +17,7 @@
     "prepare": "git config core.hooksPath .githooks",
     "fixtures:record": "pnpm --filter @rowing/api fixtures:record",
     "fixtures:record-case": "pnpm --filter @rowing/api fixtures:record-case",
+    "fixtures:replay-case": "pnpm --filter @rowing/api fixtures:replay-case",
     "db:migrate": "pnpm --filter @rowing/api db:migrate"
   },
   "devDependencies": {
