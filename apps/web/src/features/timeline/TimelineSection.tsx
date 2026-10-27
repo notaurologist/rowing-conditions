@@ -83,6 +83,9 @@ export function TimelineSection({ conditions, location, evaluated, alongside, un
     p.provenance.flow ? [p.provenance.flow] : [],
   );
   const flow = flows.find((f) => f.kind === 'forecast') ?? flows[0];
+  // Without a usable forecast, the latest reading stands in for 3 hours (#117), or for the same
+  // 3 hours when the forecast was set aside for disagreeing with it (#82).
+  const setAside = flows.some((f) => f.withheld === 'forecastDisagrees');
   const flowAt = evaluated?.flowGauge ? `Flow at ${evaluated.flowGauge.name}` : 'Flow';
 
   return (
@@ -138,7 +141,7 @@ export function TimelineSection({ conditions, location, evaluated, alongside, un
           <p>
             {flow.kind === 'forecast'
               ? `${flowAt}: National Water Prediction Service forecast, issued ${formatTime(flow.asOf, now, timeZone)}. Hours between its 6-hourly steps are interpolated.`
-              : `${flowAt}: no forecast for this gauge, so the latest observation, from ${formatTime(flow.asOf, now, timeZone)}, is shown for every hour.`}
+              : `${flowAt}: ${setAside ? 'the National Water Prediction Service forecast was set aside, because it was more than 25% off the latest reading' : 'no forecast for this gauge'}. The latest observation, from ${formatTime(flow.asOf, now, timeZone)}, stands in for the 3 hours after it; later hours are unknown.`}
           </p>
         )}
       </div>
