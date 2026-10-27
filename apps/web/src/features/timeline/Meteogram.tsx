@@ -261,14 +261,17 @@ function StatusRow({
           {strip.spans.map((s) => {
             const words = STATUS_WORDS[s.status];
             const share = (s.to - s.from) / n;
+            // Placed by its hours, like the rows below, so it lines up with them at any width.
+            // The texture (outside hatched, unknown dotted) is the cue that isn't color and
+            // fits any span; the symbol and words appear only where they fit (#91).
             return (
               <div
                 key={s.from}
                 className={`mg-status-${s.status}`}
-                style={{ flex: `${s.to - s.from} 1 0` }}
+                style={{ left: pct(s.from, n), width: pct(s.to - s.from, n) }}
               >
                 <span className="mg-long">
-                  {words.symbol}
+                  {share > 0.02 ? words.symbol : ''}
                   {share > 0.12
                     ? ` ${words.long(strip.name)}`
                     : share > 0.06
@@ -276,7 +279,7 @@ function StatusRow({
                       : ''}
                 </span>
                 <span className="mg-short">
-                  {words.symbol}
+                  {share > 0.045 ? words.symbol : ''}
                   {share > 0.22 ? ` ${words.short}` : ''}
                 </span>
               </div>
