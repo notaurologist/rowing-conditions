@@ -46,7 +46,7 @@ Implications for all features and copy:
 ### 2. Current conditions
 
 - Flow (discharge) and gauge height, with trend (rising, falling, stable) and rate of change, and forecast flow where available.
-- Water temperature, where the gauge reports it. Displayed prominently, since cold water is the most significant temperature risk.
+- Water temperature, where the gauge reports it. Listed first, since cold water is the most significant temperature risk, but styled like the other readings: emphasis read as a selection and as the app judging which reading matters (October 2026).
 - Wind speed, gusts, and direction.
 - Air temperature.
 - Sunrise and sunset.

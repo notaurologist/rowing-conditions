@@ -58,9 +58,7 @@ const TREND_SYMBOLS = { rising: '↑', falling: '↓', stable: '→', unknown: '
 function Row({ row, now, timeZone }: { row: ConditionRow; now: string; timeZone: string | null }) {
   const flagged = row.freshness !== undefined && row.freshness !== 'fresh';
   return (
-    <li
-      className={`reading${row.metric === 'waterTemp' ? ' reading-prominent' : ''}${flagged ? ' reading-flagged' : ''}`}
-    >
+    <li className={`reading${flagged ? ' reading-flagged' : ''}`}>
       <span className="reading-label">{row.label}</span>
       {row.state === 'value' ? (
         <span className="reading-value">
