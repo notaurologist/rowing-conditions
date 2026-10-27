@@ -24,6 +24,8 @@ const UNKNOWN_WORDS: Record<UnknownReason, (name: string) => string> = {
   stale: (name) => `${name} reading too old`,
   qualified: (name) => `${name} reading flagged as possibly wrong`,
   noSource: (name) => `no source reports ${name} here`,
+  noForecast: (name) => `no ${name} forecast, and the last reading is over 3 hours earlier`,
+  forecastDisagrees: (name) => `${name} forecast set aside: over 25% off the latest reading`,
 };
 
 export function reasonText(reason: PeriodReason): string {

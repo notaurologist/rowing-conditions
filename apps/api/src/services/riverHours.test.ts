@@ -1,6 +1,6 @@
 import type { ForecastPoint, Reading } from '@rowing/core';
 import { describe, expect, it } from 'vitest';
-import { riverHours } from './riverHours.ts';
+import { FORECAST_DISAGREEMENT, riverHours } from './riverHours.ts';
 
 const t = (hour: number) => new Date(Date.UTC(2026, 9, 26, hour)).toISOString();
 const hours = [t(0), t(1), t(2), t(3), t(4)];
@@ -39,7 +39,7 @@ const forecastPoint = (time: string, flow: number | null, gaugeHeight?: number):
 });
 
 describe('riverHours without a flow forecast', () => {
-  it('copies the latest observation of each metric to every hour, as an observation', () => {
+  it('copies the latest observation to hours starting within 3 hours of it (#117)', () => {
     const latest = [
       observed('flow', 100, '2026-10-25T23:45:00.000Z'),
       observed('flow', 143, '2026-10-26T00:15:00.000Z'), // the most recent wins
@@ -47,7 +47,8 @@ describe('riverHours without a flow forecast', () => {
     ];
     const result = riverHours(hours, [], latest);
     expect(result).toHaveLength(5);
-    for (const h of result) {
+    // 00:00 to 03:00 start before 03:15, three hours after the reading.
+    for (const h of result.slice(0, 4)) {
       expect(h.values).toEqual({ flow: 143, waterTemp: 9.5 });
       expect(h.provenance.flow).toEqual({
         kind: 'observation',
@@ -57,6 +58,31 @@ describe('riverHours without a flow forecast', () => {
         qualifiers: ['provisional'],
       });
     }
+  });
+
+  it('withholds flow and gauge height after that as no forecast, keeping water temperature', () => {
+    const latest = [
+      observed('flow', 143, t(0)),
+      observed('gaugeHeight', 2.5, t(0)),
+      observed('waterTemp', 9.5, t(0)),
+    ];
+    const result = riverHours(hours, [], latest);
+    expect(result[2]?.values).toEqual({ flow: 143, gaugeHeight: 2.5, waterTemp: 9.5 });
+    for (const h of result.slice(3)) {
+      expect(h.values).toEqual({ flow: null, gaugeHeight: null, waterTemp: 9.5 });
+      expect(h.provenance.flow).toMatchObject({
+        kind: 'observation',
+        asOf: t(0),
+        withheld: 'noForecast',
+      });
+      expect(h.provenance.gaugeHeight?.withheld).toBe('noForecast');
+    }
+  });
+
+  it('withholds every hour when the reading is already 3 hours old', () => {
+    const result = riverHours(hours, [], [observed('flow', 143, '2026-10-25T21:00:00.000Z')]);
+    expect(result.every((h) => h.values.flow === null)).toBe(true);
+    expect(result[0]?.provenance.flow?.withheld).toBe('noForecast');
   });
 
   it('keeps a null latest value as missing, with its provenance', () => {
@@ -118,7 +144,69 @@ describe('riverHours with a flow forecast', () => {
 
   it('uses the observation for gauge height when the forecast only covers flow', () => {
     const flowOnly = riverHours(hours, [forecastPoint(t(1), 120)], latest);
-    expect(flowOnly[3]?.values.gaugeHeight).toBe(2.5);
-    expect(flowOnly[3]?.provenance.gaugeHeight?.kind).toBe('observation');
+    expect(flowOnly[2]?.values.gaugeHeight).toBe(2.5);
+    expect(flowOnly[2]?.provenance.gaugeHeight?.kind).toBe('observation');
+    expect(flowOnly[3]?.values.gaugeHeight).toBeNull();
+    expect(flowOnly[3]?.provenance.gaugeHeight?.withheld).toBe('noForecast');
+  });
+
+  it('withholds hours before a late-starting forecast once the reading is 3 hours old', () => {
+    const late = riverHours(hours, [forecastPoint(t(4), 130)], [observed('flow', 143, t(0))]);
+    expect(late[2]?.values.flow).toBe(143);
+    expect(late[3]?.values.flow).toBeNull();
+    expect(late[3]?.provenance.flow?.withheld).toBe('noForecast');
+    expect(late[4]?.values.flow).toBe(130);
+  });
+});
+
+describe('riverHours when the flow forecast disagrees with the latest measurement (#82)', () => {
+  // Hourly forecast from 00:00, as NWPS steps are interpolated, against a reading at 00:15.
+  const forecast = hours.map((time) => forecastPoint(time, 100, 2.4));
+  const at = (flow: number, time = '2026-10-26T00:15:00.000Z') => [
+    observed('flow', flow, time),
+    observed('gaugeHeight', 2.5, time),
+  ];
+
+  it('keeps a forecast within 25% of the measurement', () => {
+    for (const flow of [80, 125, 133]) {
+      const result = riverHours(hours, forecast, at(flow));
+      expect(result.every((h) => h.values.flow === 100)).toBe(true);
+    }
+  });
+
+  it('sets aside a forecast more than 25% away, using the reading for 3 hours', () => {
+    expect(FORECAST_DISAGREEMENT).toBe(0.25);
+    for (const flow of [134, 79]) {
+      const result = riverHours(hours, forecast, at(flow));
+      expect(result.slice(0, 4).map((h) => h.values.flow)).toEqual([flow, flow, flow, flow]);
+      expect(result[1]?.provenance.flow?.kind).toBe('observation');
+      expect(result[4]?.values.flow).toBeNull();
+      expect(result[4]?.provenance.flow).toMatchObject({
+        kind: 'observation',
+        withheld: 'forecastDisagrees',
+      });
+    }
+  });
+
+  it('checks flow only, so the gauge height forecast stays', () => {
+    const result = riverHours(hours, forecast, at(200));
+    expect(result.every((h) => h.values.gaugeHeight === 2.4)).toBe(true);
+  });
+
+  it('compares against the forecast for the hour the measurement was taken', () => {
+    const shifted = hours.map((time, i) => forecastPoint(time, i === 0 ? 100 : 300));
+    expect(riverHours(hours, shifted, at(110))[2]?.values.flow).toBe(300);
+    expect(riverHours(hours, shifted, at(110, t(1)))[2]?.values.flow).toBe(110);
+  });
+
+  it('makes no comparison without a forecast for that hour, or a usable measurement in time', () => {
+    const later = hours.slice(1).map((time) => forecastPoint(time, 100));
+    expect(riverHours(hours, later, at(200))[2]?.values.flow).toBe(100);
+    const old = at(200, '2026-10-25T22:30:00.000Z');
+    const earlier = [forecastPoint('2026-10-25T22:00:00.000Z', 100), ...forecast];
+    expect(riverHours(hours, earlier, old)[2]?.values.flow).toBe(100);
+    const flagged = [{ ...observed('flow', 200, t(0)), qualifiers: ['iceAffected' as const] }];
+    expect(riverHours(hours, forecast, flagged)[2]?.values.flow).toBe(100);
+    expect(riverHours(hours, forecast, [observed('flow', null, t(0))])[2]?.values.flow).toBe(100);
   });
 });

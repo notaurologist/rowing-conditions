@@ -46,6 +46,8 @@ const reasonLabels: Record<UnknownReason, string> = {
   stale: 'too old',
   qualified: 'qualified by the source',
   noSource: 'no source',
+  noForecast: 'no forecast, reading over 3 h old',
+  forecastDisagrees: 'forecast set aside, disagreed with reading',
 };
 
 function formatValue(
@@ -155,7 +157,7 @@ export function formatReplay(replay: Replay, options: FormatOptions): string {
     '- Weather forecast: NBM via Open-Meteo, made a day ahead for the first 24 hours and two days ahead after that (Lead column). Not the NWS forecast as issued.',
   );
   lines.push(
-    '- Flow forecast: none, since NWPS keeps no past forecasts. Later hours repeat the last measured flow, as the app does for a gauge without a forecast.',
+    '- Flow forecast: none, since NWPS keeps no past forecasts. The last measured flow stands in for 3 hours, then flow is unknown, as the app does for a gauge without a forecast.',
   );
   lines.push('- Alerts: not recorded.');
   // The same warning can repeat for every reading, so each is listed once with a count.

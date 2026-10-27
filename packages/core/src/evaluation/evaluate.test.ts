@@ -119,6 +119,19 @@ describe('evaluateHour status', () => {
     expect(r.unknowns).toHaveLength(1);
   });
 
+  it('reports why a withheld value has none, instead of missing (#117, #82)', () => {
+    for (const withheld of ['noForecast', 'forecastDisagrees'] as const) {
+      const p = point(MIDDAY, { ...calm, waterTemp: null });
+      const provenance = p.provenance.waterTemp;
+      if (provenance) p.provenance.waterTemp = { ...provenance, withheld };
+      const r = hour(p, ruleSet([maxWind15, minWater10C]));
+      expect(r.status).toBe('unknown');
+      expect(r.unknowns).toEqual([
+        { thresholdId: minWater10C.id, metric: 'waterTemp', reason: withheld },
+      ]);
+    }
+  });
+
   it('treats a metric absent from the hour as missing', () => {
     const r = hour(point(MIDDAY, { windSpeed: toSI(8, 'mph') }), ruleSet([maxWind15, minWater10C]));
     expect(r.unknowns).toEqual([

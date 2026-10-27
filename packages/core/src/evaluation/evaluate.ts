@@ -70,7 +70,7 @@ function usable(point: ForecastPoint, metric: InputMetric, ctx: HourContext): Us
   const value = point.values[metric];
   const provenance = point.provenance[metric];
   if (value === null || value === undefined || provenance === undefined) {
-    return { ok: false, metric, reason: 'missing' };
+    return { ok: false, metric, reason: provenance?.withheld ?? 'missing' };
   }
   if (provenance.qualifiers?.some((q) => disqualifyingQualifiers.includes(q))) {
     return { ok: false, metric, reason: 'qualified' };

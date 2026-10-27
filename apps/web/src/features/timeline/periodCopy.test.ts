@@ -49,6 +49,8 @@ describe('reasonText', () => {
     ['stale', 'water temperature reading too old'],
     ['qualified', 'water temperature reading flagged as possibly wrong'],
     ['noSource', 'no source reports water temperature here'],
+    ['noForecast', 'no water temperature forecast, and the last reading is over 3 hours earlier'],
+    ['forecastDisagrees', 'water temperature forecast set aside: over 25% off the latest reading'],
   ] as const)('words an unknown that is %s', (reason, text) => {
     expect(reasonText({ kind: 'unknown', metric: 'waterTemp', reason, hours: 1 })).toBe(text);
   });
