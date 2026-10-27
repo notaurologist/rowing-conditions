@@ -1,6 +1,6 @@
 import { lt, sql } from 'drizzle-orm';
 import { describeError, type Logger } from '../adapters/http.ts';
-import type { Database } from '../db/client.ts';
+import { DATABASE_TIMEOUT_MS, type Database, withTimeout } from '../db/client.ts';
 import { errorEvents } from '../db/schema.ts';
 
 export const ERROR_RETENTION_DAYS = 30;
@@ -27,6 +27,7 @@ export interface ErrorLogOptions {
   db: Database;
   output?: Pick<Console, 'warn' | 'error'>;
   now?: () => number; // milliseconds, for deciding when to prune
+  timeoutMs?: number; // per write, so flush() never waits on a database that has stopped answering
 }
 
 // API warnings and errors kept in Postgres for 30 days (decision 0018). Vercel keeps runtime logs
@@ -36,11 +37,12 @@ export function createErrorLog(options: ErrorLogOptions): ErrorLog {
   const { db } = options;
   const output = options.output ?? console;
   const now = options.now ?? Date.now;
+  const timeoutMs = options.timeoutMs ?? DATABASE_TIMEOUT_MS;
   const pending = new Set<Promise<void>>();
   let lastPrune = Number.NEGATIVE_INFINITY;
 
-  const track = (write: Promise<unknown>, what: string) => {
-    const done = write.then(
+  const track = (write: PromiseLike<unknown>, what: string) => {
+    const done = withTimeout(write, timeoutMs).then(
       () => {},
       (error: unknown) => {
         output.warn(`error log: ${what} failed`, { error: describeError(error) });

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createTestDatabase } from '../../test/database.ts';
+import { createTestDatabase, createUnresponsiveDatabase } from '../../test/database.ts';
 import { createErrorLog } from './errorLog.ts';
 
 let close: (() => Promise<void>) | undefined;
@@ -90,5 +90,20 @@ describe('createErrorLog', () => {
     expect(output.warn).toHaveBeenCalledWith('error log: write failed', {
       error: expect.any(String),
     });
+  });
+
+  it('stops waiting for a write when the database stops answering, so flush ends (#122)', async () => {
+    const unresponsive = await createUnresponsiveDatabase();
+    try {
+      const output = { warn: vi.fn(), error: vi.fn() };
+      const log = createErrorLog({ db: unresponsive.db, output, timeoutMs: 50 });
+      log.logger.warn('usgs: unknown unit, reading skipped');
+      await log.flush();
+      expect(output.warn).toHaveBeenCalledWith('error log: write failed', {
+        error: 'database did not answer within 50 ms',
+      });
+    } finally {
+      await unresponsive.close();
+    }
   });
 });
