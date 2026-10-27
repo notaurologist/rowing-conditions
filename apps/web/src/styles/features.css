@@ -177,11 +177,6 @@
   background: var(--surface);
 }
 
-.reading-prominent {
-  border-width: 2px;
-  border-color: var(--accent);
-}
-
 .reading-flagged {
   border-style: dashed;
 }
