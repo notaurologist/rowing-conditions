@@ -1,6 +1,13 @@
 import { Place } from '@rowing/core';
 import type { RequestGate } from '../../services/requestGate.ts';
-import { consoleLogger, type FetchFn, fetchJson, type Logger, type SourceResult } from '../http.ts';
+import {
+  consoleLogger,
+  describeError,
+  type FetchFn,
+  fetchJson,
+  type Logger,
+  type SourceResult,
+} from '../http.ts';
 import type { Geocoder } from '../types.ts';
 import { searchUrl } from './requests.ts';
 import { NominatimSearch } from './schemas.ts';
@@ -37,7 +44,7 @@ export function createNominatimAdapter(options: NominatimAdapterOptions): Geocod
       } catch (error) {
         // Without the gate the app can't be sure it stays under the limit, so it doesn't ask.
         logger.warn('nominatim: request gate unavailable, request not sent', {
-          error: error instanceof Error ? error.message : String(error),
+          error: describeError(error),
         });
         return {
           ok: false,
@@ -56,9 +63,10 @@ export function createNominatimAdapter(options: NominatimAdapterOptions): Geocod
           lon: Number(raw.lon),
         });
         if (place.success) places.push(place.data);
+        // The fields that failed, never the place: it's what the user searched for.
         else
           logger.warn('nominatim: dropped a result that failed validation', {
-            placeId: raw.place_id,
+            fields: place.error.issues.map((i) => i.path.join('.')),
           });
       }
       return { ok: true, data: places };

@@ -1,6 +1,11 @@
 import { eq } from 'drizzle-orm';
 import type { z } from 'zod';
-import type { Logger, SourceError, SourceResult } from '../adapters/http.ts';
+import {
+  describeError,
+  type Logger,
+  type SourceError,
+  type SourceResult,
+} from '../adapters/http.ts';
 import type { Database } from '../db/client.ts';
 import { sourceCache } from '../db/schema.ts';
 
@@ -37,6 +42,12 @@ export interface SourceCache {
   ): Promise<CachedResult<T>>;
 }
 
+// A key's source and kind, such as 'nws:point', for logging. The rest of a key can be a location
+// (coordinates or place search text), which recorded warnings never hold.
+export function keyKind(key: string): string {
+  return key.split(':').slice(0, 2).join(':');
+}
+
 export interface SourceCacheOptions {
   db: Database;
   logger: Logger;
@@ -56,13 +67,15 @@ export function createSourceCache({
       if (row === undefined) return undefined;
       const parsed = schema.safeParse(row.payload);
       if (!parsed.success) {
-        logger.warn('cache: stored payload did not match schema; refetching', { key });
+        logger.warn('cache: stored payload did not match schema; refetching', {
+          kind: keyKind(key),
+        });
         return undefined;
       }
       return { data: parsed.data, fetchedAt: row.fetchedAt, expiresAt: row.expiresAt };
     } catch (error) {
       // The cache is an optimization: without it, fetch directly.
-      logger.warn('cache: read failed', { key, error: String(error) });
+      logger.warn('cache: read failed', { kind: keyKind(key), error: describeError(error) });
       return undefined;
     }
   }
@@ -75,7 +88,7 @@ export function createSourceCache({
         .values({ key, payload, fetchedAt, expiresAt })
         .onConflictDoUpdate({ target: sourceCache.key, set: { payload, fetchedAt, expiresAt } });
     } catch (error) {
-      logger.warn('cache: write failed', { key, error: String(error) });
+      logger.warn('cache: write failed', { kind: keyKind(key), error: describeError(error) });
     }
   }
 

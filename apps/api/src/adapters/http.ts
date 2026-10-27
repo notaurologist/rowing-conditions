@@ -1,4 +1,5 @@
 import type { SourceId } from '@rowing/core';
+import { DrizzleQueryError } from 'drizzle-orm/errors';
 import type { z } from 'zod';
 
 export type FetchFn = (url: string, init?: RequestInit) => Promise<Response>;
@@ -48,6 +49,28 @@ export function describeShape(value: unknown, depth = 0): unknown {
   return value === null ? 'null' : typeof value;
 }
 
+// A request URL for logging, without anything that can place the user: query values are dropped
+// (names kept) and coordinate pairs in the path, such as NWS points and gridpoints, are replaced.
+export function describeUrl(url: string): string {
+  try {
+    const { origin, pathname, searchParams } = new URL(url);
+    const path = pathname.replace(/-?\d+(\.\d+)?,-?\d+(\.\d+)?/g, ':point');
+    const names = [...new Set(searchParams.keys())];
+    return names.length > 0 ? `${origin}${path}?${names.join('&')}` : `${origin}${path}`;
+  } catch {
+    return 'invalid URL';
+  }
+}
+
+// An error's message for logging. A failed Drizzle query's own message includes its parameters,
+// which can hold a cache key with a location or a cached payload, so the driver's error is used.
+export function describeError(error: unknown): string {
+  if (error instanceof DrizzleQueryError) {
+    return error.cause instanceof Error ? error.cause.message : 'database query failed';
+  }
+  return error instanceof Error ? error.message : String(error);
+}
+
 // Fetches JSON and parses it with the schema. Never throws: every failure becomes a SourceError.
 export async function fetchJson<T>(
   url: string,
@@ -88,7 +111,7 @@ export async function fetchJson<T>(
   const parsed = schema.safeParse(body);
   if (!parsed.success) {
     logger.warn(`${source}: response did not match schema`, {
-      url,
+      url: describeUrl(url),
       issues: parsed.error.issues.slice(0, 5),
       shape: describeShape(body),
     });

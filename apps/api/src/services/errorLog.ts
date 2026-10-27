@@ -1,5 +1,5 @@
 import { lt, sql } from 'drizzle-orm';
-import type { Logger } from '../adapters/http.ts';
+import { describeError, type Logger } from '../adapters/http.ts';
 import type { Database } from '../db/client.ts';
 import { errorEvents } from '../db/schema.ts';
 
@@ -43,9 +43,7 @@ export function createErrorLog(options: ErrorLogOptions): ErrorLog {
     const done = write.then(
       () => {},
       (error: unknown) => {
-        output.warn(`error log: ${what} failed`, {
-          error: error instanceof Error ? error.message : String(error),
-        });
+        output.warn(`error log: ${what} failed`, { error: describeError(error) });
       },
     );
     pending.add(done);
