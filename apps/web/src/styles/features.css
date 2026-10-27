@@ -1156,8 +1156,8 @@ button.danger {
   font-size: var(--text-sm);
 }
 
-/* A flow forecast set aside for disagreeing with the gauge (#144): shown, never compared. Dashed
-   and faded, so it isn't told apart by color alone. */
+/* A flow forecast set aside for disagreeing with the gauge (#144): a doubted value (decision
+   0020). Dashed and faded, so it isn't told apart by color alone. */
 .mg-line-set-aside {
   stroke: var(--water);
   stroke-dasharray: 2.5 2.5;

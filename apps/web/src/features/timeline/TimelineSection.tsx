@@ -143,7 +143,7 @@ export function TimelineSection({ conditions, location, evaluated, alongside, un
             {flow.kind === 'forecast'
               ? `${flowAt}: National Water Prediction Service forecast, issued ${formatTime(flow.asOf, now, timeZone)}. Hours between its 6-hourly steps are interpolated.`
               : setAside && model.flowSetAside
-                ? `${flowAt}: the National Water Prediction Service forecast doesn't match the gauge. It had ${model.flowSetAside.forecast} for ${model.flowSetAside.hour}; the gauge measured ${model.flowSetAside.measured}. It's drawn dashed and isn't compared against limits, so flow after the current hour is unknown.`
+                ? `${flowAt}: the National Water Prediction Service forecast doesn't match the gauge. It had ${model.flowSetAside.forecast} for ${model.flowSetAside.hour}; the gauge measured ${model.flowSetAside.measured}. It's drawn dashed: hours that meet every limit on it are probably within, and hours where it's past a limit are outside.`
                 : setAside
                   ? `${flowAt}: the National Water Prediction Service forecast was set aside, because it was more than 25% off the latest reading, from ${formatTime(flow.asOf, now, timeZone)}. Flow after the current hour is unknown.`
                   : `${flowAt}: no forecast for this gauge. The latest observation, from ${formatTime(flow.asOf, now, timeZone)}, stands in for the 3 hours after it; later hours are unknown.`}
