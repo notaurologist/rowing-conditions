@@ -1,10 +1,10 @@
-# Rowing Conditions
+# Launch Window
 
-A web app that shows rowers river flow, water temperature, wind, weather, and daylight for a specific body of water over the next 48 hours, and compares them against limits the rower or their club sets. A native mobile app comes later. The product name is still to be decided.
+A web app that shows rowers river flow, water temperature, wind, weather, and daylight for a specific body of water over the next 48 hours, and compares them against limits the rower or their club sets. A native mobile app comes later.
 
 The app reports conditions. It never says whether conditions are safe or whether to row. Hours are shown as within a rule set's limits, outside them, or unknown. See [`docs/PRODUCT.md`](docs/PRODUCT.md) for the reasons.
 
-**Status:** early development. Milestone M0 (repository setup) is complete; M1 (core evaluation logic) is next. Progress is tracked in [GitHub milestones](https://github.com/notaurologist/rowing-conditions/milestones).
+**Status:** deployed and in use. Work is tracked in [GitHub issues](https://github.com/notaurologist/rowing-conditions/issues).
 
 ## Setup
 

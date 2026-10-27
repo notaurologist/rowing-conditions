@@ -11,8 +11,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['icon.svg', 'apple-touch-icon.png'],
       manifest: {
-        name: 'Rowing Conditions',
-        short_name: 'Rowing',
+        name: 'Launch Window',
+        short_name: 'Launch Window',
         description:
           'River flow, water temperature, wind, weather and daylight for the next 48 hours, compared with your limits.',
         start_url: '/',

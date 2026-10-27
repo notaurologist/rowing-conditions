@@ -1,7 +1,7 @@
 # Product Spec
 
 Status: Draft v0.2
-Working name: TBD
+Name: Launch Window (decided in #43, October 2026). Internal names (repository, packages, storage keys) stay `rowing-conditions`.
 
 ## Overview
 
