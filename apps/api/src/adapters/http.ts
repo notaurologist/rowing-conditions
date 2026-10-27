@@ -66,9 +66,17 @@ export function describeUrl(url: string): string {
 // which can hold a cache key with a location or a cached payload, so the driver's error is used.
 export function describeError(error: unknown): string {
   if (error instanceof DrizzleQueryError) {
-    return error.cause instanceof Error ? error.cause.message : 'database query failed';
+    return error.cause instanceof Error ? messageOf(error.cause) : 'database query failed';
   }
-  return error instanceof Error ? error.message : String(error);
+  return error instanceof Error ? messageOf(error) : String(error);
+}
+
+// A refused connection is an AggregateError with an empty message (#127). Its code names the
+// cause; its inner errors would also name the host and port, so they're left out.
+function messageOf(error: Error): string {
+  if (error.message !== '') return error.message;
+  const { code } = error as Error & { code?: unknown };
+  return typeof code === 'string' && code !== '' ? code : error.name;
 }
 
 // Fetches JSON and parses it with the schema. Never throws: every failure becomes a SourceError.
