@@ -50,6 +50,8 @@ pnpm fixtures:replay-case --name may-15-high-water --at 2026-05-15T06:00 \
 
 The replay reads only the case's fixtures and makes no network calls. It prints one row per hour for the 48 hours from `--at`. Each row has the status against the rule set (within, outside or unknown), what was outside or unknown and why, and the values the app would have shown. Beside those it puts what the station reported in that hour, or modeled history when the case has no station.
 
+The Measured column is the status the same limits give with the values measured in each hour: the station report filed in the hour and the gauge's last reading in it. Below the table, the replay lists the hours where the measured status differs from what the app showed. Limits on chance of rain are left out of the measured status, since nothing measures it, and the replay says so. Modeled history is never treated as measured.
+
 How a replay stands in for the live sources:
 
 - **Hours** are built by the app's own `getConditions`, and evaluated by `evaluateTimeline` as the web app does. The case's fixtures sit behind the same source interfaces.
@@ -59,6 +61,20 @@ How a replay stands in for the live sources:
 - **Gauge names** aren't recorded, so the gauge ID stands in.
 
 The `replay-test` case and the `test-club` rule set in the fixtures are for tests only. The rule set's limits are made up.
+
+## Cases
+
+Notable days from April to October 2026 at Turners Falls (42.6, -72.55), picked from the data (#37). All use Orange airport (KORE), 21.7 km away, for observed weather.
+
+| Case | Picked because | Gauges |
+|---|---|---|
+| `high-water-2026-04-02` | Montague's highest daily mean flow of the season, 46,300 cfs | Montague |
+| `windy-2026-05-05` | Sustained wind of 23 mph and gusts to 43 mph at KORE in daylight | Montague |
+| `data-gap-2026-06-09` | KORE filed 4 of its 14 daylight reports; Montague reported every 2 hours instead of every 15 minutes on June 7 and 8 | Montague |
+| `forecast-miss-2026-06-30` | The season's largest daylight temperature miss: KORE measured 18 °F below the day-ahead forecast | Montague |
+| `cold-2026-10-24` | −4.4 °C air between 5 and 8 a.m., with water at Northfield near 11 °C, so the combined air and water limit applies | Northfield (shown, water temperature), Montague |
+
+How they were picked: USGS daily mean flow at Montague and continuous water temperature at Northfield; KORE's routine hourly reports from IEM; and the NBM day-ahead forecast from Open-Meteo's Previous Runs API, compared with KORE hour by hour from 6 a.m. to 8 p.m. EDT.
 
 ## Limits
 

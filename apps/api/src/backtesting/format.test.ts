@@ -35,7 +35,7 @@ describe('formatReplay', () => {
     expect(header).toContain("Test Club's limits");
     const rows = lines.filter((l) => /^(Fri|Sat|Sun) \d{2}:00/.test(l));
     expect(rows).toHaveLength(48);
-    expect(rows[0]).toMatch(/^Fri 06:00\s+unknown\s+daylight/);
+    expect(rows[0]).toMatch(/^Fri 06:00\s+unknown\s+unknown\s+daylight/);
     for (const row of rows) expect(row).toMatch(/\s(within|outside|unknown)\s/);
   });
 
@@ -69,6 +69,17 @@ describe('formatReplay', () => {
     const row = lines.find((l) => l.startsWith('Fri 07:00')) ?? '';
     const water = header.indexOf('Water');
     expect(row.slice(water, water + 1)).toBe('–');
+  });
+
+  it('shows the measured status beside the forecast status, and sums up where they differ', () => {
+    const header = lines.find((l) => l.startsWith('Time')) ?? '';
+    expect(header).toMatch(/Test Club's limits\s+Measured\s+Light/);
+    expect(us).toContain(
+      'Measured: the status from the values measured in each hour (station report and gauge), with the same limits.',
+    );
+    expect(us).toMatch(
+      /The measured status (matches in all 48 hours|differs in \d+ of 48 hours: )/,
+    );
   });
 
   it('labels the observed columns by where they came from', () => {

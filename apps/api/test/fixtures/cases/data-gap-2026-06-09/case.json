@@ -1,0 +1,15 @@
+{
+  "name": "data-gap-2026-06-09",
+  "date": "2026-06-09",
+  "lat": 42.6,
+  "lon": -72.55,
+  "gauges": [
+    "USGS-01170500"
+  ],
+  "station": "KORE",
+  "window": {
+    "start": "2026-06-08",
+    "endExclusive": "2026-06-12"
+  },
+  "recordedAt": "2026-10-27T02:22:33.770Z"
+}
