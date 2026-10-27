@@ -87,7 +87,13 @@ const row = (m: ReturnType<typeof model>, id: MeteogramRow['id']) => {
 
 describe('meteogramModel rows', () => {
   it('stacks river, wind, air, water and rain, in that order', () => {
-    expect(model().rows.map((r) => r.id)).toEqual(['flow', 'wind', 'airTemp', 'waterTemp', 'rain']);
+    expect(model({ conditions: data(northfield) }).rows.map((r) => r.id)).toEqual([
+      'flow',
+      'wind',
+      'airTemp',
+      'waterTemp',
+      'rain',
+    ]);
   });
 
   it('draws flow in display units, one point per forecast hour', () => {
@@ -109,12 +115,36 @@ describe('meteogramModel rows', () => {
     expect(wind.arrows?.[0]?.degrees).toBe(200);
   });
 
-  it('says water temperature is not measured at a gauge without it', () => {
-    expect(row(model(), 'waterTemp')).toMatchObject({
-      kind: 'message',
-      message: 'Not measured at this gauge.',
-    });
+  it('leaves out water temperature at a gauge without it', () => {
+    expect(model().rows.map((r) => r.id)).toEqual(['flow', 'wind', 'airTemp', 'rain']);
   });
+
+  it.each([
+    ['waterTemp', 'degF', 50],
+    ['combinedTempF', 'degF', 90],
+  ] as const)(
+    'says water temperature is not measured when a %s limit needs it',
+    (metric, unit, v) => {
+      const ruleSet: RuleSet = {
+        ...clubA,
+        thresholds: [
+          ...clubA.thresholds,
+          {
+            id: 'water',
+            metric,
+            comparison: 'min',
+            boundary: 'inclusive',
+            value: metric === 'combinedTempF' ? v : toInternal(metric, v, unit),
+            enteredUnit: unit,
+          },
+        ],
+      };
+      expect(row(model({ ruleSet }), 'waterTemp')).toMatchObject({
+        kind: 'message',
+        message: 'Not measured at this gauge.',
+      });
+    },
+  );
 
   it('draws water temperature where the gauge measures it', () => {
     const water = row(model({ conditions: data(northfield) }), 'waterTemp');
@@ -190,6 +220,13 @@ describe('meteogramModel limits', () => {
     }
   });
 
+  it('rounds each scale to steps of 1, 2 or 5, so its top and bottom read cleanly', () => {
+    const m = model();
+    expect(row(m, 'flow').domain).toEqual([3000, 4000]);
+    expect(row(m, 'wind').domain).toEqual([0, 25]);
+    expect(row(m, 'airTemp').domain).toEqual([10, 80]);
+  });
+
   it('starts flow, wind and rain at zero or above, and gives wind room for its arrows', () => {
     const m = model();
     expect(row(m, 'wind').domain[0]).toBe(0);
@@ -235,6 +272,34 @@ describe('meteogramModel measurements and readouts', () => {
     expect(row(m, 'airTemp').readouts[6]).toBe('65 °F · 30 above');
     expect(row(m, 'airTemp').readouts[0]).toBe('26 °F · 9 below');
     expect(row(m, 'rain').readouts[6]).toBe('2%');
+  });
+
+  it('marks a measured current hour followed by forecasts, and reads it out as measured', () => {
+    const conditions = data();
+    const first = conditions.forecast[0];
+    if (first) {
+      first.values.flow = toInternal('flow', 1860, 'cfs');
+      first.provenance.flow = {
+        kind: 'observation',
+        asOf: '2026-10-26T12:15:00.000Z',
+        source: 'usgs',
+      };
+    }
+    const flow = row(model({ conditions }), 'flow');
+    expect(flow.series[0]?.points[0]).toMatchObject({ value: 1860, measured: true });
+    expect(flow.series[0]?.points[1]?.measured).toBeUndefined();
+    expect(flow.readouts[0]).toBe('1,860 cfs measured · 1,240 under');
+    expect(flow.readouts[1]).not.toContain('measured');
+    expect(row(model(), 'flow').series[0]?.points[0]?.measured).toBeUndefined();
+  });
+
+  it('leaves a held reading unmarked, since no forecast follows it', () => {
+    const conditions = data();
+    for (const p of conditions.forecast)
+      p.provenance.flow = { kind: 'observation', asOf: '2026-10-26T12:15:00.000Z', source: 'usgs' };
+    expect(row(model({ conditions }), 'flow').series[0]?.points.some((p) => p.measured)).toBe(
+      false,
+    );
   });
 
   it('says when an hour has no value', () => {

@@ -575,14 +575,15 @@ No secrets in code or fixtures.
 - **Meteogram** (`src/features/timeline/`):
   - `meteogramModel` turns a `/conditions` response and its evaluation into rows on one time axis:
     - flow (a hydrograph) from the selected rule set's own gauge when it names one, the same series it is evaluated against (`LocationEvaluation.forecast`), with that gauge's name, latest measurement and source note; otherwise from the location's gauge. A weather-only location shows flow when the rule set names a gauge. The summary's limit margin and context line follow the same gauge, and the note comparing a measurement with the forecast is left out for a named gauge, whose series already puts the measurement in the first hour.
-    - wind (a band from sustained to gusts, with arrows every 3 hours), air temperature, water temperature (or a row saying it isn't measured), gauge height and combined temperature when a limit uses them, and rain chance (bars, 0–100%)
+    - wind (a band from sustained to gusts, with arrows every 3 hours), air temperature, water temperature (left out at a gauge without it, unless a water or combined temperature limit needs a row saying it isn't measured), gauge height and combined temperature when a limit uses them, and rain chance (bars, 0–100%)
     - each applicable limit, in the row's display unit
+    - a scale per row rounded to steps of 1, 2 or 5, so its top and bottom labels read as 25,000, not 22,177
     - the latest measurement at the current time; one further outside the forecast than half its span or a quarter of its size is marked off-scale and drawn at the edge, so a forecast that missed doesn't flatten the row
-    - a readout per hour with the margin to the limit ("3,090 cfs · 10 under")
+    - a readout per hour with the margin to the limit ("3,090 cfs · 10 under"). When the current hour holds a measurement and the next a forecast, that point is marked `measured`: its readout says so and the lines start at the forecast, so the measured dot isn't joined to a forecast that may disagree with it (#82).
     - status spans, windows (the next one named), twilight and night from the exact daylight times, and day and hour labels in the location's time zone
     - each hour's light in words ("Daylight", "Twilight, then night"), so light isn't shown by shading alone
   - `Meteogram` draws from the model with visx `scaleLinear`, `LinePath` and `Area`, positioning by percentage so it fits any width without measuring. The space between each series and its limit is filled (Playfair's balance chart): room in `--room`, past the limit in `--over-fill`.
-  - Row labels sit in a left column on wide screens and above their rows below 600 px (a container query). There, the scale labels, the hour chip and later window labels are hidden, and status spans use short words.
+  - Row labels sit in a left column on wide screens and above their rows below 600 px (a container query). There, the hour chip and later window labels are hidden, and status spans use short words. Scale labels move inside the plot's left corners, readouts sit against the plot's edge away from the selected hour so they never run off it, and the readout's hour and light get their own line so the page doesn't reflow as it changes.
   - **Readout:** a pointer layer and a range input (for keyboard and touch) choose the hour, shown with its light. It starts at the next window.
   - **Hourly values** table: every readout, for screen readers.
   - **Rule sets:** one status strip per attached rule set, in the location's order, each evaluated for its chosen boat class. Only the selected rule set's limits, fills and windows are drawn in the rows, and its strip says "drawn below". The hourly table has a light column and a status column per rule set.
