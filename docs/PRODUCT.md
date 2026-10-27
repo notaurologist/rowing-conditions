@@ -61,7 +61,7 @@ The chart is a **rowing meteogram**: every element on one shared time axis, each
 
 - **River flow** as a hydrograph, wind as a band from sustained speed to gusts with direction arrows, air and water temperature as lines, and rain chance as bars.
 - **Limits:** each limit is a line on its row, and the space between the forecast and the limit is filled: a light tint for the room left, red where the forecast is past it.
-- **Status:** a strip above the rows shows each span within, outside or unknown, in words. With several rule sets attached, each gets its own strip, and the rows draw the selected one's limits.
+- **Status:** a strip above the rows shows each span within, outside or unknown, in words, with ● within, ○ outside and ? unknown beside them. The symbols only describe position against the limits; ✓ and ✕ were replaced because a check mark reads as approval (decided in #91, October 2026). With several rule sets attached, each gets its own strip, and the rows draw the selected one's limits.
 - **Windows** within the rule set's limits are bracketed above the rows and carried down through them.
 - **Latest measurements** are shown as dots against the forecast lines, so a forecast that has drifted from what's measured is visible. The lines start at the first forecast hour rather than joining the dot. A measurement far off the forecast's scale sits at the row's edge with an arrow.
 - **Light level** is shaded (twilight, night) from the exact civil dawn, sunrise, sunset and civil dusk. Light is context: crews often row before sunrise with lights, so it does not change whether an hour is within limits unless a rule set sets a hard daylight window.

@@ -107,8 +107,9 @@ describe('TimelineSection', () => {
 
   it('spells out each status span in words with its symbol', () => {
     const { html, text } = render();
-    expect(text).toContain('✕ Outside');
-    expect(text).toContain("✓ Within Club A's limits");
+    expect(text).toContain('○ Outside');
+    expect(text).toContain("● Within Club A's limits");
+    expect(text).not.toMatch(/[✓✕]/); // a check mark would read as approval (#91)
     expect(html).toMatch(
       /role="img" aria-label="Club A status: outside Today 8 AM to Today 1 PM; within Today 2 PM to/,
     );

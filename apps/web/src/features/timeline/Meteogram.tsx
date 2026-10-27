@@ -219,9 +219,11 @@ function Plot({ row, n, sel }: { row: MeteogramRow; n: number; sel: number }) {
   );
 }
 
+// Symbols that only describe position against the limits: a check mark would read as approval,
+// which the app never gives (#91).
 const STATUS_WORDS = {
-  within: { symbol: '✓', long: (name: string) => `Within ${name}’s limits`, short: 'Within' },
-  outside: { symbol: '✕', long: () => 'Outside', short: 'Outside' },
+  within: { symbol: '●', long: (name: string) => `Within ${name}’s limits`, short: 'Within' },
+  outside: { symbol: '○', long: () => 'Outside', short: 'Outside' },
   unknown: { symbol: '?', long: () => 'Unknown', short: 'Unknown' },
 } as const;
 
