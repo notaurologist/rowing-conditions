@@ -97,7 +97,9 @@ function Plot({ row, n, sel }: { row: MeteogramRow; n: number; sel: number }) {
   const x = (i: number) => ((i + 0.5) / n) * 100;
   const main = row.series.find((s) => s.role === 'main');
   const gust = row.series.find((s) => s.role === 'gust');
-  const selValue = (gust ?? main)?.points[sel]?.value ?? null;
+  const doubtful = row.series.find((s) => s.role === 'setAside');
+  // Beside the dashed forecast when the gauge has no value for the hour (#144).
+  const selValue = (gust ?? main)?.points[sel]?.value ?? doubtful?.points[sel]?.value ?? null;
   const flip = x(sel) > 50;
   // A measured current hour is the dot; the lines start at the forecast that follows it.
   const defined = (p: MeteogramPoint) => p.value !== null && !(p.measured && row.observed);
@@ -153,6 +155,15 @@ function Plot({ row, n, sel }: { row: MeteogramRow; n: number; sel: number }) {
             x={(_, i) => x(i)}
             y={(p) => y(p.value ?? 0)}
             className="mg-line mg-line-gust"
+          />
+        )}
+        {doubtful && (
+          <LinePath<MeteogramPoint>
+            data={doubtful.points}
+            defined={(p) => p.value !== null}
+            x={(_, i) => x(i)}
+            y={(p) => y(p.value ?? 0)}
+            className="mg-line mg-line-set-aside"
           />
         )}
         {row.kind !== 'bars' && main && (

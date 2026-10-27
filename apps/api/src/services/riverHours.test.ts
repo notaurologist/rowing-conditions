@@ -174,14 +174,12 @@ describe('riverHours when the flow forecast disagrees with the latest measuremen
     }
   });
 
-  it('sets aside a forecast more than 25% away, using the reading for 3 hours', () => {
+  it('sets aside a forecast more than 25% away, without holding the reading (#144)', () => {
     expect(FORECAST_DISAGREEMENT).toBe(0.25);
     for (const flow of [134, 79]) {
       const result = riverHours(hours, forecast, at(flow));
-      expect(result.slice(0, 4).map((h) => h.values.flow)).toEqual([flow, flow, flow, flow]);
-      expect(result[1]?.provenance.flow?.kind).toBe('observation');
-      expect(result[4]?.values.flow).toBeNull();
-      expect(result[4]?.provenance.flow).toMatchObject({
+      expect(result.every((h) => h.values.flow === null)).toBe(true);
+      expect(result[1]?.provenance.flow).toMatchObject({
         kind: 'observation',
         withheld: 'forecastDisagrees',
       });
@@ -196,7 +194,9 @@ describe('riverHours when the flow forecast disagrees with the latest measuremen
   it('compares against the forecast for the hour the measurement was taken', () => {
     const shifted = hours.map((time, i) => forecastPoint(time, i === 0 ? 100 : 300));
     expect(riverHours(hours, shifted, at(110))[2]?.values.flow).toBe(300);
-    expect(riverHours(hours, shifted, at(110, t(1)))[2]?.values.flow).toBe(110);
+    const setAside = riverHours(hours, shifted, at(110, t(1)))[2];
+    expect(setAside?.values.flow).toBeNull();
+    expect(setAside?.provenance.flow?.withheld).toBe('forecastDisagrees');
   });
 
   it('makes no comparison without a forecast for that hour, or a usable measurement in time', () => {

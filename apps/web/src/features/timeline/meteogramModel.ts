@@ -39,7 +39,7 @@ export interface MeteogramPoint {
 
 export interface MeteogramSeries {
   metric: Metric;
-  role: 'main' | 'gust';
+  role: 'main' | 'gust' | 'setAside'; // setAside: a flow forecast shown dashed, never compared (#144)
   points: MeteogramPoint[];
 }
 
@@ -87,6 +87,8 @@ export interface StatusStrip {
 export interface MeteogramModel {
   hours: { time: string; label: string; light: string; fog: FogWords }[]; // light: Twilight, then night
   course?: { words: CourseWindWords[]; notes?: string | undefined }; // wind along the saved course, per hour
+  // A set-aside flow forecast's evidence, in display units: what it had for the reading's hour.
+  flowSetAside?: { forecast: string; measured: string; hour: string };
   rows: MeteogramRow[];
   light: { from: number; to: number; light: 'twilight' | 'night' }[];
   // One strip per attached rule set, in the location's order. The selected one also drives the
@@ -288,6 +290,11 @@ export function meteogramModel(input: MeteogramInput): MeteogramModel {
   // evaluated against. Every other metric is the same in both.
   const forecast = evaluated?.forecast ?? conditions.forecast;
   const flowGauge = evaluated?.flowGauge ?? null;
+  // A flow forecast set aside for disagreeing with the gauge (#82), for whichever gauge the flow
+  // row shows. Drawn dashed and worded as not matching the gauge; never compared (#144).
+  const setAside = conditions.flowSetAside.find(
+    (f) => f.gaugeRef === (flowGauge?.ref ?? location.gaugeRef),
+  );
   const timeZone = conditions.location.timezone;
   const n = forecast.length;
   const start = n > 0 ? Date.parse(forecast[0]?.time ?? now) : Date.parse(now);
@@ -405,6 +412,20 @@ export function meteogramModel(input: MeteogramInput): MeteogramModel {
           ...(i === 0 && measuredThenForecast(forecast, metric) ? { measured: true as const } : {}),
         })),
       }));
+    if (spec.id === 'flow' && setAside) {
+      const byTime = new Map(setAside.points.map((p) => [Date.parse(p.time), p.flow]));
+      series.push({
+        metric: 'flow',
+        role: 'setAside',
+        points: forecast.map((p) => {
+          const flow = byTime.get(Date.parse(p.time));
+          return {
+            time: p.time,
+            value: flow === undefined ? null : displayValue('flow', flow, unit),
+          };
+        }),
+      });
+    }
 
     const limits: MeteogramLimit[] = thresholds
       .filter((t) => spec.metrics.includes(t.metric))
@@ -476,6 +497,7 @@ export function meteogramModel(input: MeteogramInput): MeteogramModel {
 
     const main = series.find((s) => s.role === 'main');
     const gust = series.find((s) => s.role === 'gust');
+    const doubtful = series.find((s) => s.role === 'setAside');
     const gustLimit = limits.find((l) => l.metric === 'windGust');
     const mainLimit = limits.find((l) => l.metric !== 'windGust');
     const direction = forecast.map((p) => p.values.windDirection);
@@ -495,7 +517,12 @@ export function meteogramModel(input: MeteogramInput): MeteogramModel {
         if (typeof d === 'number' && v !== 0) parts.push(`from ${compassPoint(d)}`);
         return parts.join(' · ');
       }
-      if (v === null) return 'no value';
+      if (v === null) {
+        const f = doubtful?.points[i]?.value;
+        return typeof f === 'number'
+          ? `NWPS ${fmt(f, unit)} ${symbol}, doesn't match gauge`
+          : 'no value';
+      }
       const amount =
         unit === 'percent' ? `${fmt(v, unit)}%` : `${fmt(v, unit)} ${symbol}${measured}`;
       const parts = [amount];
@@ -517,7 +544,7 @@ export function meteogramModel(input: MeteogramInput): MeteogramModel {
           : 'percent, no limit'
         : spec.id === 'wind'
           ? `${symbol}, sustained to gusts${words ? `; ${words}` : ''}`
-          : `${symbol}${words ? `, ${words}` : ''}${spec.id === 'flow' && flowGauge ? ` · gauge: ${flowGauge.name}` : ''}`;
+          : `${symbol}${words ? `, ${words}` : ''}${spec.id === 'flow' && flowGauge ? ` · gauge: ${flowGauge.name}` : ''}${doubtful ? " · dashed: NWPS forecast, doesn't match the gauge" : ''}`;
 
     return {
       id: spec.id,
@@ -613,8 +640,21 @@ export function meteogramModel(input: MeteogramInput): MeteogramModel {
     ? { words: courseWindByHour(location.course, forecast), notes: location.course.notes }
     : undefined;
 
+  const flowUnit = displayUnits[units].flow;
+  const flowNote = setAside
+    ? {
+        forecast: `${fmt(displayValue('flow', setAside.forecastForMeasurement, flowUnit), flowUnit)} ${unitSymbol(flowUnit)}`,
+        measured: `${fmt(displayValue('flow', setAside.measured, flowUnit), flowUnit)} ${unitSymbol(flowUnit)}`,
+        hour: formatClock(
+          new Date(Math.floor(Date.parse(setAside.measuredAt) / HOUR) * HOUR).toISOString(),
+          timeZone,
+        ),
+      }
+    : undefined;
+
   return {
     ...(course ? { course } : {}),
+    ...(flowNote ? { flowSetAside: flowNote } : {}),
     hours,
     rows,
     light: light.filter(

@@ -282,7 +282,7 @@ Constants in `packages/core`, starting values to tune in M9:
 
 Flow for each hour comes from the NWPS forecast when the gauge has one. Hours after the last forecast step have no flow value (`missing`); the latest observation is not used there. Otherwise the latest flow or gauge height observation stands in, with `kind: 'observation'`, only for hours that start within its maximum age (3 hours) of it. Later hours have no value, with `withheld: 'noForecast'` on the provenance, and evaluation reports them as unknown, `noForecast` (#117). At Montague in 2026, flow moved more than 25% within 3 hours of a reading about a quarter of the time, and within 6 hours 43% of the time.
 
-A flow forecast is set aside when its value for the hour of the latest flow measurement is more than 25% from that measurement (`FORECAST_DISAGREEMENT` in `riverHours.ts`, #82). Only a usable measurement from the current hour or the one before counts. Flow then works as if there were no forecast, and hours past the reading's 3 hours are unknown, `forecastDisagrees`. 25% is above the 20% that Montague's flow moves within an hour 90% of the time, and below the roughly 50% gap found in #82. Gauge height is not checked, since a percentage of a stage reading has no meaning. Water temperature is always the latest observation. The UI shows which applies from `provenance`.
+A flow forecast is set aside when its value for the hour of the latest flow measurement is more than 25% from that measurement (`FORECAST_DISAGREEMENT` in `riverHours.ts`, #82). Only a usable measurement from the current hour or the one before counts. Flow is then unknown, `forecastDisagrees`, for every hour after the current one: the reading isn't held (#144). The set-aside forecast is returned in `flowSetAside` to be shown dashed. 25% is above the 20% that Montague's flow moves within an hour 90% of the time, and below the roughly 50% gap found in #82. Gauge height is not checked, since a percentage of a stage reading has no meaning. Water temperature is always the latest observation. The UI shows which applies from `provenance`.
 
 The current hour is the exception (#75): `withLatestMeasurements` (`apps/api/src/services/latestMeasurements.ts`) replaces each value in `/conditions`' first hour, and in the first hour of each `flowSeries`, with the latest measurement of that metric. The measurement comes from the USGS gauge, or from the NWS station when current weather has `basis: 'station'`, never a forecast-based "current". It applies only if the measurement:
 - has a value (a station's missing gust leaves the forecast)
@@ -386,6 +386,7 @@ Routes validate input with `@hono/zod-validator` and answer 400 on invalid input
   gauge?: { ref, name, lat, lon },
   current: Reading[],                 // station or forecast weather, plus the gauge's latest readings
   trends: Trend[],                    // flow and gauge height at the display gauge, for each it reports now (#73)
+  flowSetAside: FlowSetAside[],       // a flow forecast set aside for disagreeing (#82), with its evidence, to show dashed and never compare (#144)
   currentBasis?: 'station' | 'forecast',
   station?: { id, name, distanceKm },
   forecast: ForecastPoint[],          // 48 hourly points
@@ -404,7 +405,7 @@ How `getConditions` builds it (`apps/api/src/services/conditions.ts`):
 - **River values for each hour** come from `riverHours`:
   - flow and gauge height from the NWPS forecast where it covers the hour, and missing after it ends
   - otherwise the latest observation for hours starting within 3 hours of it, then withheld (`noForecast`)
-  - a flow forecast more than 25% from the latest measurement for its hour is set aside (`forecastDisagrees`)
+  - a flow forecast more than 25% from the latest measurement for its hour is set aside, and flow is withheld (`forecastDisagrees`) without holding the reading
   - water temperature always from the latest observation
 - **USGS gauges** are linked to NWPS by site number. The stage-and-flow forecast is fetched only when the gauge has one.
 - **`trends`** (#73): for each of flow and gauge height the display gauge reports now, `trendOf` (`packages/core/src/series/trend.ts`) measures from the earliest usable reading in the 3 hours before the latest to the latest. Below 2 hours apart it's `unknown` (`shortHistory`). A USGS gauge's history is its last 4 hours from `getHistory`, one cached call per metric (`usgs:history:<id>:<metric>`); a failure leaves that trend `unknown` (`historyError`) without marking USGS as failed. An NWPS gauge's observations reach back days, so they serve as its history. Rule-set flow gauges get no trend. The web app also shows a trend as unknown when the latest reading is stale. `trends` defaults to `[]`, so a copy kept from before it existed still parses.

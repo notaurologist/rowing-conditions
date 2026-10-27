@@ -2,6 +2,7 @@ import {
   Alert,
   type ConditionsResponse,
   daylightTimes,
+  type FlowSetAside,
   ForecastPoint,
   Gauge,
   type GaugeRef,
@@ -17,7 +18,7 @@ import { z } from 'zod';
 import type { FlowForecastSource, FlowSource, WeatherSource } from '../adapters/types.ts';
 import type { ForecastArchive } from './forecastArchive.ts';
 import { withLatestMeasurements } from './latestMeasurements.ts';
-import { riverHours } from './riverHours.ts';
+import { flowDisagreement, riverHours } from './riverHours.ts';
 import { type CachedResult, cacheTtlMs, type SourceCache } from './sourceCache.ts';
 
 export const FORECAST_HOURS = 48;
@@ -256,6 +257,25 @@ export async function getConditions(
         : trendOf(metric, [...(history ?? []), ...(display?.latest ?? [])]);
     });
 
+  // Each set-aside flow forecast, with its evidence and its hours, to show and never compare (#144).
+  const setAside = (gaugeRef: GaugeRef, data: River | undefined): FlowSetAside[] => {
+    if (!data) return [];
+    const disagreement = flowDisagreement(times[0] as string, data.forecast, data.latest);
+    if (!disagreement) return [];
+    const byTime = new Map(data.forecast.map((p) => [Date.parse(p.time), p.values.flow]));
+    const points = times.flatMap((time) => {
+      const flow = byTime.get(Date.parse(time));
+      return typeof flow === 'number' ? [{ time, flow }] : [];
+    });
+    return [{ gaugeRef, ...disagreement, points }];
+  };
+  const flowSetAside = [
+    ...(input.gaugeRef ? setAside(input.gaugeRef, display) : []),
+    ...(input.flowGaugeRefs ?? []).flatMap((ref, i) =>
+      ref === input.gaugeRef ? [] : setAside(ref, named[i]),
+    ),
+  ];
+
   return {
     location: {
       lat,
@@ -275,6 +295,7 @@ export async function getConditions(
       : {}),
     current: [...(current?.readings ?? []), ...gaugeReadings],
     trends,
+    flowSetAside,
     ...(current ? { currentBasis: current.basis } : {}),
     ...(current?.station ? { station: current.station } : {}),
     forecast,

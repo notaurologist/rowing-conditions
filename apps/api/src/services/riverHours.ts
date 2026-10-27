@@ -40,21 +40,38 @@ function fromObservation(r: Reading): { value: number | null; provenance: ValueP
   };
 }
 
-// Whether the flow forecast for the hour of the latest flow measurement is more than
-// FORECAST_DISAGREEMENT away from it. Only a usable measurement from the first hour or the one
-// before counts, as for the current hour (#75); an older one says nothing about the forecast now.
-function forecastDisagrees(
-  firstHour: number,
-  forecastByTime: ReadonlyMap<number, ForecastPoint>,
-  measured: Reading | undefined,
-): boolean {
-  if (!measured || measured.value === null) return false;
-  if (measured.qualifiers?.some((q) => disqualifyingQualifiers.includes(q))) return false;
+export interface FlowDisagreement {
+  measured: number; // m³/s
+  measuredAt: string;
+  forecastForMeasurement: number; // the forecast for the measurement's hour, m³/s
+  issuedAt: string; // the forecast's issue time
+}
+
+// The evidence when the flow forecast for the hour of the latest flow measurement is more than
+// FORECAST_DISAGREEMENT away from it (#82). Only a usable measurement from the first hour or the
+// one before counts, as for the current hour (#75); an older one says nothing about the forecast
+// now. Undefined when they agree or can't be compared.
+export function flowDisagreement(
+  firstHour: string,
+  forecast: readonly ForecastPoint[],
+  latestReadings: readonly Reading[],
+): FlowDisagreement | undefined {
+  const measured = latestByMetric(latestReadings).get('flow');
+  if (!measured || measured.value === null) return undefined;
+  if (measured.qualifiers?.some((q) => disqualifyingQualifiers.includes(q))) return undefined;
   const at = Date.parse(measured.observedAt);
-  if (at < firstHour - HOUR) return false;
-  const forecast = forecastByTime.get(Math.floor(at / HOUR) * HOUR)?.values.flow;
-  if (forecast === undefined || forecast === null) return false;
-  return Math.abs(forecast - measured.value) > FORECAST_DISAGREEMENT * measured.value;
+  if (at < Date.parse(firstHour) - HOUR) return undefined;
+  const point = forecast.find((p) => Date.parse(p.time) === Math.floor(at / HOUR) * HOUR);
+  const value = point?.values.flow;
+  const provenance = point?.provenance.flow;
+  if (value === undefined || value === null || !provenance) return undefined;
+  if (Math.abs(value - measured.value) <= FORECAST_DISAGREEMENT * measured.value) return undefined;
+  return {
+    measured: measured.value,
+    measuredAt: measured.observedAt,
+    forecastForMeasurement: value,
+    issuedAt: provenance.asOf,
+  };
 }
 
 // River values for each hour (ARCHITECTURE.md, "Maximum ages"):
@@ -62,8 +79,9 @@ function forecastDisagrees(
 //   forecast step are missing.
 // - Otherwise the latest observation stands in for hours that start within its maximum age
 //   (3 hours) of it. Later hours have no value, withheld as 'noForecast' (#117).
-// - A flow forecast more than 25% from the latest measurement is set aside, and flow works as
-//   if there were no forecast, withheld as 'forecastDisagrees' after the reading's 3 hours (#82).
+// - A flow forecast more than 25% from the latest measurement is set aside (#82), and flow is
+//   withheld as 'forecastDisagrees' for every hour; the reading isn't held (#144). The current
+//   hour still gets the measurement (withLatestMeasurements).
 // - Water temperature is always the latest observation.
 // A metric with neither is left out, so evaluation treats it as having no source.
 export function riverHours(
@@ -88,8 +106,7 @@ export function riverHours(
     }
   }
 
-  const firstHour = Date.parse(times[0] ?? '');
-  if (forecastDisagrees(firstHour, forecastByTime, latest.get('flow'))) spans.delete('flow');
+  if (flowDisagreement(times[0] ?? '', forecast, latestReadings)) spans.delete('flow');
   const setAside = !spans.has('flow') && forecast.some((p) => p.provenance.flow !== undefined);
 
   return times.map((time) => {
@@ -115,8 +132,12 @@ export function riverHours(
         }
       } else if (observation) {
         const { value, provenance } = fromObservation(observation);
+        // A set-aside forecast means the river is moving in ways the forecast doesn't capture, so
+        // the reading isn't held at all; the current hour still gets it as a measurement (#144).
         const heldUntil =
-          Date.parse(observation.observedAt) + maxAgeHours[metric].observation * HOUR;
+          metric === 'flow' && setAside
+            ? Number.NEGATIVE_INFINITY
+            : Date.parse(observation.observedAt) + maxAgeHours[metric].observation * HOUR;
         if (ms < heldUntil) {
           set(metric, value, provenance);
         } else {

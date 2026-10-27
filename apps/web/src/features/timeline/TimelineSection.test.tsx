@@ -308,8 +308,55 @@ describe('TimelineSection flow note without a usable forecast (#117, #82)', () =
   it('says why when the forecast was set aside', () => {
     const { text } = render(clubA, withoutForecast('forecastDisagrees'));
     expect(text).toContain(
-      'Flow: the National Water Prediction Service forecast was set aside, because it was more than 25% off the latest reading. The latest observation, from 8:15 AM, stands in',
+      'Flow: the National Water Prediction Service forecast was set aside, because it was more than 25% off the latest reading, from 8:15 AM. Flow after the current hour is unknown.',
     );
+  });
+});
+
+describe('TimelineSection set-aside flow forecast (#144)', () => {
+  // The forecast set aside: the 8:15 AM reading holds 3 hours, then flow is withheld, and the
+  // forecast itself comes along to be shown dashed.
+  const setAside = () => {
+    const conditions = structuredClone(montague) as Conditions;
+    const asOf = '2026-10-26T12:15:00.000Z';
+    for (const [i, p] of conditions.forecast.entries()) {
+      const provenance = { kind: 'observation' as const, asOf, source: 'usgs' as const };
+      p.values.flow = i < 3 ? 106 : null;
+      p.provenance.flow = i < 3 ? provenance : { ...provenance, withheld: 'forecastDisagrees' };
+    }
+    conditions.flowSetAside = [
+      {
+        gaugeRef: 'usgs:USGS-01170500',
+        issuedAt: '2026-10-25T14:44:00.000Z',
+        measured: toInternal('flow', 3750, 'cfs'),
+        measuredAt: asOf,
+        forecastForMeasurement: toInternal('flow', 2650, 'cfs'),
+        points: conditions.forecast.map((p) => ({
+          time: p.time,
+          flow: toInternal('flow', 5750, 'cfs'),
+        })),
+      },
+    ];
+    return conditions;
+  };
+
+  it('draws the forecast dashed, names it in the row, and says what it had in the note', () => {
+    const { html, text } = render(clubA, setAside());
+    expect(html).toContain('mg-line-set-aside');
+    expect(text).toContain("dashed: NWPS forecast, doesn't match the gauge");
+    expect(text).toContain(
+      "Flow: the National Water Prediction Service forecast doesn't match the gauge. It had 2,650 cfs for 8 AM; the gauge measured 3,750 cfs. It's drawn dashed and isn't compared against limits, so flow after the current hour is unknown.",
+    );
+  });
+
+  it('gives its value for unknown hours in the readout and table', () => {
+    const { text } = render(clubA, setAside());
+    expect(text).toContain("NWPS 5,750 cfs, doesn't match gauge");
+  });
+
+  it('draws nothing dashed without a set-aside forecast', () => {
+    const { html } = render();
+    expect(html).not.toContain('mg-line-set-aside');
   });
 });
 
