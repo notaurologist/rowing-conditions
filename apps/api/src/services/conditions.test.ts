@@ -325,9 +325,10 @@ describe('getConditions: the current hour uses the latest measurements (#75)', (
       ok([{ ...(usgsLatest[0] as Reading), observedAt: '2026-10-26T12:10:00.000Z' }]),
     );
     const r = await conditions();
-    expect(r.forecast.slice(0, 4).every((p) => p.values.flow === toSI(5060, 'cfs'))).toBe(true);
-    expect(r.forecast.slice(4).every((p) => p.values.flow === null)).toBe(true);
-    expect(r.forecast[10]?.provenance.flow?.withheld).toBe('forecastDisagrees');
+    // Only the current hour has flow: the measurement itself. The reading isn't held (#144).
+    expect(r.forecast[0]?.values.flow).toBe(toSI(5060, 'cfs'));
+    expect(r.forecast.slice(1).every((p) => p.values.flow === null)).toBe(true);
+    expect(r.forecast[1]?.provenance.flow?.withheld).toBe('forecastDisagrees');
   });
 
   it("sets aside the forecast for a rule set's flow gauge the same way", async () => {
@@ -366,7 +367,10 @@ describe('getConditions: the current hour uses the latest measurements (#75)', (
       lon: LON,
       now: clock.toISOString(),
     });
-    expect(hours[1]?.status).toBe('within');
+    expect(hours[0]?.status).toBe('within'); // the measurement itself
+    expect(hours[1]?.unknowns).toEqual([
+      { thresholdId: 'flow', metric: 'flow', reason: 'forecastDisagrees' },
+    ]);
     expect(hours[10]?.unknowns).toEqual([
       { thresholdId: 'flow', metric: 'flow', reason: 'forecastDisagrees' },
     ]);

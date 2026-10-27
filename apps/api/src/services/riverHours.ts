@@ -79,8 +79,9 @@ export function flowDisagreement(
 //   forecast step are missing.
 // - Otherwise the latest observation stands in for hours that start within its maximum age
 //   (3 hours) of it. Later hours have no value, withheld as 'noForecast' (#117).
-// - A flow forecast more than 25% from the latest measurement is set aside, and flow works as
-//   if there were no forecast, withheld as 'forecastDisagrees' after the reading's 3 hours (#82).
+// - A flow forecast more than 25% from the latest measurement is set aside (#82), and flow is
+//   withheld as 'forecastDisagrees' for every hour; the reading isn't held (#144). The current
+//   hour still gets the measurement (withLatestMeasurements).
 // - Water temperature is always the latest observation.
 // A metric with neither is left out, so evaluation treats it as having no source.
 export function riverHours(
@@ -131,8 +132,12 @@ export function riverHours(
         }
       } else if (observation) {
         const { value, provenance } = fromObservation(observation);
+        // A set-aside forecast means the river is moving in ways the forecast doesn't capture, so
+        // the reading isn't held at all; the current hour still gets it as a measurement (#144).
         const heldUntil =
-          Date.parse(observation.observedAt) + maxAgeHours[metric].observation * HOUR;
+          metric === 'flow' && setAside
+            ? Number.NEGATIVE_INFINITY
+            : Date.parse(observation.observedAt) + maxAgeHours[metric].observation * HOUR;
         if (ms < heldUntil) {
           set(metric, value, provenance);
         } else {

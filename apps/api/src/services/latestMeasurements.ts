@@ -26,7 +26,9 @@ export function withLatestMeasurements(
   for (const [metric, reading] of latest) {
     const current = provenance[metric];
     if (reading.value === null || !current) continue;
-    if (Date.parse(reading.observedAt) <= Date.parse(current.asOf)) continue;
+    // A newer forecast keeps its value, but an hour with no value (withheld, #144) takes the reading.
+    if (Date.parse(reading.observedAt) <= Date.parse(current.asOf) && values[metric] != null)
+      continue;
     if (Date.parse(reading.observedAt) < Date.parse(hour.time) - HOUR) continue;
     values[metric] = reading.value;
     provenance[metric] = {

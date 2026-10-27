@@ -308,7 +308,7 @@ describe('TimelineSection flow note without a usable forecast (#117, #82)', () =
   it('says why when the forecast was set aside', () => {
     const { text } = render(clubA, withoutForecast('forecastDisagrees'));
     expect(text).toContain(
-      'Flow: the National Water Prediction Service forecast was set aside, because it was more than 25% off the latest reading. The latest observation, from 8:15 AM, stands in',
+      'Flow: the National Water Prediction Service forecast was set aside, because it was more than 25% off the latest reading, from 8:15 AM. Flow after the current hour is unknown.',
     );
   });
 });
@@ -345,7 +345,7 @@ describe('TimelineSection set-aside flow forecast (#144)', () => {
     expect(html).toContain('mg-line-set-aside');
     expect(text).toContain("dashed: NWPS forecast, doesn't match the gauge");
     expect(text).toContain(
-      "Flow: the National Water Prediction Service forecast doesn't match the gauge. It had 2,650 cfs for 8 AM; the gauge measured 3,750 cfs. It's drawn dashed and isn't compared against limits",
+      "Flow: the National Water Prediction Service forecast doesn't match the gauge. It had 2,650 cfs for 8 AM; the gauge measured 3,750 cfs. It's drawn dashed and isn't compared against limits, so flow after the current hour is unknown.",
     );
   });
 
