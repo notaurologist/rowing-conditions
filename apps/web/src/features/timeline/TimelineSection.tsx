@@ -117,6 +117,8 @@ export function TimelineSection({ conditions, location, evaluated, alongside, un
           night.
           {model.rows.some((r) => r.limits.length > 0) &&
             ' The light fill is the room left before each limit; red fill is past it.'}
+          {model.statuses.some((st) => st.spans.length > 0) &&
+            ' In the status strip, outside hours are striped and unknown hours dotted.'}
         </p>
         {flow && (
           <p>

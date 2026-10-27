@@ -110,6 +110,9 @@ describe('TimelineSection', () => {
     expect(text).toContain('○ Outside');
     expect(text).toContain("● Within Club A's limits");
     expect(text).not.toMatch(/[✓✕]/); // a check mark would read as approval (#91)
+    // A symbol never stands alone: each one is followed by its word.
+    expect(html).not.toMatch(/<span class="mg-(long|short)">[●○?]<\/span>/);
+    expect(text).toContain('outside hours are striped and unknown hours dotted');
     expect(html).toMatch(
       /role="img" aria-label="Club A status: outside Today 8 AM to Today 1 PM; within Today 2 PM to/,
     );

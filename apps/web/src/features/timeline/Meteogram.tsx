@@ -263,7 +263,7 @@ function StatusRow({
             const share = (s.to - s.from) / n;
             // Placed by its hours, like the rows below, so it lines up with them at any width.
             // The texture (outside hatched, unknown dotted) is the cue that isn't color and
-            // fits any span; the symbol and words appear only where they fit (#91).
+            // fits any span. The symbol appears only with its word, where both fit (#91).
             return (
               <div
                 key={s.from}
@@ -271,16 +271,14 @@ function StatusRow({
                 style={{ left: pct(s.from, n), width: pct(s.to - s.from, n) }}
               >
                 <span className="mg-long">
-                  {share > 0.02 ? words.symbol : ''}
                   {share > 0.12
-                    ? ` ${words.long(strip.name)}`
+                    ? `${words.symbol} ${words.long(strip.name)}`
                     : share > 0.06
-                      ? ` ${words.short}`
+                      ? `${words.symbol} ${words.short}`
                       : ''}
                 </span>
                 <span className="mg-short">
-                  {share > 0.045 ? words.symbol : ''}
-                  {share > 0.22 ? ` ${words.short}` : ''}
+                  {share > 0.22 ? `${words.symbol} ${words.short}` : ''}
                 </span>
               </div>
             );
