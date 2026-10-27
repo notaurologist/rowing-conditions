@@ -201,7 +201,7 @@ Computed locally with the `suncalc` library. No external API.
 
 ---
 
-## Backtesting only: historical weather (decision 0019, proposed)
+## Backtesting only: historical weather (decision 0019)
 
 Checked against docs and live requests on October 26, 2026 (issue #35). Used by the fixture recorder and backtesting, never by the live app.
 
