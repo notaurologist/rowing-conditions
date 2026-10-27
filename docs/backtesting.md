@@ -76,6 +76,29 @@ Notable days from April to October 2026 at Turners Falls (42.6, -72.55), picked 
 
 How they were picked: USGS daily mean flow at Montague and continuous water temperature at Northfield; KORE's routine hourly reports from IEM; and the NBM day-ahead forecast from Open-Meteo's Previous Runs API, compared with KORE hour by hour from 6 a.m. to 8 p.m. EDT.
 
+## Findings, October 2026
+
+Each case was replayed at 6 a.m. EDT on its date against the owner's club's only limit: flow at most 20 kcfs at Montague, measured at the same gauge the club watches (NWPS `MNTM3` shows USGS 01170500's readings). The club has no wind, temperature or daylight limits; it asks rowers to check the weather themselves. So the statuses below are about flow, and the weather comparisons are context.
+
+| Case | App at 6 a.m. | Measured status differs | What the replay showed |
+|---|---|---|---|
+| `high-water-2026-04-02` | Outside all 48 hours (45.5 kcfs) | Never | Flow stayed well over the limit for both days. |
+| `windy-2026-05-05` | Within all 48 hours (11.7 kcfs) | 2 hours, 2–3 a.m. the next night | A release took Montague from 15.3 to 21.7 kcfs in about 2 hours. Forecast wind was 5–9 mph under what Orange measured from 11 a.m., and gusts up to 18 mph under (25 mph forecast, 43 mph measured at 2 p.m.). |
+| `data-gap-2026-06-09` | Within all 48 hours (7.5 kcfs) | 2 hours, 9–10 p.m. | Orange's reports stopped, so current weather fell back to the forecast, labeled as such. A release took Montague from 14.8 to 23.4 kcfs within 2 hours. |
+| `forecast-miss-2026-06-30` | Within all 48 hours (5.3 kcfs) | 2 hours, 7–8 p.m. the next day | The day-ahead forecast had 90 °F all afternoon; Orange measured 72 °F at 3 p.m. after a sudden drop, with a 9–13% chance of rain forecast. Flow later crossed 20 kcfs briefly. |
+| `cold-2026-10-24` | Within all 48 hours (4.7 kcfs) | Never | Air at Orange was 24 °F at 6 a.m. and water at Northfield 53 °F. The air forecast was within 7 °F of what was measured until 4 p.m., then up to 10 °F too warm as it cooled. |
+
+What this means for the app:
+
+- **Flow changes faster than the app assumed.** Across April to October 2026, on 10 days Montague was within 20 kcfs at 6 a.m. and over it later the same day, once from 3.5 kcfs. The largest one-hour rise was 6,900 cfs. These are releases from the dams upstream: sharp rises over an hour or two, then slower falls.
+- **Maximum age for flow and gauge height readings lowered from 6 to 3 hours.** A 6-hour-old reading could be off by more than 15,000 cfs. Montague never went more than 2 hours between readings all season (every 2 hours on June 7 and 8, otherwise every 15 minutes), so 3 hours wouldn't have marked any reading stale.
+- **Without a flow forecast, the latest reading is held for 48 hours.** That's how the replays work, and how the app works for a gauge without an NWPS forecast. It missed every one of these releases. For Montague, the app uses the NWPS forecast instead, but whether NWPS anticipates releases can't be checked from history, since NWPS keeps no past forecasts (#81). #82 found the NWPS forecast at `MNTM3` disagreeing with the gauge by about half.
+- **Wind on windy days was under-forecast.** On May 5 the day-ahead forecast had the wind's shape right but not its size. For limits on wind, the measured values from the station in the current hour matter.
+- **Northfield reports negative flow.** USGS 01161280 had 50 negative readings from October 23 to 26 (down to −4,890 cfs) and 189 in July, probably from the Northfield Mountain pumped storage station and the Turners Falls dam pool. The app treats negative flow as out of range, so those readings are missing.
+- **Stale data and gaps behaved as designed.** Missing weather reports fell back to the forecast and said so, and Montague's 2-hourly readings stayed current.
+
+Headroom scales: reviewed and unchanged. Flow's scale is the limit itself, and 20 kcfs is the only limit in this rule set. A release can use up about a third of that in an hour, so headroom says little about the next few hours on this river. The fixed temperature and gauge height scales couldn't be checked, since the club has no limits on them.
+
 ## Limits
 
 - **Weather forecasts are model forecasts, not the NWS forecasts as issued.** NWS forecasters edit the NBM, so a crew that checked the forecast that morning may have seen something different (decision 0019).
