@@ -535,6 +535,28 @@ describe('getConditions with failures', () => {
   });
 });
 
+describe('getConditions: forecast archive (#81)', () => {
+  it('keeps each NWPS forecast it fetches, but not one served from the cache', async () => {
+    const record = vi.fn(async () => {});
+    deps = { ...deps, archive: { record, issuedBetween: vi.fn() } };
+    await conditions();
+    expect(record).toHaveBeenCalledWith('MNTM3', '2026-10-26T06:00:00.000Z', flowForecast);
+    record.mockClear();
+    await conditions();
+    expect(record).not.toHaveBeenCalled();
+  });
+
+  it('keeps nothing when NWPS has no forecast', async () => {
+    const record = vi.fn(async () => {});
+    deps = { ...deps, archive: { record, issuedBetween: vi.fn() } };
+    vi.mocked(deps.nwps.getStageFlow).mockResolvedValue(
+      ok({ observed: [], forecast: [], issuedAt: null }),
+    );
+    await conditions();
+    expect(record).not.toHaveBeenCalled();
+  });
+});
+
 describe('getConditions: flow and gauge height trends (#73)', () => {
   const latestHeight: Reading = {
     metric: 'gaugeHeight',

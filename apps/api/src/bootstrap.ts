@@ -9,6 +9,7 @@ import { type Config, loadConfig } from './config.ts';
 import { type ConnectionOptions, createDatabase } from './db/client.ts';
 import { getConditions } from './services/conditions.ts';
 import { createErrorLog } from './services/errorLog.ts';
+import { createForecastArchive } from './services/forecastArchive.ts';
 import { createPlaceSearch } from './services/places.ts';
 import { createDatabaseGate } from './services/requestGate.ts';
 import { createSourceCache } from './services/sourceCache.ts';
@@ -38,6 +39,7 @@ export function createApi(config: Config, connection: ConnectionOptions = {}) {
   const nwps = createNwpsAdapter({ logger });
   const nws = createNwsAdapter({ userAgent: config.nwsUserAgent, logger });
   const cache = createSourceCache({ db, logger });
+  const archive = createForecastArchive({ db, logger });
   const now = () => new Date();
 
   // Nominatim asks for a User-Agent that identifies the app; NWS_USER_AGENT already does.
@@ -49,7 +51,7 @@ export function createApi(config: Config, connection: ConnectionOptions = {}) {
 
   return createApp({
     usgs,
-    conditions: (input) => getConditions(input, { usgs, nwps, nws, cache, now }),
+    conditions: (input) => getConditions(input, { usgs, nwps, nws, cache, now, archive }),
     ...(config.geocodingEnabled ? { searchPlaces: createPlaceSearch({ geocoder, cache }) } : {}),
     errorLog,
   });

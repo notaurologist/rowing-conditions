@@ -15,6 +15,7 @@ import {
 } from '@rowing/core';
 import { z } from 'zod';
 import type { FlowForecastSource, FlowSource, WeatherSource } from '../adapters/types.ts';
+import type { ForecastArchive } from './forecastArchive.ts';
 import { withLatestMeasurements } from './latestMeasurements.ts';
 import { riverHours } from './riverHours.ts';
 import { type CachedResult, cacheTtlMs, type SourceCache } from './sourceCache.ts';
@@ -54,6 +55,7 @@ export interface ConditionsDeps {
   nws: WeatherSource;
   cache: SourceCache;
   now: () => Date;
+  archive?: ForecastArchive; // keeps each NWPS forecast fetched (#81)
 }
 
 export interface ConditionsInput {
@@ -118,9 +120,13 @@ export async function getConditions(
     const stageFlow = (lid: string) =>
       track(
         'nwps',
-        cache.get(`nwps:stageflow:${lid}`, cacheTtlMs.nwpsStageFlow, StageFlowPayload, () =>
-          nwps.getStageFlow(lid),
-        ),
+        cache.get(`nwps:stageflow:${lid}`, cacheTtlMs.nwpsStageFlow, StageFlowPayload, async () => {
+          const result = await nwps.getStageFlow(lid);
+          // Each new forecast is kept, so it can later be compared with what was measured (#81).
+          if (result.ok && result.data.issuedAt && result.data.forecast.length > 0)
+            await deps.archive?.record(lid, result.data.issuedAt, result.data.forecast);
+          return result;
+        }),
       );
     const nwpsGauge = (identifier: string) =>
       track(

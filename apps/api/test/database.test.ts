@@ -9,6 +9,7 @@ describe('createTestDatabase', () => {
     );
     expect(tables.rows.map((r) => r.tablename)).toEqual([
       'error_events',
+      'forecast_archive',
       'gauges',
       'request_gates',
       'source_cache',
