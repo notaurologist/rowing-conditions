@@ -73,7 +73,11 @@ describe('search', () => {
     );
     const result = await nominatim.search('x');
     expect(result.ok && result.data.map((p) => p.name)).toEqual(['Good']);
-    expect(logger.warn).toHaveBeenCalledOnce();
+    // The failed fields only: the place itself is what the user searched for.
+    expect(logger.warn).toHaveBeenCalledExactlyOnceWith(
+      'nominatim: dropped a result that failed validation',
+      { fields: ['lat'] },
+    );
   });
 
   it('reports a schema mismatch as a parse error', async () => {

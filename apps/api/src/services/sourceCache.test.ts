@@ -138,8 +138,27 @@ describe('source cache', () => {
     const fetch = vi.fn(async () => ok({ flow: 4 }));
     expect(await get(fetch)).toMatchObject({ status: 'ok', data: { flow: 4 }, cached: false });
     expect(warn).toHaveBeenCalledWith('cache: stored payload did not match schema; refetching', {
-      key: 'usgs:latest:A',
+      kind: 'usgs:latest',
     });
+  });
+
+  it('logs a database failure without the location in the key or the payload', async () => {
+    const c = cache();
+    await close();
+    const fetch = vi.fn(async () => ok({ flow: 5 }));
+    await get(fetch, c, 'nws:point:42.5300,-72.5700');
+    expect(warn).toHaveBeenCalledWith('cache: read failed', {
+      kind: 'nws:point',
+      error: expect.any(String),
+    });
+    expect(warn).toHaveBeenCalledWith('cache: write failed', {
+      kind: 'nws:point',
+      error: expect.any(String),
+    });
+    const logged = JSON.stringify(warn.mock.calls);
+    expect(logged).not.toContain('42.53');
+    expect(logged).not.toContain('flow');
+    ({ db, close } = await createTestDatabase()); // for afterEach
   });
 
   it('still fetches when the database is unavailable, and logs the failure', async () => {

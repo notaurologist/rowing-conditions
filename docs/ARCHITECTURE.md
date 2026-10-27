@@ -510,7 +510,11 @@ Decision 0018. Vercel keeps runtime logs for one hour, so warnings and errors ar
 - **Before each response,** a middleware waits for pending writes, so a function instance isn't frozen with writes outstanding.
 - **A failed write** goes to the console only and never fails the request. Errors while the database is down therefore reach only Vercel's one-hour logs.
 - **Retention:** rows older than 30 days are deleted as part of recording, at most once an hour per instance.
-- **What's recorded:** fixed messages and the structured details the code passes. Never request bodies, headers, query strings, or IP addresses. An exception's own message is recorded as thrown, so code shouldn't put request values in error messages.
+- **What's recorded:** fixed messages and the structured details the code passes. Never request bodies, headers, query strings, or IP addresses, and nothing that can place the user: coordinates or place search text. An exception's own message is recorded as thrown, so code shouldn't put request values in error messages.
+  - Cache warnings record the key's kind (`nws:point`), not the key, whose rest can be coordinates or search text (`keyKind`).
+  - Upstream URLs are recorded with query values dropped and coordinate pairs in the path replaced (`describeUrl`).
+  - Database errors are recorded by the driver's message (`describeError`), because a failed Drizzle query's message includes its parameters.
+  - Gauge and weather station IDs are recorded. They name public sites, not the user's location, and are needed to debug a source.
 - **Reading:** SQL in Neon's console, for example `select occurred_at, level, message, route, details from error_events order by id desc limit 50;`.
 
 ### Configuration

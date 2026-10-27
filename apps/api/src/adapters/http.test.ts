@@ -1,6 +1,14 @@
+import { DrizzleQueryError } from 'drizzle-orm/errors';
 import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
-import { describeShape, type FetchFn, fetchJson, type Logger } from './http.ts';
+import {
+  describeError,
+  describeShape,
+  describeUrl,
+  type FetchFn,
+  fetchJson,
+  type Logger,
+} from './http.ts';
 
 const schema = z.object({ value: z.number() });
 const silent: Logger = { warn: vi.fn() };
@@ -38,6 +46,18 @@ describe('fetchJson', () => {
     expect(JSON.stringify(details)).not.toContain('secret-ish');
   });
 
+  it('logs a schema mismatch without the location in the request URL', async () => {
+    const logger: Logger = { warn: vi.fn() };
+    await fetchJson('https://api.weather.gov/points/42.5300,-72.5700', schema, {
+      source: 'nws',
+      fetch: respond({ value: 'x' }),
+      logger,
+    });
+    const details = vi.mocked(logger.warn).mock.calls[0]?.[1];
+    expect(details?.url).toBe('https://api.weather.gov/points/:point');
+    expect(JSON.stringify(details)).not.toContain('42.53');
+  });
+
   it('reports a thrown fetch as a network error', async () => {
     const fetch: FetchFn = async () => {
       throw new TypeError('fetch failed');
@@ -63,6 +83,46 @@ describe('fetchJson', () => {
     });
     const headers = fetch.mock.calls[0]?.[1]?.headers as Record<string, string>;
     expect(headers['X-Api-Key']).toBe('k');
+  });
+});
+
+describe('describeUrl', () => {
+  it('replaces coordinate pairs in the path', () => {
+    expect(describeUrl('https://api.weather.gov/points/42.5300,-72.5700')).toBe(
+      'https://api.weather.gov/points/:point',
+    );
+    expect(describeUrl('https://api.weather.gov/gridpoints/BOX/71,90/forecast')).toBe(
+      'https://api.weather.gov/gridpoints/BOX/:point/forecast',
+    );
+  });
+
+  it('keeps query names and drops their values', () => {
+    expect(describeUrl('https://api.weather.gov/alerts/active?point=42.53,-72.57')).toBe(
+      'https://api.weather.gov/alerts/active?point',
+    );
+    expect(
+      describeUrl('https://nominatim.openstreetmap.org/search?q=turners+falls&format=jsonv2'),
+    ).toBe('https://nominatim.openstreetmap.org/search?q&format');
+  });
+
+  it('describes an unparseable URL without echoing it', () => {
+    expect(describeUrl('not a url 42.53,-72.57')).toBe('invalid URL');
+  });
+});
+
+describe('describeError', () => {
+  it("uses the driver's error for a failed Drizzle query, not the query's parameters", () => {
+    const error = new DrizzleQueryError(
+      'select * from "source_cache" where "key" = $1',
+      ['nws:point:42.5300,-72.5700'],
+      new Error('connection terminated'),
+    );
+    expect(describeError(error)).toBe('connection terminated');
+  });
+
+  it('uses the message of any other error', () => {
+    expect(describeError(new Error('boom'))).toBe('boom');
+    expect(describeError('plain')).toBe('plain');
   });
 });
 
