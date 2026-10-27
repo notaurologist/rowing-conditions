@@ -281,3 +281,33 @@ describe('TimelineSection', () => {
     }
   });
 });
+
+describe('TimelineSection flow note without a usable forecast (#117, #82)', () => {
+  // Every hour's flow as the API sends it without a forecast: the 8:15 AM reading for 3 hours,
+  // then withheld.
+  const withoutForecast = (withheld: 'noForecast' | 'forecastDisagrees') => {
+    const conditions = structuredClone(montague) as Conditions;
+    const asOf = '2026-10-26T12:15:00.000Z';
+    for (const [i, p] of conditions.forecast.entries()) {
+      const provenance = { kind: 'observation' as const, asOf, source: 'usgs' as const };
+      p.values.flow = i < 3 ? 106 : null;
+      p.provenance.flow = i < 3 ? provenance : { ...provenance, withheld };
+    }
+    return conditions;
+  };
+
+  it('says the reading stands in for 3 hours when the gauge has no forecast', () => {
+    const { text } = render(clubA, withoutForecast('noForecast'));
+    expect(text).toContain(
+      'Flow: no forecast for this gauge. The latest observation, from 8:15 AM, stands in for the 3 hours after it; later hours are unknown.',
+    );
+    expect(text).not.toContain('every hour');
+  });
+
+  it('says why when the forecast was set aside', () => {
+    const { text } = render(clubA, withoutForecast('forecastDisagrees'));
+    expect(text).toContain(
+      'Flow: the National Water Prediction Service forecast was set aside, because it was more than 25% off the latest reading. The latest observation, from 8:15 AM, stands in',
+    );
+  });
+});
