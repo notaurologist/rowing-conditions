@@ -27,8 +27,6 @@ function rowHeight(row: MeteogramRow) {
   return row.id === 'flow' && row.kind === 'line' ? FLOW_HEIGHT : ROW_HEIGHT[row.kind];
 }
 
-const defined = (p: MeteogramPoint) => p.value !== null;
-
 // A measurement far off the forecast's scale sits just inside the row's top or bottom edge.
 function observedTop(row: MeteogramRow, y: (v: number) => number) {
   if (row.observed?.offScale === 'above') return 4;
@@ -40,10 +38,12 @@ function Fills({
   row,
   x,
   y,
+  defined,
 }: {
   row: MeteogramRow;
   x: (i: number) => number;
   y: (v: number) => number;
+  defined: (p: MeteogramPoint) => boolean;
 }) {
   const main = row.series.find((s) => s.role === 'main');
   const gust = row.series.find((s) => s.role === 'gust');
@@ -97,7 +97,9 @@ function Plot({ row, n, sel }: { row: MeteogramRow; n: number; sel: number }) {
   const main = row.series.find((s) => s.role === 'main');
   const gust = row.series.find((s) => s.role === 'gust');
   const selValue = (gust ?? main)?.points[sel]?.value ?? null;
-  const flip = x(sel) > 68;
+  const flip = x(sel) > 50;
+  // A measured current hour is the dot; the lines start at the forecast that follows it.
+  const defined = (p: MeteogramPoint) => p.value !== null && !(p.measured && row.observed);
   // Above the point, unless that would leave the row; bars sit in a short row, so centre it.
   const readoutTop =
     row.kind === 'bars' ? 50 : Math.max(0, Math.min(100, y(selValue ?? row.domain[0])));
@@ -110,7 +112,7 @@ function Plot({ row, n, sel }: { row: MeteogramRow; n: number; sel: number }) {
         {row.kind === 'band' && main && gust && (
           <Area<MeteogramPoint>
             data={main.points}
-            defined={(p, i) => p.value !== null && gust.points[i]?.value !== null}
+            defined={(p, i) => defined(p) && gust.points[i]?.value !== null}
             x={(_, i) => x(i)}
             y0={(p) => y(p.value ?? 0)}
             y1={(_, i) => y(gust.points[i]?.value ?? 0)}
@@ -130,7 +132,7 @@ function Plot({ row, n, sel }: { row: MeteogramRow; n: number; sel: number }) {
               />
             ) : null,
           )}
-        <Fills row={row} x={x} y={y} />
+        <Fills row={row} x={x} y={y} defined={defined} />
         {row.kind === 'band' && gust && (
           <LinePath<MeteogramPoint>
             data={gust.points}

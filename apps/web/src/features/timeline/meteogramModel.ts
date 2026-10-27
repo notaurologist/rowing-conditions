@@ -30,6 +30,9 @@ const HOUR = 3_600_000;
 export interface MeteogramPoint {
   time: string;
   value: number | null; // display unit; null draws a gap
+  // The current hour's value is a measurement and the next hour's a forecast. The chart shows it
+  // as the measured dot rather than joining it to the forecast line.
+  measured?: true;
 }
 
 export interface MeteogramSeries {
@@ -130,6 +133,14 @@ function hasValues(forecast: readonly ForecastPoint[], metric: Metric): boolean 
   );
 }
 
+// The current hour holds a measurement (withLatestMeasurements in the API) and the next a forecast.
+function measuredThenForecast(forecast: readonly ForecastPoint[], metric: Metric): boolean {
+  return (
+    forecast[0]?.provenance[metric]?.kind === 'observation' &&
+    forecast[1]?.provenance[metric]?.kind === 'forecast'
+  );
+}
+
 // The scale for a row: data, limits and the measurement all fit, padded so lines clear the edges.
 function domainOf(values: number[], floorAtZero: boolean, headroom = 1): [number, number] {
   if (values.length === 0) return [0, 1];
@@ -139,7 +150,16 @@ function domainOf(values: number[], floorAtZero: boolean, headroom = 1): [number
   lo -= pad;
   hi = hi + pad + (hi - lo) * (headroom - 1);
   if (floorAtZero) lo = Math.max(0, lo);
-  return [lo, hi];
+  return niceDomain(lo, hi);
+}
+
+// Widens a scale to round steps of 1, 2 or 5, so its top and bottom labels read as 25,000, not 22,177.
+function niceDomain(lo: number, hi: number): [number, number] {
+  const rough = (hi - lo) / 5;
+  const magnitude = 10 ** Math.floor(Math.log10(rough));
+  const norm = rough / magnitude;
+  const step = (norm < 1.5 ? 1 : norm < 3 ? 2 : norm < 7 ? 5 : 10) * magnitude;
+  return [Math.floor(lo / step) * step, Math.ceil(hi / step) * step];
 }
 
 // "2 PM – 6:20 PM" becomes "2 – 6:20 PM" when both ends share AM or PM.
@@ -266,7 +286,11 @@ export function meteogramModel(input: MeteogramInput): MeteogramModel {
     metrics: ['airTemp'],
     unitMetric: 'airTemp',
   });
-  if (hasGauge)
+  // Water temperature without values is shown only when a limit needs it, to explain unknowns.
+  const waterLimit = thresholds.some(
+    (t) => t.metric === 'waterTemp' || t.metric === 'combinedTempF',
+  );
+  if (hasGauge && (waterLimit || hasValues(forecast, 'waterTemp')))
     specs.push({
       id: 'waterTemp',
       label: 'Water temperature',
@@ -338,7 +362,11 @@ export function meteogramModel(input: MeteogramInput): MeteogramModel {
       .map((metric) => ({
         metric,
         role: metric === 'windGust' ? 'gust' : 'main',
-        points: forecast.map((p) => ({ time: p.time, value: valueAt(p, metric, unit) })),
+        points: forecast.map((p, i) => ({
+          time: p.time,
+          value: valueAt(p, metric, unit),
+          ...(i === 0 && measuredThenForecast(forecast, metric) ? { measured: true as const } : {}),
+        })),
       }));
 
     const limits: MeteogramLimit[] = thresholds
@@ -417,11 +445,12 @@ export function meteogramModel(input: MeteogramInput): MeteogramModel {
 
     const readouts = forecast.map((_, i) => {
       const v = main?.points[i]?.value ?? null;
+      const measured = main?.points[i]?.measured ? ' measured' : '';
       if (spec.id === 'wind') {
         const g = gust?.points[i]?.value ?? null;
         if (v === null && g === null) return 'no value';
         const parts = [
-          `${v === null ? '–' : fmt(v, unit)}${g === null ? '' : `, gusts ${fmt(g, unit)}`} ${symbol}`,
+          `${v === null ? '–' : fmt(v, unit)}${g === null ? '' : `, gusts ${fmt(g, unit)}`} ${symbol}${measured}`,
         ];
         if (gustLimit && g !== null) parts.push(marginWords(g, gustLimit, unit));
         else if (mainLimit && v !== null) parts.push(marginWords(v, mainLimit, unit));
@@ -430,7 +459,8 @@ export function meteogramModel(input: MeteogramInput): MeteogramModel {
         return parts.join(' · ');
       }
       if (v === null) return 'no value';
-      const amount = unit === 'percent' ? `${fmt(v, unit)}%` : `${fmt(v, unit)} ${symbol}`;
+      const amount =
+        unit === 'percent' ? `${fmt(v, unit)}%` : `${fmt(v, unit)} ${symbol}${measured}`;
       return mainLimit ? `${amount} · ${marginWords(v, mainLimit, unit)}` : amount;
     });
 

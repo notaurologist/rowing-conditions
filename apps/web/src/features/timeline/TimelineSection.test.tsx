@@ -80,12 +80,12 @@ const paths = (html: string, cls: string) =>
 describe('TimelineSection', () => {
   it('stacks a labelled row for each element on one time axis', () => {
     const { html, text } = render();
-    for (const row of ['flow', 'wind', 'airTemp', 'waterTemp', 'rain'])
+    for (const row of ['flow', 'wind', 'airTemp', 'rain'])
       expect(html).toContain(`data-row="${row}"`);
+    expect(html).not.toContain('data-row="waterTemp"'); // Montague doesn't measure it
     expect(text).toContain('River flow cfs, limit 3,100');
     expect(text).toContain('Wind mph, sustained to gusts; gust limit 15');
     expect(text).toContain('Air temperature °F, limit 35°');
-    expect(text).toContain('Not measured at this gauge.');
     expect(text).toMatch(/Mon 26 .*Tue 27 .*Wed 28/);
   });
 
@@ -141,6 +141,23 @@ describe('TimelineSection', () => {
     const [air] = paths(render(clubA, conditions).html, 'mg-line-airTemp');
     expect(air?.match(/M/g)).toHaveLength(2);
     expect(paths(render().html, 'mg-line-airTemp')[0]?.match(/M/g)).toHaveLength(1);
+  });
+
+  it('starts the line at the forecast after a measured current hour', () => {
+    const conditions = structuredClone(montague) as Conditions;
+    const first = conditions.forecast[0];
+    if (first) {
+      first.values.flow = toInternal('flow', 1860, 'cfs');
+      first.provenance.flow = {
+        kind: 'observation',
+        asOf: '2026-10-26T12:15:00.000Z',
+        source: 'usgs',
+      };
+    }
+    const { html } = render(clubA, conditions);
+    // x of the second hour: (1 + 0.5) / 48 of the width.
+    expect(paths(html, 'mg-line-flow')[0]).toMatch(/^M3\.125,/);
+    expect(paths(render().html, 'mg-line-flow')[0]).toMatch(/^M1\.042,/);
   });
 
   it('shades twilight and night', () => {
