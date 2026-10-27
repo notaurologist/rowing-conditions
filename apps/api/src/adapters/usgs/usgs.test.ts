@@ -85,13 +85,15 @@ describe('getLatest', () => {
     expect(reading(result.data, 'gaugeHeight')?.value).toBeCloseTo(toSI(4.75, 'ft'), 9);
   });
 
-  it('treats a negative flow (reverse flow) as missing and logs it', async () => {
+  it('keeps a negative flow, marked as reversed, without a warning (#116)', async () => {
     const { usgs, logger } = adapter();
     const result = await usgs.getLatest(NORTHFIELD); // the fixture has -1620 ft³/s
-    expect(result.ok && reading(result.data, 'flow')?.value).toBeNull();
-    expect(logger.warn).toHaveBeenCalledWith(
+    const flow = result.ok ? reading(result.data, 'flow') : undefined;
+    expect(flow?.value).toBeCloseTo(toSI(-1620, 'cfs'));
+    expect(flow?.qualifiers).toContain('reversedFlow');
+    expect(logger.warn).not.toHaveBeenCalledWith(
       'usgs: reading out of range, treated as missing',
-      expect.objectContaining({ gauge: NORTHFIELD }),
+      expect.anything(),
     );
   });
 });

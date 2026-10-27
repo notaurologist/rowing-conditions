@@ -183,6 +183,25 @@ describe('getStageFlow edge cases', () => {
     expect(result.issuedAt).toBeNull();
   });
 
+  it('keeps a negative observed flow, marked as reversed (#116)', async () => {
+    const observed = {
+      issuedTime: '0001-01-01T00:00:00Z',
+      primaryUnits: 'ft',
+      secondaryUnits: 'kcfs',
+      data: [{ validTime: '2026-10-25T23:00:00Z', primary: 7, secondary: -1.6 }],
+    };
+    const result = await stageFlow('TSTM3', [
+      {
+        path: '/nwps/v1/gauges/TSTM3/stageflow',
+        respond: json({ observed, forecast: { ...observed, data: [] } }),
+      },
+    ]);
+    const flow = result.observed.find((r) => r.metric === 'flow');
+    expect(flow?.value).toBeCloseTo(toSI(-1.6, 'kcfs'), 9);
+    expect(flow?.qualifiers).toEqual(['reversedFlow']);
+    expect(result.observed.find((r) => r.metric === 'gaugeHeight')?.qualifiers).toBeUndefined();
+  });
+
   it('treats a forecast with an issue time but no data as no forecast', async () => {
     const result = await stageFlow('TSTM3', synthetic({ data: [] }));
     expect(result.issuedAt).toBeNull();

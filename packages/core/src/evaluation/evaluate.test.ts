@@ -119,6 +119,22 @@ describe('evaluateHour status', () => {
     expect(r.unknowns).toHaveLength(1);
   });
 
+  it('never compares a reversed flow, against a max or a min limit (#116)', () => {
+    const maxFlow = limit('flow', 'max', 20, 'kcfs');
+    const minFlow = limit('flow', 'min', 1, 'kcfs');
+    const p = point(
+      MIDDAY,
+      { flow: toSI(-1.6, 'kcfs') },
+      { flow: { qualifiers: ['reversedFlow'] } },
+    );
+    for (const t of [maxFlow, minFlow]) {
+      const r = hour(p, ruleSet([t]));
+      expect(r.status).toBe('unknown');
+      expect(r.failures).toEqual([]);
+      expect(r.unknowns).toEqual([{ thresholdId: t.id, metric: 'flow', reason: 'reversed' }]);
+    }
+  });
+
   it('reports why a withheld value has none, instead of missing (#117, #82)', () => {
     for (const withheld of ['noForecast', 'forecastDisagrees'] as const) {
       const p = point(MIDDAY, { ...calm, waterTemp: null });

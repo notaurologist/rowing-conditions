@@ -45,6 +45,7 @@ const reasonLabels: Record<UnknownReason, string> = {
   missing: 'missing',
   stale: 'too old',
   qualified: 'qualified by the source',
+  reversed: 'flow reversed',
   noSource: 'no source',
   noForecast: 'no forecast, reading over 3 h old',
   forecastDisagrees: 'forecast set aside, disagreed with reading',

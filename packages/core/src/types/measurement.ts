@@ -73,6 +73,7 @@ export const Qualifier = z.enum([
   'iceAffected',
   'equipmentMalfunction',
   'unreliable', // any other code meaning the value may be wrong, including unrecognized codes
+  'reversedFlow', // negative flow: the river running backward, for example toward pumped storage (#116)
 ]);
 export type Qualifier = z.infer<typeof Qualifier>;
 
