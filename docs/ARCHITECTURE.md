@@ -498,6 +498,7 @@ MVP tables:
 - `source_cache`: `key` (pk), `payload` (jsonb, normalized data), `fetched_at`, `expires_at`.
 - `request_gates`: `name` (pk, e.g. `nominatim`), `last_start` (the latest reserved start time). One row per rate-limited service.
 - `error_events`: `id`, `occurred_at`, `level` (`warn` or `error`), `message`, `details` (jsonb), `route`. Kept 30 days. See Error logging.
+- `forecast_archive`: `source` (`nwps`), `ref` (the NWPS gauge), `issued_at`, `recorded_at`, `points` (jsonb, the hourly forecast as the adapter returned it). One row per gauge and issue time. Written when the app fetches a new NWPS forecast, kept 90 days and pruned on write, at most once an hour (`createForecastArchive`, #81). NWPS serves only its current forecast, so this is the only way to compare a forecast with what was measured later. Fetching is on demand, so only forecasts fetched while someone viewed a location are kept.
 - `gauges`: `ref` (pk, e.g. `usgs:USGS-01170500`, `nwps:MNTM3`), `source`, `name`, `lat`, `lon`, `metrics` (text[]), `has_flow_forecast` (bool), `linked_ref` (the matching gauge in the other source, when known), `updated_at`. Populated lazily from nearby searches.
 
 Migrations via `drizzle-kit`, committed to the repo:

@@ -7,6 +7,7 @@ import {
   index,
   jsonb,
   pgTable,
+  primaryKey,
   text,
   timestamp,
 } from 'drizzle-orm/pg-core';
@@ -69,5 +70,24 @@ export const errorEvents = pgTable(
   (t) => [
     check('error_events_level', sql`${t.level} in ('warn', 'error')`),
     index('error_events_occurred_at').on(t.occurredAt),
+  ],
+);
+
+// Each NWPS flow forecast the app fetched, kept 90 days, so forecasts can be compared with what
+// was measured (#81). NWPS serves only its current forecast. One row per gauge and issue time.
+// Only forecasts fetched while someone viewed a location are here (decision 0006).
+export const forecastArchive = pgTable(
+  'forecast_archive',
+  {
+    source: text('source').notNull(), // 'nwps'
+    ref: text('ref').notNull(), // the NWPS gauge, e.g. 'MNTM3'
+    issuedAt: timestamp('issued_at', { withTimezone: true }).notNull(),
+    recordedAt: timestamp('recorded_at', { withTimezone: true }).notNull().defaultNow(),
+    points: jsonb('points').notNull(), // hourly ForecastPoint[] as the adapter returned them
+  },
+  (t) => [
+    primaryKey({ columns: [t.source, t.ref, t.issuedAt] }),
+    check('forecast_archive_source', sql`${t.source} in ('nwps')`),
+    index('forecast_archive_issued_at').on(t.issuedAt),
   ],
 );
