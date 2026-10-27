@@ -263,7 +263,9 @@ The window is measured from the sunrise and sunset of the solar day containing t
 
 Each hour's `light` is the level at the middle of the hour (`time + 30 min`): `daylight` between sunrise and sunset, `twilight` between civil dawn and sunrise or sunset and civil dusk, `dark` otherwise. UI copy describes it ("before sunrise, twilight") and never turns it into an instruction such as "lights required."
 
-Then: any failure makes the hour `outside`. Otherwise any unknown makes it `unknown`. Only an hour with every applicable threshold present, usable, and passing is `within`. An outside result does not hide unknowns; both lists are returned so the UI can explain both.
+A flow value withheld as `forecastDisagrees` that carries the set-aside forecast (`provenance.setAside`) is still compared, as a value the app doubts, if that forecast is within its maximum age (decision 0020). Its threshold is listed in `doubtful`, and a failure on it is marked `doubtful: true`.
+
+Then: any failure makes the hour `outside`, including one on a doubted value. Otherwise any unknown makes it `unknown`. Otherwise any doubted value makes it `probablyWithin`. Only an hour with every applicable threshold present, usable, trusted and passing is `within`. An outside result does not hide unknowns; both lists are returned so the UI can explain both.
 
 For `combinedTempF`, the hour is unknown if either component is unknown. The unknown entry names the component's metric (for example `waterTemp`) and its reason, so the UI can say which reading is the problem. If both are unusable, it names air temperature.
 

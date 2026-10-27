@@ -16,7 +16,7 @@ A web app that shows rowers river flow, water temperature, wind, weather, and da
 ## Hard rules
 
 1. **Never present conditions as safe or unsafe.** No verdicts, no "go / no go," no recommendations to row, no default limits. Use "within [rule set]'s limits" / "outside" / "unknown."
-2. **Missing data is never treated as acceptable.** Unknown is its own state, shown clearly.
+2. **Missing data is never treated as acceptable.** Unknown is its own state, shown clearly. A value the app doubts is labeled with how sure it is and why ("probably within", decision 0020), and every answer says forecasts can be wrong.
 3. **Store and transmit SI units.** Convert only for display. Exception: combined air plus water temperature is computed in °F.
 4. **Business logic goes in `packages/core` or `apps/api`,** never only in `apps/web`.
 5. **Parse every external response with Zod** inside the adapter. Convert units inside the adapter.

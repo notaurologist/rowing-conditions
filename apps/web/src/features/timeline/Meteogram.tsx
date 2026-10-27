@@ -235,6 +235,12 @@ function Plot({ row, n, sel }: { row: MeteogramRow; n: number; sel: number }) {
 const STATUS_WORDS = {
   within: { symbol: '●', long: (name: string) => `Within ${name}’s limits`, short: 'Within' },
   outside: { symbol: '○', long: () => 'Outside', short: 'Outside' },
+  // A forecast the app doubts says within (decision 0020).
+  probablyWithin: {
+    symbol: '~',
+    long: (name: string) => `Probably within ${name}’s limits`,
+    short: 'Probably',
+  },
   unknown: { symbol: '?', long: () => 'Unknown', short: 'Unknown' },
 } as const;
 
@@ -339,7 +345,7 @@ export function Meteogram({ model }: { model: MeteogramModel }) {
               {model.windows.map((w, i) => (
                 <div
                   key={w.from}
-                  className="mg-window"
+                  className={`mg-window${w.probable ? ' mg-window-probable' : ''}`}
                   style={{ left: pct(w.from, n), width: pct(w.to - w.from, n) }}
                 >
                   <span

@@ -23,3 +23,4 @@ One file per decision. Format: context, decision, consequences. Never edit a pas
 | 0017 | Vercel for the web app and API, Neon for Postgres | Accepted |
 | 0018 | Record API errors in Postgres | Accepted |
 | 0019 | Historical weather for backtesting from Open-Meteo and the IEM ASOS archive | Accepted |
+| 0020 | Degrees of certainty, and "probably within" | Accepted |

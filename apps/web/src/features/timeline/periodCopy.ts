@@ -32,6 +32,7 @@ const UNKNOWN_WORDS: Record<UnknownReason, (name: string) => string> = {
 export function reasonText(reason: PeriodReason): string {
   const name = metricName(reason.metric);
   if (reason.kind === 'unknown') return UNKNOWN_WORDS[reason.reason](name);
+  if (reason.kind === 'doubtful') return `${name} from a forecast that doesn't match the gauge`;
   const amount = (v: number) => `${formatNumber(v, reason.unit)} ${unitSymbol(reason.unit)}`;
   const direction = reason.comparison === 'max' ? 'up to' : 'down to';
   return `${name} ${direction} ${amount(reason.worst)} (limit: ${limitWording(reason.comparison, reason.boundary)} ${amount(reason.limit)})`;

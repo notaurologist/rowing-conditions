@@ -642,3 +642,87 @@ describe('evaluateTimeline', () => {
     expect(result.unavailableMetrics).toEqual([]);
   });
 });
+
+describe('degrees of certainty: a set-aside flow forecast (decision 0020)', () => {
+  const maxFlow = limit('flow', 'max', 20, 'kcfs');
+  // Flow withheld for disagreeing with the gauge, carrying the set-aside forecast.
+  const doubted = (kcfs: number, issued = ago(6)) =>
+    point(
+      MIDDAY,
+      { ...calm, flow: null },
+      {
+        flow: {
+          withheld: 'forecastDisagrees',
+          setAside: { value: toSI(kcfs, 'kcfs'), asOf: issued },
+        },
+      },
+    );
+
+  it('is probably within when the doubted forecast meets the limit', () => {
+    const r = hour(doubted(5), ruleSet([maxWind15, maxFlow]));
+    expect(r.status).toBe('probablyWithin');
+    expect(r.unknowns).toEqual([]);
+    expect(r.doubtful).toEqual([
+      { thresholdId: maxFlow.id, metric: 'flow', reason: 'forecastDisagrees' },
+    ]);
+  });
+
+  it('is outside when the doubted forecast is past the limit, with the failure marked', () => {
+    const r = hour(doubted(25), ruleSet([maxWind15, maxFlow]));
+    expect(r.status).toBe('outside');
+    expect(r.failures).toEqual([
+      {
+        kind: 'limit',
+        thresholdId: maxFlow.id,
+        metric: 'flow',
+        value: 25,
+        limit: 20,
+        unit: 'kcfs',
+        doubtful: true,
+      },
+    ]);
+  });
+
+  it('stays unknown when another limit is unknown, since nothing is known about that one', () => {
+    const p = doubted(5);
+    p.values.waterTemp = null;
+    expect(hour(p, ruleSet([maxFlow, minWater10C])).status).toBe('unknown');
+  });
+
+  it('is outside when a trusted value fails, whatever the doubted one says', () => {
+    const p = doubted(5);
+    p.values.windSpeed = toSI(20, 'mph');
+    expect(hour(p, ruleSet([maxWind15, maxFlow])).status).toBe('outside');
+  });
+
+  it('treats a doubted forecast older than the forecast maximum age as stale', () => {
+    const r = hour(doubted(5, ago(40)), ruleSet([maxFlow]));
+    expect(r.status).toBe('unknown');
+    expect(r.unknowns).toEqual([{ thresholdId: maxFlow.id, metric: 'flow', reason: 'stale' }]);
+  });
+
+  it('is unknown with no set-aside forecast for the hour', () => {
+    const p = point(MIDDAY, { flow: null }, { flow: { withheld: 'forecastDisagrees' } });
+    expect(hour(p, ruleSet([maxFlow])).unknowns).toEqual([
+      { thresholdId: maxFlow.id, metric: 'flow', reason: 'forecastDisagrees' },
+    ]);
+  });
+
+  it('never uses a set-aside value for any other withheld reason', () => {
+    const p = point(
+      MIDDAY,
+      { flow: null },
+      { flow: { withheld: 'noForecast', setAside: { value: toSI(5, 'kcfs'), asOf: ago(6) } } },
+    );
+    expect(hour(p, ruleSet([maxFlow])).status).toBe('unknown');
+  });
+
+  it('is plain within when nothing is doubted, with no doubtful list', () => {
+    const r = hour(
+      point(MIDDAY, { ...calm, flow: toSI(5, 'kcfs') }),
+      ruleSet([maxWind15, maxFlow]),
+    );
+    expect(r.status).toBe('within');
+    expect(r).not.toHaveProperty('doubtful');
+  });
+});

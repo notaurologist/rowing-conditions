@@ -44,6 +44,9 @@ export const ValueProvenance = z.object({
   qualifiers: z.array(Qualifier).optional(),
   // Why a null value was left out on purpose, so evaluation can say so rather than 'missing'.
   withheld: z.enum(['noForecast', 'forecastDisagrees']).optional(),
+  // With withheld 'forecastDisagrees': the set-aside forecast for this hour and when it was issued.
+  // Evaluation may use it for "probably within" (decision 0020), never for plain within.
+  setAside: z.object({ value: z.number(), asOf: UtcTime }).optional(),
 });
 export type ValueProvenance = z.infer<typeof ValueProvenance>;
 

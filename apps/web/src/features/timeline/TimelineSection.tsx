@@ -8,6 +8,7 @@ import { type MeteogramModel, meteogramModel, type StatusStrip } from './meteogr
 const STATUS_TEXT = {
   within: 'Within limits',
   outside: 'Outside limits',
+  probablyWithin: 'Probably within limits',
   unknown: 'Unknown',
 } as const;
 

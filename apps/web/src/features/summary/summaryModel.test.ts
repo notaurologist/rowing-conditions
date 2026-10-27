@@ -223,3 +223,70 @@ describe('summaryModel with several rule sets', () => {
     expect(summary().others).toEqual([]);
   });
 });
+
+describe('summaryModel degrees of certainty (decision 0020)', () => {
+  // Flow withheld after the current hour because the forecast disagrees with the gauge, with the
+  // set-aside forecast at 2,000 cfs: under Club A's 3,100 cfs limit.
+  function doubted(): Conditions {
+    const conditions = structuredClone(montague) as Conditions;
+    const asOf = '2026-10-26T12:15:00.000Z';
+    for (const [i, p] of conditions.forecast.entries()) {
+      if (i === 0) continue;
+      p.values.flow = null;
+      p.provenance.flow = {
+        kind: 'observation',
+        asOf,
+        source: 'usgs',
+        withheld: 'forecastDisagrees',
+        setAside: { value: toInternal('flow', 2000, 'cfs'), asOf: '2026-10-26T10:00:00.000Z' },
+      };
+    }
+    conditions.flowSetAside = [
+      {
+        gaugeRef: 'usgs:USGS-01170500',
+        issuedAt: '2026-10-26T10:00:00.000Z',
+        measured: toInternal('flow', 3750, 'cfs'),
+        measuredAt: asOf,
+        forecastForMeasurement: toInternal('flow', 2600, 'cfs'),
+        points: [],
+      },
+    ];
+    return conditions;
+  }
+
+  it('offers a probable window when no hour is plainly within, and says why', () => {
+    const s = summary(clubA, { conditions: doubted() });
+    expect(s.headline).toMatch(/^Probably within Club A’s limits/);
+    expect(s.detail.join(' ')).toContain(
+      'It rests on the NWPS flow forecast, which doesn’t match the gauge: it had 2,600 cfs for 8 AM; the gauge measured 3,750 cfs.',
+    );
+  });
+
+  it('words probable periods in the days', () => {
+    const s = summary(clubA, { conditions: doubted() });
+    expect(s.days.map((d) => d.text).join(' ')).toContain('Probably within from');
+    expect(s.days.map((d) => d.text).join(' ')).toContain(
+      "flow from a forecast that doesn't match the gauge",
+    );
+  });
+
+  it('puts the caveat with every answer', () => {
+    expect(summary().caveat).toBe(
+      'Forecasts can be wrong. Check conditions on the water before you go.',
+    );
+    expect(summary(clubA, { conditions: doubted() }).caveat).toBe(
+      'Forecasts can be wrong. Check conditions on the water before you go.',
+    );
+  });
+
+  it('says no hours are known to be within when the rest are unknown, not that none are', () => {
+    const conditions = doubted();
+    for (const p of conditions.forecast) {
+      const prov = p.provenance.flow;
+      if (prov) delete prov.setAside;
+    }
+    expect(summary(clubA, { conditions }).headline).toBe(
+      'No hours known to be within Club A’s limits from dawn to dusk in the next 48 hours',
+    );
+  });
+});

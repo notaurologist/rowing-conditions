@@ -10,6 +10,7 @@ import { dayLabel, formatClock, reasonText } from '../timeline/periodCopy.ts';
 export interface Summary {
   headline: string;
   detail: string[];
+  caveat?: string; // with every answer: forecasts can be wrong, and the rower decides (decision 0020)
   others: string[]; // one sentence per other attached rule set
   days: { name: string; text: string }[];
 }
@@ -23,6 +24,7 @@ export interface SummaryInput {
 
 const HOUR = 3_600_000;
 const MINUTE = 60_000;
+export const CAVEAT = 'Forecasts can be wrong. Check conditions on the water before you go.';
 // A measurement this far from the forecast for its hour is worth saying out loud.
 const DISAGREEMENT = 0.1;
 function capitalize(s: string) {
@@ -100,15 +102,39 @@ function dayPhrase(time: string, now: string, timeZone: string | null): string {
 
 function headline(evaluated: LocationEvaluation, now: string, timeZone: string | null): string {
   const name = evaluated.ruleSet.name;
-  const next = nextWindow(evaluated.periods, now);
-  if (!next) return `No hours within ${name}’s limits from dawn to dusk in the next 48 hours`;
+  // A within window first; failing that, a probable one from a forecast the app doubts (0020).
+  const sure = nextWindow(evaluated.periods, now);
+  const next = sure ?? nextWindow(evaluated.periods, now, 'probablyWithin');
+  if (!next) {
+    const unsure = evaluated.periods.some(
+      (p) => p.status === 'unknown' && Date.parse(p.end) > Date.parse(now),
+    );
+    return unsure
+      ? `No hours known to be within ${name}’s limits from dawn to dusk in the next 48 hours`
+      : `No hours within ${name}’s limits from dawn to dusk in the next 48 hours`;
+  }
+  const status = sure ? 'Within' : 'Probably within';
   const { window } = next;
   const clock = (t: string) => formatClock(t, timeZone);
   if (Date.parse(window.start) <= Date.parse(now)) {
     const sameDay = dayLabel(window.end, now, timeZone) === dayLabel(now, now, timeZone);
-    return `Within ${name}’s limits now, until ${sameDay ? '' : `${dayPhrase(window.end, now, timeZone)} `}${clock(window.end)}`;
+    return `${status} ${name}’s limits now, until ${sameDay ? '' : `${dayPhrase(window.end, now, timeZone)} `}${clock(window.end)}`;
   }
-  return `Within ${name}’s limits ${dayPhrase(window.start, now, timeZone)}, ${clock(window.start)} to ${clock(window.end)}`;
+  return `${status} ${name}’s limits ${dayPhrase(window.start, now, timeZone)}, ${clock(window.start)} to ${clock(window.end)}`;
+}
+
+// Why a probable window is only probable: the set-aside flow forecast and what it disagreed with.
+function doubtNote(conditions: Conditions, evaluated: LocationEvaluation, now: string): string[] {
+  if (nextWindow(evaluated.periods, now)) return [];
+  if (!nextWindow(evaluated.periods, now, 'probablyWithin')) return [];
+  const ref = evaluated.flowGauge?.ref ?? conditions.gauge?.ref;
+  const setAside = conditions.flowSetAside.find((f) => f.gaugeRef === ref);
+  if (!setAside) return ['It rests on a flow forecast that doesn’t match the gauge.'];
+  const cfs = (v: number) => `${formatNumber(displayValue('flow', v, 'cfs'), 'cfs')} cfs`;
+  const hour = new Date(Math.floor(Date.parse(setAside.measuredAt) / HOUR) * HOUR).toISOString();
+  return [
+    `It rests on the NWPS flow forecast, which doesn’t match the gauge: it had ${cfs(setAside.forecastForMeasurement)} for ${formatClock(hour, conditions.location.timezone)}; the gauge measured ${cfs(setAside.measured)}.`,
+  ];
 }
 
 // Periods are cut to the minute at civil dawn and dusk, so an edge within a minute of one is it.
@@ -130,7 +156,14 @@ function periodSentence(p: Period, conditions: Conditions): string {
   const from = point(p.start);
   const to = point(p.end);
   const span = `from ${from}${from.includes(',') ? ',' : ''} to ${to}`;
-  const status = p.status === 'within' ? 'Within' : p.status === 'outside' ? 'Outside' : 'Unknown';
+  const status =
+    p.status === 'within'
+      ? 'Within'
+      : p.status === 'probablyWithin'
+        ? 'Probably within'
+        : p.status === 'outside'
+          ? 'Outside'
+          : 'Unknown';
   const reasons = p.reasons.map(reasonText).join('; ');
   return `${status} ${span}${reasons ? `: ${reasons}` : ''}.`;
 }
@@ -209,10 +242,17 @@ export function summaryModel({ conditions, evaluated, alongside, now }: SummaryI
       days: daylightDays(conditions, now),
     };
   }
-  const window = nextWindow(evaluated.periods, now)?.window;
+  const window = (
+    nextWindow(evaluated.periods, now) ?? nextWindow(evaluated.periods, now, 'probablyWithin')
+  )?.window;
   return {
     headline: headline(evaluated, now, tz),
-    detail: [...deciding(evaluated, window), ...measurementNote(conditions, evaluated)],
+    detail: [
+      ...deciding(evaluated, window),
+      ...doubtNote(conditions, evaluated, now),
+      ...measurementNote(conditions, evaluated),
+    ],
+    caveat: CAVEAT,
     others: rest,
     days: days(evaluated, conditions, now),
   };

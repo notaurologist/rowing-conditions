@@ -94,7 +94,7 @@ export interface MeteogramModel {
   // One strip per attached rule set, in the location's order. The selected one also drives the
   // limit lines and windows.
   statuses: StatusStrip[];
-  windows: { from: number; to: number; label: string }[];
+  windows: { from: number; to: number; label: string; probable?: boolean }[]; // probable: dashed
   days: { at: number; label: string }[];
   ticks: { at: number; label: string }[];
   defaultHour: number;
@@ -592,9 +592,14 @@ export function meteogramModel(input: MeteogramInput): MeteogramModel {
 
   const windows: MeteogramModel['windows'] = [];
   if (evaluated?.timeline.hasLimits) {
-    const next = nextWindow(evaluated.periods, now);
+    // Within windows, and probable ones with dashed brackets (decision 0020). The next is the
+    // earliest within window, or the earliest probable one when there's no within window.
+    const next =
+      nextWindow(evaluated.periods, now) ?? nextWindow(evaluated.periods, now, 'probablyWithin');
     for (const p of evaluated.periods) {
-      if (p.status !== 'within' || Date.parse(p.end) <= Date.parse(now)) continue;
+      if (p.status !== 'within' && p.status !== 'probablyWithin') continue;
+      if (Date.parse(p.end) <= Date.parse(now)) continue;
+      const probable = p.status === 'probablyWithin';
       const range = compactRange(p.start, p.end, timeZone);
       const isNext = next?.window.start === p.start;
       const day = new Date(p.start).toLocaleDateString('en-US', {
@@ -604,7 +609,10 @@ export function meteogramModel(input: MeteogramInput): MeteogramModel {
       windows.push({
         from: Math.max(0, at(p.start)),
         to: Math.min(n, at(p.end)),
-        label: isNext ? `Next window · ${range}` : `${day} · ${range}`,
+        label: isNext
+          ? `${probable ? 'Probable window' : 'Next window'} · ${range}`
+          : `${day} · ${probable ? 'probable · ' : ''}${range}`,
+        ...(probable ? { probable: true } : {}),
       });
     }
   }

@@ -142,7 +142,17 @@ export function riverHours(
           set(metric, value, provenance);
         } else {
           const withheld = metric === 'flow' && setAside ? 'forecastDisagrees' : 'noForecast';
-          set(metric, null, { ...provenance, withheld });
+          // The set-aside forecast travels with the hour, for "probably within" (decision 0020).
+          const doubted = withheld === 'forecastDisagrees' ? forecastByTime.get(ms) : undefined;
+          const doubtedValue = doubted?.values.flow;
+          const doubtedAsOf = doubted?.provenance.flow?.asOf;
+          set(metric, null, {
+            ...provenance,
+            withheld,
+            ...(typeof doubtedValue === 'number' && doubtedAsOf
+              ? { setAside: { value: doubtedValue, asOf: doubtedAsOf } }
+              : {}),
+          });
         }
       }
     }
