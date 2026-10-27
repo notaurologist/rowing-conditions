@@ -11,6 +11,7 @@ export const Metric = z.enum([
   'windDirection', // meteorological: the direction the wind comes from
   'precipChance',
   'combinedTempF',
+  'dewPoint', // context for fog (#42); no limits use it
 ]);
 export type Metric = z.infer<typeof Metric>;
 
@@ -41,6 +42,7 @@ export const metricUnits: Record<Metric, readonly Unit[]> = {
   windDirection: [],
   precipChance: ['percent'],
   combinedTempF: ['degF'],
+  dewPoint: [], // context only: never a limit
 };
 
 // Metrics with a true zero, where a limit of zero or less is meaningless.
@@ -73,6 +75,7 @@ export const Qualifier = z.enum([
   'iceAffected',
   'equipmentMalfunction',
   'unreliable', // any other code meaning the value may be wrong, including unrecognized codes
+  'reversedFlow', // negative flow: the river running backward, for example toward pumped storage (#116)
 ]);
 export type Qualifier = z.infer<typeof Qualifier>;
 

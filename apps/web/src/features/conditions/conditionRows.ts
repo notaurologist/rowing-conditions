@@ -88,6 +88,7 @@ const QUALIFIER_LABELS: Record<Qualifier, string> = {
   iceAffected: 'Ice affected',
   equipmentMalfunction: 'Equipment malfunction',
   unreliable: 'Flagged as possibly wrong',
+  reversedFlow: 'Flowing backward',
 };
 
 const SOURCE_NAMES: Record<SourceId, string> = {

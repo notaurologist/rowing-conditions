@@ -24,6 +24,7 @@ export const maxAgeHours: Record<InputMetric, Record<ValueProvenance['kind'], nu
   windGust: { observation: 12, forecast: 12 },
   windDirection: { observation: 12, forecast: 12 },
   precipChance: { observation: 12, forecast: 12 },
+  dewPoint: { observation: 12, forecast: 12 },
 };
 
 // Readings with these qualifiers are shown but never compared against a limit (#41, #13).
@@ -32,6 +33,7 @@ export const disqualifyingQualifiers: readonly Qualifier[] = [
   'equipmentMalfunction',
   'estimated',
   'unreliable',
+  'reversedFlow',
 ];
 
 export type Freshness = 'fresh' | 'stale' | 'future';
@@ -71,6 +73,9 @@ function usable(point: ForecastPoint, metric: InputMetric, ctx: HourContext): Us
   const provenance = point.provenance[metric];
   if (value === null || value === undefined || provenance === undefined) {
     return { ok: false, metric, reason: provenance?.withheld ?? 'missing' };
+  }
+  if (provenance.qualifiers?.includes('reversedFlow')) {
+    return { ok: false, metric, reason: 'reversed' };
   }
   if (provenance.qualifiers?.some((q) => disqualifyingQualifiers.includes(q))) {
     return { ok: false, metric, reason: 'qualified' };

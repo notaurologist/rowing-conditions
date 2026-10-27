@@ -325,3 +325,79 @@ describe('getAlerts', () => {
     });
   });
 });
+
+describe('getHourlyForecast: fog and dew point (#42)', () => {
+  // Medford, OR, recorded with patchy fog at 18:00 on the 28th and from 04:00 on the 29th,
+  // turning to areas of fog from 06:00 to 12:00.
+  const medford = (weather?: unknown) => {
+    const body = loadFixture('nws/grid-mfr-90-80').body as { properties: Record<string, unknown> };
+    if (weather !== undefined) body.properties.weather = weather;
+    return adapter(
+      [
+        {
+          path: '/points/42.6,-72.55',
+          respond: json({
+            properties: { gridId: 'MFR', gridX: 90, gridY: 80, timeZone: 'America/Los_Angeles' },
+          }),
+        },
+        { path: '/gridpoints/MFR/90,80', respond: json(body) },
+      ],
+      new Date('2026-10-27T18:40:00Z'),
+    ).nws.getHourlyForecast(LAT, LON, 48);
+  };
+  const at = (points: ForecastPoint[], time: string) => points.find((p) => p.time === time);
+
+  it("gives each hour the forecaster's fog coverage, or null for none", async () => {
+    const result = await medford();
+    if (!result.ok) throw new Error('expected ok');
+    expect(at(result.data, '2026-10-27T18:00:00.000Z')?.fog).toBeNull(); // rain, no fog
+    expect(at(result.data, '2026-10-28T17:00:00.000Z')?.fog).toBeNull();
+    expect(at(result.data, '2026-10-28T18:00:00.000Z')?.fog).toBe('patchy');
+    expect(at(result.data, '2026-10-29T05:00:00.000Z')?.fog).toBe('patchy');
+    expect(at(result.data, '2026-10-29T06:00:00.000Z')?.fog).toBe('areas');
+    expect(at(result.data, '2026-10-29T11:00:00.000Z')?.fog).toBe('areas');
+    expect(result.data.filter((p) => p.fog !== null && p.fog !== undefined)).toHaveLength(9);
+  });
+
+  it('leaves fog unknown for hours the weather layer does not cover, never "no fog"', async () => {
+    const result = await medford({
+      values: [
+        {
+          validTime: '2026-10-28T18:00:00+00:00/PT1H',
+          value: [{ coverage: 'patchy', weather: 'fog' }],
+        },
+      ],
+    });
+    if (!result.ok) throw new Error('expected ok');
+    expect(at(result.data, '2026-10-28T18:00:00.000Z')?.fog).toBe('patchy');
+    expect(at(result.data, '2026-10-28T19:00:00.000Z')).not.toHaveProperty('fog');
+  });
+
+  it('counts fog without a coverage word as fog', async () => {
+    const result = await medford({
+      values: [
+        {
+          validTime: '2026-10-27T18:00:00+00:00/PT1H',
+          value: [{ coverage: null, weather: 'fog' }],
+        },
+      ],
+    });
+    if (!result.ok) throw new Error('expected ok');
+    expect(result.data[0]?.fog).toBe('unspecified');
+  });
+
+  it("reads dew point in °C with the forecast's provenance", async () => {
+    const result = await medford();
+    if (!result.ok) throw new Error('expected ok');
+    const first = result.data[0];
+    expect(typeof first?.values.dewPoint).toBe('number');
+    expect(first?.provenance.dewPoint).toMatchObject({ kind: 'forecast', source: 'nws' });
+  });
+
+  it('has no fog field and no dew point where the grid lacks them', async () => {
+    const result = await adapter().nws.getHourlyForecast(LAT, LON, 3);
+    if (!result.ok) throw new Error('expected ok');
+    expect(result.data[0]).not.toHaveProperty('fog');
+    expect(result.data[0]?.provenance).not.toHaveProperty('dewPoint');
+  });
+});

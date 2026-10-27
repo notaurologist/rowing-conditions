@@ -52,6 +52,7 @@ const fixtures: Record<string, string> = {
   'nwps/stageflow-nfdm3': stageFlowUrl('NFDM3'), // no forecast: sentinel issuedTime, -999 flows
   'nws/points-turners-falls': pointsUrl(42.6, -72.55),
   'nws/grid-box-20-103': gridUrl('BOX', 20, 103), // has PT3H and P1D intervals
+  'nws/grid-mfr-90-80': gridUrl('MFR', 90, 80), // Medford, OR: fog (patchy, areas) and dew point
   'nws/stations-box-20-103': stationsUrl('BOX', 20, 103),
   'nws/observation-kore': latestObservationUrl('KORE'), // windGust null: no gust reported
   'nws/alerts-turners-falls': alertsUrl(42.6, -72.55), // usually empty
@@ -92,23 +93,27 @@ for (const name of ['nwps/stageflow-mntm3', 'nwps/stageflow-nfdm3']) {
   };
 }
 
-// NWS grid data has about 60 series; the adapter reads five.
+// NWS grid data has about 60 series; the adapter reads these.
 const NWS_SERIES = [
   'temperature',
   'windSpeed',
   'windGust',
   'windDirection',
   'probabilityOfPrecipitation',
+  'dewpoint',
+  'weather',
 ];
-trims['nws/grid-box-20-103'] = {
-  note: `properties trimmed to updateTime, validTimes, and ${NWS_SERIES.join(', ')}`,
-  apply: (body) => {
-    const b = body as { properties: Record<string, unknown> };
-    const keep = ['updateTime', 'validTimes', ...NWS_SERIES];
-    b.properties = Object.fromEntries(keep.map((k) => [k, b.properties[k]]));
-    return b;
-  },
-};
+for (const name of ['nws/grid-box-20-103', 'nws/grid-mfr-90-80']) {
+  trims[name] = {
+    note: `properties trimmed to updateTime, validTimes, and ${NWS_SERIES.join(', ')}`,
+    apply: (body) => {
+      const b = body as { properties: Record<string, unknown> };
+      const keep = ['updateTime', 'validTimes', ...NWS_SERIES];
+      b.properties = Object.fromEntries(keep.map((k) => [k, b.properties[k]]));
+      return b;
+    },
+  };
+}
 for (const [name, count] of [
   ['nws/stations-box-20-103', 5],
   ['nws/alerts-sample-ak', 3],

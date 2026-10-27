@@ -148,6 +148,8 @@ USGS marks recent data as provisional. That is normal and does not affect evalua
 
 USGS also flags maintenance, flood damage, backwater, a rating still being developed, debris, dam failure, test data, and values below what's shown ("less than", "below minimum"). These count as unreliable too, and so does any code the app doesn't recognize, so a new USGS code can never let a doubtful value through. Only codes known to be informational, such as "discontinued" or "regulated", are ignored. A "less than" value matters most for low-water minimums: the true flow is lower than the number shown. The full code table is in `DATA_SOURCES.md`. (Decided in issue #13, October 2026.)
 
+Negative flow means the river is running backward. USGS 01161280 at Northfield reports it often, from the Northfield Mountain pumped-storage station and the Turners Falls dam pool. The app shows the value with "Flowing backward" and never compares it against a limit, max or min, so those hours are unknown with that reason. (Decided in issue #116, October 2026.)
+
 ### Limits the location cannot check
 
 A limit can only be checked if some source reports its metric at that location. For example, a gauge without a water temperature sensor cannot check a water temperature minimum, and a lake in weather-only mode cannot check flow. Every hour is then unknown for that rule set. That is correct: a missing reading is never treated as passing. But the app says so once, in plain words ("Club A's water temperature limit can't be checked here: this gauge doesn't report water temperature"), instead of only showing 48 unknown hours.
@@ -163,7 +165,13 @@ So the app treats light as context by default:
 - A rule set's daylight window is optional and meant only for clubs with a hard rule. If one is set, hours entirely outside it are outside that rule set's limits, with darkness given as the reason, and windows that start or end partway through an hour are cut at the exact boundary. The editor describes it that way ("only if your club forbids rowing outside these hours").
 - When the app needs a default span of "hours you might row" (choosing which metric to chart, listing periods within limits), it uses civil dawn to civil dusk, or the rule set's window if it has one. This keeps cold, calm overnight hours from deciding the default chart while still including pre-sunrise outings in twilight.
 
-Open question: fog and visibility. The NWS grid data includes visibility and a weather layer that reports fog. Showing visibility as context, and allowing an optional minimum-visibility limit, would treat fog the same way as light. That would expand the MVP, so it is not in the plan yet.
+### Fog
+
+Fog is shown as context, like light, and never changes whether an hour is within limits (decided in #42, October 2026):
+
+- **The forecaster's call:** the NWS forecast's weather layer names fog with a coverage word ("patchy", "areas", "widespread"). Each hour shows it in words, for example "Patchy fog (NWS)". An hour the layer doesn't cover is "fog forecast unknown", never "no fog". Dense Fog Advisories already show under alerts.
+- **Dew point gap:** air temperature minus dew point, shown with the air temperature. Radiation fog forms as air cools to its dew point, so a small gap is one input to fog. No credible source gives a threshold that turns it into "fog likely", so the app shows the number only.
+- **Not used:** the NWS hourly visibility series is one flat value or missing at most grid points, so there is no visibility limit. The water-minus-air gap (steam fog) is left for later: water temperature is a single observation and many gauges don't measure it.
 
 ## Units
 

@@ -1,7 +1,7 @@
 # Product Spec
 
 Status: Draft v0.2
-Working name: TBD
+Name: Launch Window (decided in #43, October 2026). Internal names (repository, packages, storage keys) stay `rowing-conditions`.
 
 ## Overview
 
@@ -46,7 +46,7 @@ Implications for all features and copy:
 ### 2. Current conditions
 
 - Flow (discharge) and gauge height, with trend (rising, falling, stable) and rate of change, and forecast flow where available.
-- Water temperature, where the gauge reports it. Displayed prominently, since cold water is the most significant temperature risk.
+- Water temperature, where the gauge reports it. Listed first, since cold water is the most significant temperature risk, but styled like the other readings: emphasis read as a selection and as the app judging which reading matters (October 2026).
 - Wind speed, gusts, and direction.
 - Air temperature.
 - Sunrise and sunset.
@@ -64,6 +64,7 @@ The chart is a **rowing meteogram**: every element on one shared time axis, each
 - **Status:** a strip above the rows shows each span within, outside or unknown, in words, with ● within, ○ outside and ? unknown beside them where the words fit. Outside spans are striped and unknown spans dotted, so even a one-hour span is told apart without color, and the strip lines up with the hours below. The symbols only describe position against the limits; ✓ and ✕ were replaced because a check mark reads as approval (decided in #91, October 2026). With several rule sets attached, each gets its own strip, and the rows draw the selected one's limits.
 - **Windows** within the rule set's limits are bracketed above the rows and carried down through them.
 - **Latest measurements** are shown as dots against the forecast lines, so a forecast that has drifted from what's measured is visible. The lines start at the first forecast hour rather than joining the dot. A measurement far off the forecast's scale sits at the row's edge with an arrow.
+- **Fog** is the NWS forecaster's call for each hour, in words ("Patchy fog (NWS)"), in the readout and the hourly table, with the air temperature's gap to the dew point. Context only, like light (decided in #42).
 - **Light level** is shaded (twilight, night) from the exact civil dawn, sunrise, sunset and civil dusk. Light is context: crews often row before sunrise with lights, so it does not change whether an hour is within limits unless a rule set sets a hard daylight window.
 - **Readout:** one readout line shows every row's value and its margin to the limit at any hour, by pointer or by slider. Every value is also in an hourly table.
 - **Missing rows:** flow at a weather-only location gets a row that says so. Water temperature at a gauge without a sensor is left out, unless a limit needs it, when its row says it isn't measured.

@@ -557,6 +557,23 @@ describe('getConditions: forecast archive (#81)', () => {
   });
 });
 
+describe('getConditions: fog (#42)', () => {
+  it('carries the NWS fog call through to each hour, keeping unknown hours without one', async () => {
+    vi.mocked(deps.nws.getHourlyForecast).mockImplementation(async (_lat, _lon, hours: number) =>
+      ok(
+        weather(hours).map((p, i) =>
+          i === 1 ? { ...p, fog: 'patchy' } : i < 3 ? { ...p, fog: null } : p,
+        ),
+      ),
+    );
+    const r = await conditions();
+    expect(r.forecast[1]?.fog).toBe('patchy');
+    expect(r.forecast[2]?.fog).toBeNull();
+    expect(r.forecast[5]).not.toHaveProperty('fog');
+    expect(ConditionsResponse.parse(r).forecast[1]?.fog).toBe('patchy');
+  });
+});
+
 describe('getConditions: flow and gauge height trends (#73)', () => {
   const latestHeight: Reading = {
     metric: 'gaugeHeight',

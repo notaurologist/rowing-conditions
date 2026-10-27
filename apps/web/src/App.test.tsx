@@ -49,7 +49,7 @@ const turnersFalls = {
 
 describe('App', () => {
   it('renders the heading', () => {
-    expect(render()).toContain('Rowing Conditions</p>');
+    expect(render()).toContain('Launch Window</p>');
   });
 
   it('opens location setup when there are no saved locations', () => {
@@ -136,7 +136,7 @@ describe('App limits', () => {
 
   it('shows the intro on first use, before location setup', () => {
     const html = render(unseenStorage());
-    expect(html).toContain('About Rowing Conditions');
+    expect(html).toContain('About Launch Window');
     expect(html).toContain('>Continue</button>');
     expect(html).not.toContain('Add a location');
     expect(html).not.toContain('>About</button>');
@@ -146,13 +146,13 @@ describe('App limits', () => {
     const storage = unseenStorage();
     storage.saveLocations([turnersFalls]);
     const html = render(storage);
-    expect(html).toContain('About Rowing Conditions');
+    expect(html).toContain('About Launch Window');
     expect(html).not.toContain('Turners Falls</option>');
   });
 
   it('offers About in the header once the intro has been seen', () => {
     const html = render();
     expect(html).toContain('>About</button>');
-    expect(html).not.toContain('About Rowing Conditions');
+    expect(html).not.toContain('About Launch Window');
   });
 });

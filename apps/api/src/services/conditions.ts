@@ -216,6 +216,7 @@ export async function getConditions(
       time,
       values: { ...w?.values, ...r?.values },
       provenance: { ...w?.provenance, ...r?.provenance },
+      ...(w?.fog !== undefined ? { fog: w.fog } : {}),
     };
     return i === 0 ? withLatestMeasurements(point, measured) : point;
   });
