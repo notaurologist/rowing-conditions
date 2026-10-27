@@ -10,7 +10,7 @@
     },
     "api": {
       "root": "apps/api/",
-      "entrypoint": "src/vercel.ts",
+      "entrypoint": "src/vercel.mjs",
       "installCommand": "pnpm install --frozen-lockfile"
     }
   },
