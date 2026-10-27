@@ -470,3 +470,26 @@ describe('meteogramModel with a rule set that names its flow gauge', () => {
     });
   });
 });
+
+describe('course wind (#103)', () => {
+  const course = {
+    points: [
+      [42.6, -72.55],
+      [42.609, -72.55],
+    ] as [number, number][],
+    notes: 'Keep to the east bank going upstream.',
+  };
+
+  it('words the wind along a saved course for each hour, with its notes', () => {
+    const m = model({ location: { ...location, course } });
+    expect(m.course?.words).toHaveLength(m.hours.length);
+    expect(m.course?.words[0]).toMatch(
+      /^(Out: .*\. Back: .*\.|Calm on the course|Course wind unknown)$/,
+    );
+    expect(m.course?.notes).toBe('Keep to the east bank going upstream.');
+  });
+
+  it('has no course without one saved', () => {
+    expect(model().course).toBeUndefined();
+  });
+});

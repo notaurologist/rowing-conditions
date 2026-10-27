@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { SourceResult } from './adapters/http.ts';
 import type { FlowSource } from './adapters/types.ts';
 import { createApp, DEFAULT_RADIUS_KM, MAX_FLOW_GAUGES, MAX_RADIUS_KM } from './app.ts';
+import type { SnapCourse } from './services/courseSnap.ts';
 
 const montague: Gauge = {
   ref: 'usgs:USGS-01170500',
@@ -263,6 +264,66 @@ describe('GET /places/search', () => {
     expect(await res.json()).toEqual({
       error: { source: 'nominatim', kind: 'timeout', message: 'timed out' },
     });
+  });
+});
+
+describe('GET /course/snap (#103)', () => {
+  const path = '/course/snap?startLat=42.605&startLon=-72.5448&turnLat=42.6422&turnLon=-72.4819';
+  const snapApp = (snapCourse?: SnapCourse) =>
+    createApp({
+      usgs: fakeUsgs(),
+      conditions: fakeConditions(),
+      ...(snapCourse ? { snapCourse } : {}),
+    });
+
+  it('returns the course following the river', async () => {
+    const points: [number, number][] = [
+      [42.6048, -72.5454],
+      [42.642, -72.4825],
+    ];
+    const snapCourse = vi.fn<SnapCourse>(async () => ({ ok: true, points }));
+    const res = await snapApp(snapCourse).request(path);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ points });
+    expect(snapCourse).toHaveBeenCalledWith([42.605, -72.5448], [42.6422, -72.4819]);
+  });
+
+  it.each([
+    ['noRiver', 'There is no mapped river within 300 m of the start or the turn.'],
+    ['notConnected', "aren't on the same mapped river"],
+    ['tooFar', 'more than 30 km apart'],
+  ] as const)('explains %s in words, as 422', async (reason, words) => {
+    const res = await snapApp(async () => ({ ok: false, reason })).request(path);
+    expect(res.status).toBe(422);
+    const body = (await res.json()) as { error: { kind: string; message: string } };
+    expect(body.error.kind).toBe(reason);
+    expect(body.error.message).toContain(words);
+  });
+
+  it('reports a failed source as 502', async () => {
+    const error = { source: 'overpass' as const, kind: 'timeout' as const, message: 'timed out' };
+    const res = await snapApp(async () => ({ ok: false, reason: 'sourceError', error })).request(
+      path,
+    );
+    expect(res.status).toBe(502);
+    expect(await res.json()).toEqual({
+      error: {
+        source: 'overpass',
+        kind: 'timeout',
+        message: "OpenStreetMap's river data is busy right now. Try again in a few minutes.",
+      },
+    });
+  });
+
+  it('rejects missing or out-of-range points', async () => {
+    const snapCourse = vi.fn<SnapCourse>();
+    expect(
+      (await snapApp(snapCourse).request('/course/snap?startLat=42.6&startLon=-72.5')).status,
+    ).toBe(400);
+    expect(
+      (await snapApp(snapCourse).request(path.replace('turnLat=42.6422', 'turnLat=95'))).status,
+    ).toBe(400);
+    expect(snapCourse).not.toHaveBeenCalled();
   });
 });
 

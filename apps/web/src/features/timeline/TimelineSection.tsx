@@ -28,6 +28,7 @@ function HourTable({ model }: { model: MeteogramModel }) {
             <tr>
               <th scope="col">Hour</th>
               <th scope="col">Light</th>
+              {model.course && <th scope="col">Course wind</th>}
               {model.statuses.map((strip) => (
                 <th key={strip.ruleSetId} scope="col">
                   {strip.name}
@@ -45,6 +46,7 @@ function HourTable({ model }: { model: MeteogramModel }) {
               <tr key={h.time}>
                 <th scope="row">{h.label}</th>
                 <td>{h.light}</td>
+                {model.course && <td>{model.course.words[i]}</td>}
                 {model.statuses.map((strip) => (
                   <td key={strip.ruleSetId}>{statusAt(strip, i)}</td>
                 ))}
@@ -120,6 +122,14 @@ export function TimelineSection({ conditions, location, evaluated, alongside, un
           {model.statuses.some((st) => st.spans.length > 0) &&
             ' In the status strip, outside hours are striped and unknown hours dotted.'}
         </p>
+        {model.course && (
+          <p>
+            Course wind is the forecast wind against the course out and back: headwind within 45° of
+            dead ahead, tailwind within 45° of dead astern, crosswind between. Banks and trees can
+            shelter parts of the river; the forecast doesn't see that.
+            {model.course.notes && ` Course notes: ${model.course.notes}`}
+          </p>
+        )}
         {flow && (
           <p>
             {flow.kind === 'forecast'

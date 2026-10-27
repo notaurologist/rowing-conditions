@@ -195,6 +195,14 @@ Chosen by the owner for location search in #25. Checked against the live API on 
 
 ---
 
+## OpenStreetMap Overpass API (river centerlines for courses)
+
+Used only to set up a course (#103): `GET https://overpass-api.de/api/interpreter?data=…` with the query `way["waterway"~"^(river|canal)$"](box);out body geom;`. `out body geom` returns each way's node ids (to join ways where they share a node) and coordinates in parallel lists; a coordinate can be null at the box edge.
+
+- **Usage policy:** identify the app with a User-Agent (the API sends `NWS_USER_AGENT`), keep queries small, and expect 429/502/504 when the public server is busy. The adapter retries once after 3 s on a 5xx.
+- **Speed:** the query for about 12 by 10 km around Turners Falls took 32 to 34 s on October 27, 2026, and failed with 502 twice. The adapter waits up to 60 s. Results are cached 30 days by box, since rivers don't move.
+- **Data:** OpenStreetMap, © OpenStreetMap contributors, under the ODbL. The map already shows that attribution. No rowing courses are mapped near Turners Falls or on the Charles (checked October 27, 2026), but river centerlines are mapped everywhere in the US.
+
 ## Sunrise and sunset
 
 Computed locally with the `suncalc` library. No external API.

@@ -424,6 +424,7 @@ export function Meteogram({ model }: { model: MeteogramModel }) {
             {model.hours[hour]?.label} · {model.hours[hour]?.light.toLowerCase()}
           </span>
         </label>
+        {model.course && <p className="mg-course">Course: {model.course.words[hour]}</p>}
       </div>
     </div>
   );

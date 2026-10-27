@@ -64,6 +64,7 @@ The chart is a **rowing meteogram**: every element on one shared time axis, each
 - **Status:** a strip above the rows shows each span within, outside or unknown, in words, with ● within, ○ outside and ? unknown beside them where the words fit. Outside spans are striped and unknown spans dotted, so even a one-hour span is told apart without color, and the strip lines up with the hours below. The symbols only describe position against the limits; ✓ and ✕ were replaced because a check mark reads as approval (decided in #91, October 2026). With several rule sets attached, each gets its own strip, and the rows draw the selected one's limits.
 - **Windows** within the rule set's limits are bracketed above the rows and carried down through them.
 - **Latest measurements** are shown as dots against the forecast lines, so a forecast that has drifted from what's measured is visible. The lines start at the first forecast hour rather than joining the dot. A measurement far off the forecast's scale sits at the row's edge with an arrow.
+- **Course wind:** with a course saved for the location (tap the start and the turn; it follows the river), each hour gives the share of headwind, crosswind and tailwind on the way out and the way back, with the course's notes. Context only (decided in #103).
 - **Light level** is shaded (twilight, night) from the exact civil dawn, sunrise, sunset and civil dusk. Light is context: crews often row before sunrise with lights, so it does not change whether an hour is within limits unless a rule set sets a hard daylight window.
 - **Readout:** one readout line shows every row's value and its margin to the limit at any hour, by pointer or by slider. Every value is also in an hourly table.
 - **Missing rows:** flow at a weather-only location gets a row that says so. Water temperature at a gauge without a sensor is left out, unless a limit needs it, when its row says it isn't measured.
@@ -129,7 +130,7 @@ There is no formal user testing. Jason shares it informally and doesn't plan to 
 - Notifications ("within your limits tomorrow 6 to 8 AM").
 - Native mobile app.
 - Shared club pages: a club publishes its rule set so members subscribe instead of entering limits by hand.
-- Wind direction relative to the course and current.
+- Wind against the current (the course itself is done: #103).
 - Lightning proximity.
 - Banded or zone-based rules (see `DOMAIN.md`).
 - Tide data for tidal rivers.
