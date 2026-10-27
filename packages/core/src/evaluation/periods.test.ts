@@ -244,3 +244,40 @@ describe('nextWindow', () => {
     expect(nextWindow([p('within', 0, 2), p('outside', 2, 4)], at(DAY, 3))).toBeNull();
   });
 });
+
+describe('probably within (decision 0020)', () => {
+  const doubted = (time: string) =>
+    hour(time, 'probablyWithin', {
+      doubtful: [{ thresholdId: 'flow', metric: 'flow', reason: 'forecastDisagrees' }],
+    });
+
+  it('groups probable hours into their own periods, saying what is doubted', () => {
+    const hours = [
+      hour(at(DAY, 0), 'within'),
+      doubted(at(DAY, 1)),
+      doubted(at(DAY, 2)),
+      hour(at(DAY, 3), 'within'),
+    ];
+    const periods = findPeriods(hours, ctx);
+    expect(periods.map((p) => p.status)).toEqual(['within', 'probablyWithin', 'within']);
+    expect(periods[1]?.reasons).toEqual([
+      { kind: 'doubtful', metric: 'flow', reason: 'forecastDisagrees', hours: 2 },
+    ]);
+  });
+
+  it('finds the next probable window only when asked for one', () => {
+    const p = (status: EvaluationStatus, from: number, to: number): Period => ({
+      status,
+      start: at(DAY, from),
+      end: at(DAY, to),
+      reasons: [],
+    });
+    const periods = [p('unknown', 0, 2), p('probablyWithin', 2, 5), p('outside', 5, 6)];
+    expect(nextWindow(periods, at(DAY, 0))).toBeNull();
+    expect(nextWindow(periods, at(DAY, 0), 'probablyWithin')).toEqual({
+      window: periods[1],
+      before: periods[0],
+      following: periods[2],
+    });
+  });
+});

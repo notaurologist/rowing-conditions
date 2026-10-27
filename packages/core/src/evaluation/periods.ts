@@ -19,18 +19,21 @@ export type PeriodReason =
       unit: Unit;
       hours: number; // hours in the period that failed this limit
     }
-  | { kind: 'unknown'; metric: Metric; reason: UnknownReason; hours: number };
+  | { kind: 'unknown'; metric: Metric; reason: UnknownReason; hours: number }
+  // A value the app doubts, why, and in how many hours (decision 0020).
+  | { kind: 'doubtful'; metric: Metric; reason: 'forecastDisagrees'; hours: number };
 
 export interface Period {
   status: EvaluationStatus;
   start: string; // ISO 8601, UTC
   end: string; // exclusive
-  reasons: PeriodReason[]; // empty for within
+  reasons: PeriodReason[]; // empty for within; for probably within, what's doubted
 }
 
 function reasonsFor(run: HourResult[], ctx: WindowContext): PeriodReason[] {
   const limits = new Map<string, Extract<PeriodReason, { kind: 'limit' }>>();
   const unknowns = new Map<string, Extract<PeriodReason, { kind: 'unknown' }>>();
+  const doubts = new Map<string, Extract<PeriodReason, { kind: 'doubtful' }>>();
   for (const hour of run) {
     for (const failure of hour.failures) {
       if (failure.kind !== 'limit') continue;
@@ -58,8 +61,18 @@ function reasonsFor(run: HourResult[], ctx: WindowContext): PeriodReason[] {
       const seen = unknowns.get(key);
       unknowns.set(key, { kind: 'unknown', metric, reason, hours: (seen?.hours ?? 0) + 1 });
     }
+    const doubtedInHour = new Set((hour.doubtful ?? []).map((d) => d.metric));
+    for (const metric of doubtedInHour) {
+      const seen = doubts.get(metric);
+      doubts.set(metric, {
+        kind: 'doubtful',
+        metric,
+        reason: 'forecastDisagrees',
+        hours: (seen?.hours ?? 0) + 1,
+      });
+    }
   }
-  return [...limits.values(), ...unknowns.values()];
+  return [...limits.values(), ...unknowns.values(), ...doubts.values()];
 }
 
 // Periods are cut to whole minutes at the edges of the rowing span: the rule set's daylight
@@ -140,13 +153,18 @@ export interface NextWindow {
 }
 
 /** The first within period that isn't over at `now`, with what comes before and after it. */
-export function nextWindow(periods: readonly Period[], now: string): NextWindow | null {
+// The next window of the given status: within by default, or probably within (decision 0020).
+export function nextWindow(
+  periods: readonly Period[],
+  now: string,
+  status: 'within' | 'probablyWithin' = 'within',
+): NextWindow | null {
   const nowMs = Date.parse(now);
-  const index = periods.findIndex((p) => p.status === 'within' && Date.parse(p.end) > nowMs);
+  const index = periods.findIndex((p) => p.status === status && Date.parse(p.end) > nowMs);
   const window = periods[index];
   if (!window) return null;
-  // What follows is the next change: a later within period (say, tomorrow morning) isn't one.
-  const following = periods.slice(index + 1).find((p) => p.status !== 'within');
+  // What follows is the next change: a later period of the same status isn't one.
+  const following = periods.slice(index + 1).find((p) => p.status !== status);
   const before =
     Date.parse(window.start) > nowMs
       ? periods.find((p) => Date.parse(p.start) <= nowMs && Date.parse(p.end) > nowMs)

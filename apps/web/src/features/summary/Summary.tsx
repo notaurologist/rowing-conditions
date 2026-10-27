@@ -34,6 +34,7 @@ export function Summary({
         </p>
         <h1 id="summary-heading">{summary.headline}</h1>
         {summary.detail.length > 0 && <p className="summary-detail">{summary.detail.join(' ')}</p>}
+        {summary.caveat && <p className="summary-caveat">{summary.caveat}</p>}
         {summary.others.length > 0 && (
           <ul className="summary-others" aria-label="Other rule sets">
             {summary.others.map((text, i) => (

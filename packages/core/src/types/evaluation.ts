@@ -1,7 +1,9 @@
 import { z } from 'zod';
 import { Id, Metric, Unit, UtcTime } from './measurement.ts';
 
-export const EvaluationStatus = z.enum(['within', 'outside', 'unknown']);
+// Probably within: within every limit, but at least one value is one the app has a named reason to
+// doubt, such as a flow forecast that disagrees with the gauge (decision 0020).
+export const EvaluationStatus = z.enum(['within', 'probablyWithin', 'outside', 'unknown']);
 export type EvaluationStatus = z.infer<typeof EvaluationStatus>;
 
 export const UnknownReason = z.enum([
@@ -27,6 +29,7 @@ export const Failure = z.discriminatedUnion('kind', [
     value: z.number(), // rounded, in unit
     limit: z.number(), // rounded, in unit
     unit: Unit,
+    doubtful: z.literal(true).optional(), // the value is one the app doubts (decision 0020)
   }),
   z.object({ kind: z.literal('daylight') }), // hour entirely outside the daylight window
 ]);
@@ -38,5 +41,9 @@ export const HourResult = z.object({
   light: LightLevel,
   failures: z.array(Failure),
   unknowns: z.array(z.object({ thresholdId: Id, metric: Metric, reason: UnknownReason })),
+  // Limits met or failed on a value the app doubts, and why (decision 0020).
+  doubtful: z
+    .array(z.object({ thresholdId: Id, metric: Metric, reason: z.literal('forecastDisagrees') }))
+    .optional(),
 });
 export type HourResult = z.infer<typeof HourResult>;

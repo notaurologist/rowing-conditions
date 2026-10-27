@@ -341,39 +341,61 @@ describe('getConditions: the current hour uses the latest measurements (#75)', (
     expect(points[10]?.provenance.flow?.withheld).toBe('forecastDisagrees');
   });
 
-  it('says why flow is unknown in evaluation, not just missing', async () => {
-    vi.mocked(deps.usgs.getLatest).mockResolvedValue(
-      ok([{ ...(usgsLatest[0] as Reading), observedAt: '2026-10-26T12:10:00.000Z' }]),
-    );
-    const r = await conditions();
-    const flowLimit = {
-      id: 'flow',
-      metric: 'flow' as const,
-      comparison: 'max' as const,
-      boundary: 'inclusive' as const,
-      value: toSI(20000, 'cfs'),
-      enteredUnit: 'cfs' as const,
+  describe('evaluating a set-aside flow forecast (decision 0020)', () => {
+    const evaluate = async (limitCfs: number) => {
+      vi.mocked(deps.usgs.getLatest).mockResolvedValue(
+        ok([{ ...(usgsLatest[0] as Reading), observedAt: '2026-10-26T12:10:00.000Z' }]),
+      );
+      const r = await conditions();
+      return evaluateTimeline({
+        forecast: r.forecast,
+        ruleSet: {
+          id: 'rs',
+          name: 'Club',
+          boatClasses: [{ id: 'all', name: 'All' }],
+          thresholds: [
+            {
+              id: 'flow',
+              metric: 'flow',
+              comparison: 'max',
+              boundary: 'inclusive',
+              value: toSI(limitCfs, 'cfs'),
+              enteredUnit: 'cfs',
+            },
+          ],
+        },
+        boatClassId: 'all',
+        lat: LAT,
+        lon: LON,
+        now: clock.toISOString(),
+      }).hours;
     };
-    const { hours } = evaluateTimeline({
-      forecast: r.forecast,
-      ruleSet: {
-        id: 'rs',
-        name: 'Club',
-        boatClasses: [{ id: 'all', name: 'All' }],
-        thresholds: [flowLimit],
-      },
-      boatClassId: 'all',
-      lat: LAT,
-      lon: LON,
-      now: clock.toISOString(),
+
+    it('gives probably within where the doubted forecast meets the limit, naming why', async () => {
+      const hours = await evaluate(20000);
+      expect(hours[0]?.status).toBe('within'); // the measurement itself
+      expect(hours[1]?.status).toBe('probablyWithin');
+      expect(hours[1]?.doubtful).toEqual([
+        { thresholdId: 'flow', metric: 'flow', reason: 'forecastDisagrees' },
+      ]);
+      expect(hours[10]?.status).toBe('probablyWithin');
     });
-    expect(hours[0]?.status).toBe('within'); // the measurement itself
-    expect(hours[1]?.unknowns).toEqual([
-      { thresholdId: 'flow', metric: 'flow', reason: 'forecastDisagrees' },
-    ]);
-    expect(hours[10]?.unknowns).toEqual([
-      { thresholdId: 'flow', metric: 'flow', reason: 'forecastDisagrees' },
-    ]);
+
+    it('gives outside where the doubted forecast is past the limit, marked as doubtful', async () => {
+      // The 3.4 kcfs forecast is over a 3,000 cfs limit.
+      const hours = await evaluate(3000);
+      expect(hours[1]?.status).toBe('outside');
+      expect(hours[1]?.failures).toEqual([
+        expect.objectContaining({ metric: 'flow', value: 3400, limit: 3000, doubtful: true }),
+      ]);
+    });
+
+    it('is unknown past the end of the forecast, where nothing is left to doubt', async () => {
+      const hours = await evaluate(20000);
+      // The test forecast covers 30 hours.
+      expect(hours[35]?.status).toBe('unknown');
+      expect(hours[35]?.unknowns[0]?.reason).toBe('forecastDisagrees');
+    });
   });
 
   it('replaces forecast weather for the current hour with a newer station reading', async () => {

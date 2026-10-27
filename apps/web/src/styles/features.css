@@ -1156,10 +1156,38 @@ button.danger {
   font-size: var(--text-sm);
 }
 
-/* A flow forecast set aside for disagreeing with the gauge (#144): shown, never compared. Dashed
-   and faded, so it isn't told apart by color alone. */
+/* A flow forecast set aside for disagreeing with the gauge (#144): a doubted value (decision
+   0020). Dashed and faded, so it isn't told apart by color alone. */
 .mg-line-set-aside {
   stroke: var(--water);
   stroke-dasharray: 2.5 2.5;
   opacity: 0.55;
+}
+
+/* Probably within (decision 0020): a lighter within, hatched, so it isn't told apart by color
+   alone, and dashed window brackets. */
+.mg-status-probablyWithin {
+  background:
+    repeating-linear-gradient(
+      45deg,
+      transparent 0 4px,
+      color-mix(in srgb, var(--within-ink) 30%, transparent) 4px 5px
+    ),
+    color-mix(in srgb, var(--within-bg) 60%, var(--paper));
+  color: var(--within-ink);
+}
+
+.mg-status-probablyWithin > span:not(:empty) {
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--within-bg) 60%, var(--paper));
+}
+
+.mg-window-probable {
+  border-style: dashed;
+}
+
+.summary-caveat {
+  margin: var(--space-1) 0 0;
+  color: var(--muted);
+  font-size: var(--text-sm);
 }

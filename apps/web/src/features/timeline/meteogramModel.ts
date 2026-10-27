@@ -39,7 +39,7 @@ export interface MeteogramPoint {
 
 export interface MeteogramSeries {
   metric: Metric;
-  role: 'main' | 'gust' | 'setAside'; // setAside: a flow forecast shown dashed, never compared (#144)
+  role: 'main' | 'gust' | 'setAside'; // setAside: a doubted flow forecast, dashed (#144, decision 0020)
   points: MeteogramPoint[];
 }
 
@@ -94,7 +94,7 @@ export interface MeteogramModel {
   // One strip per attached rule set, in the location's order. The selected one also drives the
   // limit lines and windows.
   statuses: StatusStrip[];
-  windows: { from: number; to: number; label: string }[];
+  windows: { from: number; to: number; label: string; probable?: boolean }[]; // probable: dashed
   days: { at: number; label: string }[];
   ticks: { at: number; label: string }[];
   defaultHour: number;
@@ -118,6 +118,8 @@ type RowSpec = {
 };
 
 const fmt = (value: number, unit: Unit) => formatNumber(value, unit);
+// Window labels closer than this share of the timeline would overlap; the later one is left out.
+const LABEL_GAP = 0.2;
 
 function valueAt(point: ForecastPoint, metric: Metric, unit: Unit): number | null {
   if (metric === 'combinedTempF') {
@@ -291,7 +293,8 @@ export function meteogramModel(input: MeteogramInput): MeteogramModel {
   const forecast = evaluated?.forecast ?? conditions.forecast;
   const flowGauge = evaluated?.flowGauge ?? null;
   // A flow forecast set aside for disagreeing with the gauge (#82), for whichever gauge the flow
-  // row shows. Drawn dashed and worded as not matching the gauge; never compared (#144).
+  // row shows. Drawn dashed and worded as not matching the gauge; evaluation counts it only as a doubted value
+  // (probably within or outside, decision 0020).
   const setAside = conditions.flowSetAside.find(
     (f) => f.gaugeRef === (flowGauge?.ref ?? location.gaugeRef),
   );
@@ -592,19 +595,35 @@ export function meteogramModel(input: MeteogramInput): MeteogramModel {
 
   const windows: MeteogramModel['windows'] = [];
   if (evaluated?.timeline.hasLimits) {
-    const next = nextWindow(evaluated.periods, now);
+    // Within windows, and probable ones with dashed brackets (decision 0020). The next is the
+    // earliest within window, or the earliest probable one when there's no within window.
+    const next =
+      nextWindow(evaluated.periods, now) ?? nextWindow(evaluated.periods, now, 'probablyWithin');
+    let lastLabeled: number | null = null;
     for (const p of evaluated.periods) {
-      if (p.status !== 'within' || Date.parse(p.end) <= Date.parse(now)) continue;
+      if (p.status !== 'within' && p.status !== 'probablyWithin') continue;
+      if (Date.parse(p.end) <= Date.parse(now)) continue;
+      const probable = p.status === 'probablyWithin';
       const range = compactRange(p.start, p.end, timeZone);
       const isNext = next?.window.start === p.start;
       const day = new Date(p.start).toLocaleDateString('en-US', {
         timeZone: timeZone ?? undefined,
         weekday: 'short',
       });
+      const from = Math.max(0, at(p.start));
+      // A label starting this close to the previous one would be drawn over it, as when a within
+      // window runs straight into a probable one; the bracket alone shows the later window.
+      const crowded = !isNext && lastLabeled !== null && from - lastLabeled < n * LABEL_GAP;
+      if (!crowded) lastLabeled = from;
       windows.push({
-        from: Math.max(0, at(p.start)),
+        from,
         to: Math.min(n, at(p.end)),
-        label: isNext ? `Next window · ${range}` : `${day} · ${range}`,
+        label: crowded
+          ? ''
+          : isNext
+            ? `${probable ? 'Probable window' : 'Next window'} · ${range}`
+            : `${day} · ${probable ? 'probable · ' : ''}${range}`,
+        ...(probable ? { probable: true } : {}),
       });
     }
   }

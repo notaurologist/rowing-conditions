@@ -345,13 +345,31 @@ describe('TimelineSection set-aside flow forecast (#144)', () => {
     expect(html).toContain('mg-line-set-aside');
     expect(text).toContain("dashed: NWPS forecast, doesn't match the gauge");
     expect(text).toContain(
-      "Flow: the National Water Prediction Service forecast doesn't match the gauge. It had 2,650 cfs for 8 AM; the gauge measured 3,750 cfs. It's drawn dashed and isn't compared against limits, so flow after the current hour is unknown.",
+      "Flow: the National Water Prediction Service forecast doesn't match the gauge. It had 2,650 cfs for 8 AM; the gauge measured 3,750 cfs. It's drawn dashed: hours that meet every limit on it are probably within, and hours where it's past a limit are outside.",
     );
   });
 
   it('gives its value for unknown hours in the readout and table', () => {
     const { text } = render(clubA, setAside());
     expect(text).toContain("NWPS 5,750 cfs, doesn't match gauge");
+  });
+
+  it('marks hours that meet every limit on the doubted forecast as probably within (0020)', () => {
+    const conditions = setAside();
+    for (const p of conditions.forecast) {
+      const prov = p.provenance.flow;
+      if (prov?.withheld === 'forecastDisagrees')
+        prov.setAside = {
+          value: toInternal('flow', 2000, 'cfs'),
+          asOf: '2026-10-25T14:44:00.000Z',
+        };
+    }
+    const { html, text } = render(clubA, conditions);
+    expect(text).toContain("~ Probably within Club A's limits");
+    expect(html).toContain('mg-status-probablyWithin');
+    expect(html).toContain('mg-window mg-window-probable');
+    expect(text).toMatch(/Probable window · /);
+    expect(text).toContain('Probably within limits'); // the hourly table
   });
 
   it('draws nothing dashed without a set-aside forecast', () => {

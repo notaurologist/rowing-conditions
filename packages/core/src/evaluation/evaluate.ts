@@ -64,7 +64,7 @@ export interface HourContext {
 }
 
 type Usable =
-  | { ok: true; value: number }
+  | { ok: true; value: number; doubtful?: 'forecastDisagrees' }
   | { ok: false; metric: InputMetric; reason: UnknownReason };
 
 function usable(point: ForecastPoint, metric: InputMetric, ctx: HourContext): Usable {
@@ -72,6 +72,14 @@ function usable(point: ForecastPoint, metric: InputMetric, ctx: HourContext): Us
   const value = point.values[metric];
   const provenance = point.provenance[metric];
   if (value === null || value === undefined || provenance === undefined) {
+    // A forecast set aside for disagreeing with the gauge still counts, as a value the app doubts:
+    // it can give "probably within" or outside, never plain within (decision 0020).
+    const doubted = provenance?.withheld === 'forecastDisagrees' ? provenance.setAside : undefined;
+    if (doubted) {
+      return freshness(metric, 'forecast', doubted.asOf, ctx.now) === 'fresh'
+        ? { ok: true, value: doubted.value, doubtful: 'forecastDisagrees' }
+        : { ok: false, metric, reason: 'stale' };
+    }
     return { ok: false, metric, reason: provenance?.withheld ?? 'missing' };
   }
   if (provenance.qualifiers?.includes('reversedFlow')) {
@@ -130,6 +138,7 @@ export function evaluateHour(point: ForecastPoint, ctx: HourContext): HourResult
 
   const failures: Failure[] = [];
   const unknowns: HourResult['unknowns'] = [];
+  const doubtful: NonNullable<HourResult['doubtful']> = [];
 
   for (const threshold of ruleSet.thresholds) {
     if (!appliesTo(threshold, boatClassId)) continue;
@@ -145,6 +154,14 @@ export function evaluateHour(point: ForecastPoint, ctx: HourContext): HourResult
       continue;
     }
     const values = inputs.map((input) => (input.ok ? input.value : Number.NaN));
+    const doubted = inputs.find((input) => input.ok && input.doubtful);
+    if (doubted?.ok && doubted.doubtful) {
+      doubtful.push({
+        thresholdId: threshold.id,
+        metric: threshold.metric,
+        reason: doubted.doubtful,
+      });
+    }
 
     const unit = threshold.enteredUnit;
     const value =
@@ -161,15 +178,30 @@ export function evaluateHour(point: ForecastPoint, ctx: HourContext): HourResult
         value,
         limit,
         unit,
+        ...(doubted ? { doubtful: true as const } : {}),
       });
     }
   }
 
   if (outsideDaylightWindow(point, ctx)) failures.push({ kind: 'daylight' });
 
-  const status = failures.length > 0 ? 'outside' : unknowns.length > 0 ? 'unknown' : 'within';
+  const status =
+    failures.length > 0
+      ? 'outside'
+      : unknowns.length > 0
+        ? 'unknown'
+        : doubtful.length > 0
+          ? 'probablyWithin'
+          : 'within';
   const light = hourLightLevel(point.time, ctx.lat, ctx.lon);
-  return { time: point.time, status, light, failures, unknowns };
+  return {
+    time: point.time,
+    status,
+    light,
+    failures,
+    unknowns,
+    ...(doubtful.length > 0 ? { doubtful } : {}),
+  };
 }
 
 export interface TimelineInput extends Omit<HourContext, 'unavailableMetrics'> {
