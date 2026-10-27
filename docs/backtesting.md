@@ -76,6 +76,20 @@ Notable days from April to October 2026 at Turners Falls (42.6, -72.55), picked 
 
 How they were picked: USGS daily mean flow at Montague and continuous water temperature at Northfield; KORE's routine hourly reports from IEM; and the NBM day-ahead forecast from Open-Meteo's Previous Runs API, compared with KORE hour by hour from 6 a.m. to 8 p.m. EDT.
 
+These cases aren't in the repo. Together they're about 3 MB of fixtures, and no test uses them. To re-record one, run its command below, then replay it at 6 a.m. with your rule set:
+
+```
+pnpm fixtures:record-case --name high-water-2026-04-02 --date 2026-04-02 --lat 42.6 --lon -72.55 --gauge USGS-01170500 --station KORE
+pnpm fixtures:record-case --name windy-2026-05-05 --date 2026-05-05 --lat 42.6 --lon -72.55 --gauge USGS-01170500 --station KORE
+pnpm fixtures:record-case --name data-gap-2026-06-09 --date 2026-06-09 --lat 42.6 --lon -72.55 --gauge USGS-01170500 --station KORE
+pnpm fixtures:record-case --name forecast-miss-2026-06-30 --date 2026-06-30 --lat 42.6 --lon -72.55 --gauge USGS-01170500 --station KORE
+pnpm fixtures:record-case --name cold-2026-10-24 --date 2026-10-24 --lat 42.6 --lon -72.55 --gauge USGS-01161280 --gauge USGS-01170500 --station KORE
+
+pnpm fixtures:replay-case --name windy-2026-05-05 --at 2026-05-05T06:00 --timezone America/New_York --rule-set ~/my-club.json
+```
+
+The findings below come from recordings made on October 27, 2026. USGS readings from the last several months are provisional and can be revised when they're approved, so a later recording may differ slightly. Don't commit the recordings.
+
 ## Findings, October 2026
 
 Each case was replayed at 6 a.m. EDT on its date against the owner's club's only limit: flow at most 20 kcfs at Montague, measured at the same gauge the club watches (NWPS `MNTM3` shows USGS 01170500's readings). The club has no wind, temperature or daylight limits; it asks rowers to check the weather themselves. So the statuses below are about flow, and the weather comparisons are context.
