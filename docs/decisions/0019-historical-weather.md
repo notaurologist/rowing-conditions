@@ -1,6 +1,6 @@
 # 0019: Historical weather for backtesting from Open-Meteo and the IEM ASOS archive
 
-Status: Proposed (October 2026)
+Status: Accepted (October 2026)
 
 ## Context
 M9 replays remembered days from last season to see whether the app's view matches what crews remember (issue #35). Flow and water temperature come from USGS `continuous` data. Weather needs another source:

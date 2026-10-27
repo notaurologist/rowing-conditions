@@ -11,6 +11,7 @@
     "start": "node --env-file-if-exists=../../.env src/index.ts",
     "typecheck": "tsc -p .",
     "fixtures:record": "node scripts/record-fixtures.ts",
+    "fixtures:record-case": "node scripts/record-case.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate"
   },
