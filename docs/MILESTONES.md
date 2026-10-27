@@ -117,7 +117,6 @@ No one's memory of a day is needed. Whether the app matches a crew's judgment on
 
 ## M10: Tester readiness (February)
 
-- Simple feedback channel (link to a form or email).
 - Short onboarding: what the app does and does not do (conditions, not verdicts).
 - Recruit testers from own club and a few nearby clubs.
 
