@@ -616,7 +616,7 @@ Test files sit next to the code they test as `*.test.ts` or `*.test.tsx`. `pnpm 
 - **api routes:** tests with adapters stubbed by fixtures, covering partial failure.
 - **web:** component tests for timeline and thresholds with fixture data.
 - Fixture recording is a script (`pnpm fixtures:record`) run manually, never in the pre-push check or CI.
-- Historical fixtures from past rowing days double as backtesting cases, recorded with `pnpm fixtures:record-case` into `test/fixtures/cases/` (see `backtesting.md`).
+- Historical fixtures from notable past days double as backtesting cases, recorded with `pnpm fixtures:record-case` into `test/fixtures/cases/` (see `backtesting.md`).
 
 ## Tooling
 
@@ -629,8 +629,8 @@ Test files sit next to the code they test as `*.test.ts` or `*.test.tsx`. `pnpm 
 
 Decision 0017: one Vercel project (Hobby plan) with the web build at `/` and the API as Vercel Functions at `/api/*`, and Postgres 18 on Neon's free plan.
 
-- **Project config:** `vercel.json` defines two services. `web` builds `apps/web` with Vite and serves `dist`. `api` runs `apps/api/src/vercel.ts` as Vercel Functions. Requests to `/api/*` go to `api`, and everything else to `web`, so the browser sees one origin and the API needs no CORS.
-- **Entry points:** `apps/api/src/bootstrap.ts` builds the app. `index.ts` serves it with `@hono/node-server` for local development. `vercel.ts` exports it for Vercel, mounted under `/api` because Vercel passes the prefix through (the Vite dev proxy strips it).
+- **Project config:** `vercel.json` defines two services. `web` builds `apps/web` with Vite and serves `dist`. `api` runs `apps/api/src/vercel.mjs` as Vercel Functions. Requests to `/api/*` go to `api`, and everything else to `web`, so the browser sees one origin and the API needs no CORS.
+- **Entry points:** `apps/api/src/bootstrap.ts` builds the app. `index.ts` serves it with `@hono/node-server` for local development. `vercel.ts` exports it for Vercel, mounted under `/api` because Vercel passes the prefix through (the Vite dev proxy strips it). Vercel's entry point is `vercel.mjs`, which only re-exports `vercel.ts`. Vercel's builder type-checks a `.ts` entry point with the project's TypeScript through its JavaScript API, which TypeScript 7 doesn't have, so a `.ts` entry fails the build. Type checking runs in CI and the pre-push check instead.
 - **Configuration:** both entry points validate the environment the same way and log each problem by variable name, never its value. Locally the process exits. On Vercel the function fails to start, so it serves nothing.
 - **Database connection:** the deployed API uses Neon's pooled connection string (the host with `-pooler`), with prepared statements off and at most 5 connections per function instance (`POOLED_CONNECTION` in `bootstrap.ts`). Create the Neon project in AWS `us-east-1`, near Vercel's default function region (Washington, D.C.).
 - **Environment (Vercel project settings):** `DATABASE_URL` (pooled), `NWS_USER_AGENT`, and optionally `USGS_API_KEY` and `GEOCODING_ENABLED`. Never in the repository.
