@@ -19,6 +19,7 @@ import {
   pointsUrl,
   stationsUrl,
 } from '../src/adapters/nws/requests.ts';
+import { waterwaysUrl } from '../src/adapters/overpass/requests.ts';
 import {
   historyUrl,
   latestReadingsUrl,
@@ -27,6 +28,8 @@ import {
   timeSeriesMetadataUrl,
   usgsParameterCodes,
 } from '../src/adapters/usgs/requests.ts';
+import { courseBox } from '../src/services/courseSnap.ts';
+import { COURSE_START, COURSE_TURN } from '../test/course.ts';
 import { recordFixture, type Trim } from './recorder.ts';
 
 const MONTAGUE = 'USGS-01170500'; // Connecticut River at Montague City, MA: no water temperature
@@ -64,6 +67,8 @@ const fixtures: Record<string, string> = {
     sixHoursAgo.toISOString(),
     now.toISOString(),
   ),
+  // The Connecticut River above the Turners Falls dam, from a start to a turn about 6 km upriver.
+  'overpass/waterways-turners-falls': waterwaysUrl(courseBox(COURSE_START, COURSE_TURN)),
   'nominatim/search-turners-falls': searchUrl('Turners Falls'),
   'nominatim/search-no-results': searchUrl('qqzzxx no such place'),
   // Backtesting sources (decision 0019), for fixed past dates so re-recording gives the same data.

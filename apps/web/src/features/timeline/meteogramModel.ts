@@ -16,6 +16,7 @@ import {
 } from '@rowing/core';
 import type { Conditions } from '../../lib/api.ts';
 import { compassPoint, formatNumber, unitSymbol } from '../../lib/format.ts';
+import { courseWindByHour } from '../course/courseWords.ts';
 import type { LocationEvaluation } from './evaluateLocation.ts';
 import { dayLabel, formatClock } from './periodCopy.ts';
 
@@ -85,6 +86,7 @@ export interface StatusStrip {
 
 export interface MeteogramModel {
   hours: { time: string; label: string; light: string; fog: FogWords }[]; // light: Twilight, then night
+  course?: { words: string[]; notes?: string | undefined }; // wind along the saved course, per hour
   rows: MeteogramRow[];
   light: { from: number; to: number; light: 'twilight' | 'night' }[];
   // One strip per attached rule set, in the location's order. The selected one also drives the
@@ -606,7 +608,13 @@ export function meteogramModel(input: MeteogramInput): MeteogramModel {
   const firstWindow = windows[0];
   const defaultHour = firstWindow ? Math.min(n - 1, Math.max(0, Math.floor(firstWindow.from))) : 0;
 
+  // Wind along the saved course, out and back, per hour (#103). Context only.
+  const course = location.course
+    ? { words: courseWindByHour(location.course, forecast), notes: location.course.notes }
+    : undefined;
+
   return {
+    ...(course ? { course } : {}),
     hours,
     rows,
     light: light.filter(

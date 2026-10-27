@@ -1129,3 +1129,29 @@ button.danger {
 .intro .setup-actions {
   margin-top: var(--space-5);
 }
+
+/* Course editor (#103): the start and turn markers on the map. */
+.course-editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.course-end-letter {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 2px solid var(--paper);
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--paper);
+  font-weight: 700;
+  font-size: var(--text-sm);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 40%);
+}
+
+.mg-course {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-sm);
+}

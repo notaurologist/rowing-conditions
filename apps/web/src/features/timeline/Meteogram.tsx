@@ -428,6 +428,7 @@ export function Meteogram({ model }: { model: MeteogramModel }) {
               : ''}
           </span>
         </label>
+        {model.course && <p className="mg-course">Course: {model.course.words[hour]}</p>}
       </div>
     </div>
   );

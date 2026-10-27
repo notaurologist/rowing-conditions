@@ -371,6 +371,7 @@ Hono on Node. Export the app type so clients use `hono/client` for typed calls. 
 | GET | `/gauges/:ref` | `{ gauge, latest: Reading[], sources }` for a `usgs:` ref. Returns 404 if there's no such gauge. If the readings fail, it still returns the gauge, with that source marked `error`. `nwps:` refs get 501 until #18. |
 | GET | `/conditions?lat&lon&gaugeRef?&flowGaugeRefs?` | Current readings plus 48-hour hourly forecast (including forecast flow where available) and daylight data. `flowGaugeRefs` (comma-separated, up to 5) adds flow series for gauges named by rule sets. Always 200 on valid input; failures are reported per source. |
 | GET | `/places/search?q` | `{ places: Place[] }` from Nominatim, US only, at most 5. `q` is 2 to 200 characters. Clients call it only when the user submits a search (the usage policy forbids autocomplete). Returns 503 when `GEOCODING_ENABLED=false`. |
+| GET | `/course/snap?startLat&startLon&turnLat&turnLon` | `{ points: [lat, lon][] }`: a course following the river from the node nearest the start to the node nearest the turn (#103). Waterways come from OpenStreetMap through Overpass, cached 30 days by box. Answers 422 with `{ error: { kind, message } }` when a point is more than 300 m from a mapped river (`noRiver`), the two aren't on connected waterways (`notConnected`), or they're more than 30 km apart (`tooFar`). 502 when Overpass fails after one retry. Can take a minute. |
 
 Routes validate input with `@hono/zod-validator` and answer 400 on invalid input. An adapter failure becomes 502 with `{ error: { source, kind, message } }`. `createApp(deps)` takes the adapters, so route tests pass in fake ones.
 
@@ -481,6 +482,7 @@ Fetch on demand, cache in Postgres. No scheduled jobs in the MVP.
   - NWS points lookup: 30 days
   - Gauge metadata: 7 days
   - Nominatim place search: 30 days (places don't move, and the usage policy asks for caching)
+  - OpenStreetMap waterways for snapping a course: 30 days (rivers don't move)
 - **On upstream failure**, serve the last cached value marked `stale` if one exists.
 - **Concurrent fetches** for the same key are deduplicated in process.
 - **Implementation:** `createSourceCache({ db, logger, now })` in `apps/api/src/services/sourceCache.ts`. `cache.get(key, ttlMs, schema, fetch)` returns one of three results:

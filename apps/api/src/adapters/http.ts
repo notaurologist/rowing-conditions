@@ -5,7 +5,7 @@ import type { z } from 'zod';
 export type FetchFn = (url: string, init?: RequestInit) => Promise<Response>;
 
 // Data sources, plus services that aren't data sources, such as place search.
-export type ErrorSource = SourceId | 'nominatim';
+export type ErrorSource = SourceId | 'nominatim' | 'overpass';
 
 export interface SourceError {
   source: ErrorSource;

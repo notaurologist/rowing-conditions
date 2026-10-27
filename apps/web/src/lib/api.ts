@@ -33,6 +33,21 @@ export async function fetchPlaces(client: ApiClient, query: string) {
   return body.places;
 }
 
+/** A course following the river between the tapped start and turn (#103). Can take a minute. */
+export async function fetchCourse(client: ApiClient, start: Coordinates, turn: Coordinates) {
+  const body = await parseResponse(
+    client.course.snap.$get({
+      query: {
+        startLat: String(start.lat),
+        startLon: String(start.lon),
+        turnLat: String(turn.lat),
+        turnLon: String(turn.lon),
+      },
+    }),
+  );
+  return body.points;
+}
+
 export function fetchConditions(
   client: ApiClient,
   at: Coordinates & { gaugeRef?: GaugeRef; flowGaugeRefs?: readonly GaugeRef[] },
