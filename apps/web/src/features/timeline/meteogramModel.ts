@@ -11,6 +11,7 @@ import {
   nextWindow,
   type SavedLocation,
   type Threshold,
+  temperatureDifference,
   type Unit,
 } from '@rowing/core';
 import type { Conditions } from '../../lib/api.ts';
@@ -84,7 +85,7 @@ export interface StatusStrip {
 }
 
 export interface MeteogramModel {
-  hours: { time: string; label: string; light: string }[]; // light in words: Twilight, then night
+  hours: { time: string; label: string; light: string; fog: FogWords }[]; // light: Twilight, then night
   course?: { words: string[]; notes?: string | undefined }; // wind along the saved course, per hour
   rows: MeteogramRow[];
   light: { from: number; to: number; light: 'twilight' | 'night' }[];
@@ -240,6 +241,40 @@ function lightSpans(
 }
 
 // The light levels an hour passes through, in words, so light isn't conveyed by shading alone.
+// The NWS forecaster's fog call in words (#42). Context only: it never affects status. An hour
+// the forecast doesn't cover is unknown, never "no fog".
+export interface FogWords {
+  state: 'fog' | 'none' | 'unknown';
+  text: string; // "Patchy fog", "No fog forecast", "Fog forecast unknown"
+}
+
+const FOG_COVERAGE: Record<string, string> = {
+  patchy: 'Patchy fog',
+  areas: 'Areas of fog',
+  widespread: 'Widespread fog',
+  isolated: 'Isolated fog',
+  scattered: 'Scattered fog',
+  slight_chance: 'Slight chance of fog',
+  chance: 'Chance of fog',
+  likely: 'Fog likely',
+  definite: 'Fog',
+  unspecified: 'Fog',
+};
+
+// Air temperature above the dew point, an input to fog (#42). Shown as a number only: the app
+// doesn't turn it into a fog forecast.
+export function dewPointGapWords(gapC: number, unit: 'degC' | 'degF'): string {
+  const gap = temperatureDifference(gapC, unit);
+  if (gap <= 0) return 'at dew point';
+  return `${formatNumber(gap, unit)}° above dew point`;
+}
+
+export function fogWords(fog: string | null | undefined): FogWords {
+  if (fog === undefined) return { state: 'unknown', text: 'Fog forecast unknown' };
+  if (fog === null) return { state: 'none', text: 'No fog forecast' };
+  return { state: 'fog', text: FOG_COVERAGE[fog] ?? `Fog (${fog.replaceAll('_', ' ')})` };
+}
+
 function hourLight(spans: readonly { from: number; to: number; light: Light }[], i: number) {
   const levels = spans.filter((s) => s.from < i + 1 && s.to > i).map((s) => s.light);
   const words = levels.filter((l, k) => l !== levels[k - 1]).join(', then ');
@@ -463,7 +498,15 @@ export function meteogramModel(input: MeteogramInput): MeteogramModel {
       if (v === null) return 'no value';
       const amount =
         unit === 'percent' ? `${fmt(v, unit)}%` : `${fmt(v, unit)} ${symbol}${measured}`;
-      return mainLimit ? `${amount} · ${marginWords(v, mainLimit, unit)}` : amount;
+      const parts = [amount];
+      if (mainLimit) parts.push(marginWords(v, mainLimit, unit));
+      if (spec.id === 'airTemp') {
+        const air = forecast[i]?.values.airTemp;
+        const dew = forecast[i]?.values.dewPoint;
+        if (typeof air === 'number' && typeof dew === 'number')
+          parts.push(dewPointGapWords(air - dew, unit === 'degC' ? 'degC' : 'degF'));
+      }
+      return parts.join(' · ');
     });
 
     const words = limits.map((l) => l.label).join(', ');
@@ -560,6 +603,7 @@ export function meteogramModel(input: MeteogramInput): MeteogramModel {
     time: p.time,
     label: `${dayLabel(p.time, now, timeZone)} ${formatClock(p.time, timeZone)}`,
     light: hourLight(light, i),
+    fog: fogWords(p.fog),
   }));
   const firstWindow = windows[0];
   const defaultHour = firstWindow ? Math.min(n - 1, Math.max(0, Math.floor(firstWindow.from))) : 0;

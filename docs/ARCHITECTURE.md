@@ -85,7 +85,8 @@ type Metric =
   | 'windGust'        // m/s
   | 'windDirection'   // degrees, meteorological (direction wind comes FROM)
   | 'precipChance'    // 0..1
-  | 'combinedTempF';  // °F, computed: airTemp°F + waterTemp°F
+  | 'combinedTempF'   // °F, computed: airTemp°F + waterTemp°F
+  | 'dewPoint';       // °C, NWS forecast; context for fog, never a limit (#42)
 
 interface Reading {
   metric: Metric;
@@ -109,6 +110,7 @@ interface ForecastPoint {
   time: string;                // start of hour, ISO 8601, UTC
   values: Partial<Record<Metric, number | null>>;
   provenance: Partial<Record<Metric, ValueProvenance>>;  // absent = no source supplies this metric
+  fog?: string | null;         // NWS coverage word ("patchy"), null = no fog forecast, absent = unknown (#42)
 }
 
 interface ValueProvenance {

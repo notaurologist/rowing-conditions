@@ -157,6 +157,8 @@ Verified against the live API on October 25, 2026 (issue #19).
    - `windSpeed` and `windGust`: `wmoUnit:km_h-1`. Values are knot multiples converted to km/h (1.852, 3.704, …).
    - `windDirection`: `wmoUnit:degree_(angle)`
    - `probabilityOfPrecipitation`: `wmoUnit:percent`. Convert to a 0–1 fraction.
+   - `dewpoint`: `wmoUnit:degC`.
+   - `weather`: no `uom`. Each value is a list of `{ coverage, weather, intensity, visibility, attributes }`; `weather` is `"fog"`, `"rain"` and so on, and an entry with `weather: null` means none. Coverage words seen: `patchy`, `areas`, `widespread`, `slight_chance`, `chance`, `likely`, `definite` (Medford, OR, October 27, 2026, recorded as `nws/grid-mfr-90-80`).
    - The data covers `validTimes`, here 7½ days from 13:00Z.
 3. `GET /alerts/active?point={lat},{lon}` returns `{ features: [...] }`. Each alert's `properties` include `id`, `event`, `headline`, `severity`, `onset`, `ends`, `expires` and `effective`. `ends` can be null, so fall back to `expires`.
 4. **Current observations:** `GET /gridpoints/{office}/{x},{y}/stations` lists observation stations nearest first, followed by `GET /stations/{id}/observations/latest`. Each value is `{ unitCode, value, qualityControl }`, and `windGust` is null when there's no gust. The nearest station to Turners Falls is Orange Municipal Airport (`KORE`), 22 km away.

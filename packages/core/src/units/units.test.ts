@@ -7,6 +7,7 @@ import {
   fromInternal,
   fromSI,
   roundHalfAwayFromZero,
+  temperatureDifference,
   toDisplay,
   toInternal,
   toSI,
@@ -147,6 +148,7 @@ describe('displayUnits', () => {
       windGust: 'mph',
       precipChance: 'percent',
       combinedTempF: 'degF',
+      dewPoint: 'degF',
     });
   });
 
@@ -160,6 +162,21 @@ describe('displayUnits', () => {
       windGust: 'km/h',
       precipChance: 'percent',
       combinedTempF: 'degF',
+      dewPoint: 'degC',
     });
+  });
+});
+
+describe('temperatureDifference', () => {
+  it('scales a difference without the 32° offset (#42)', () => {
+    expect(temperatureDifference(5, 'degF')).toBe(9);
+    expect(temperatureDifference(5, 'degC')).toBe(5);
+    expect(temperatureDifference(0, 'degF')).toBe(0);
+    expect(temperatureDifference(-1.5, 'degF')).toBe(-3);
+  });
+
+  it('rounds at display precision', () => {
+    expect(temperatureDifference(1.25, 'degC')).toBe(1.3);
+    expect(temperatureDifference(1.1, 'degF')).toBe(2);
   });
 });

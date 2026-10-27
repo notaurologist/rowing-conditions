@@ -24,6 +24,7 @@ export const maxAgeHours: Record<InputMetric, Record<ValueProvenance['kind'], nu
   windGust: { observation: 12, forecast: 12 },
   windDirection: { observation: 12, forecast: 12 },
   precipChance: { observation: 12, forecast: 12 },
+  dewPoint: { observation: 12, forecast: 12 },
 };
 
 // Readings with these qualifiers are shown but never compared against a limit (#41, #13).

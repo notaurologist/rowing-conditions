@@ -29,6 +29,7 @@ function HourTable({ model }: { model: MeteogramModel }) {
               <th scope="col">Hour</th>
               <th scope="col">Light</th>
               {model.course && <th scope="col">Course wind</th>}
+              <th scope="col">Fog (NWS)</th>
               {model.statuses.map((strip) => (
                 <th key={strip.ruleSetId} scope="col">
                   {strip.name}
@@ -47,6 +48,7 @@ function HourTable({ model }: { model: MeteogramModel }) {
                 <th scope="row">{h.label}</th>
                 <td>{h.light}</td>
                 {model.course && <td>{model.course.words[i]}</td>}
+                <td>{h.fog.text}</td>
                 {model.statuses.map((strip) => (
                   <td key={strip.ruleSetId}>{statusAt(strip, i)}</td>
                 ))}
@@ -119,6 +121,8 @@ export function TimelineSection({ conditions, location, evaluated, alongside, un
           night.
           {model.rows.some((r) => r.limits.length > 0) &&
             ' The light fill is the room left before each limit; red fill is past it.'}
+          {model.hours.some((h) => h.fog.state === 'fog') &&
+            ' Fog is the National Weather Service forecast, shown as context; it never changes whether an hour is within limits.'}
           {model.statuses.some((st) => st.spans.length > 0) &&
             ' In the status strip, outside hours are striped and unknown hours dotted.'}
         </p>

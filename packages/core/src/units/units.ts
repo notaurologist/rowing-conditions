@@ -104,6 +104,13 @@ export function displayValue(metric: Metric, value: number, unit: Unit): number 
   return roundHalfAwayFromZero(fromInternal(metric, value, unit), unitDecimals[unit]);
 }
 
+// A temperature difference in °C, such as air minus dew point, in a display unit. A difference
+// scales without the 32° offset, so it can't go through displayValue.
+export function temperatureDifference(differenceC: number, unit: 'degC' | 'degF'): number {
+  const scaled = unit === 'degF' ? differenceC * 1.8 : differenceC;
+  return roundHalfAwayFromZero(scaled, unitDecimals[unit]);
+}
+
 // Clubs define this rule in °F and add the two readings as shown, so each part is rounded first.
 export function combinedTempF(airTempC: number, waterTempC: number): number {
   return toDisplay(airTempC, 'degF') + toDisplay(waterTempC, 'degF');
@@ -122,6 +129,7 @@ export const displayUnits: Record<DisplaySystem, Record<Exclude<Metric, 'windDir
     windGust: 'mph',
     precipChance: 'percent',
     combinedTempF: 'degF',
+    dewPoint: 'degF',
   },
   metric: {
     flow: 'm3/s',
@@ -132,5 +140,6 @@ export const displayUnits: Record<DisplaySystem, Record<Exclude<Metric, 'windDir
     windGust: 'km/h',
     precipChance: 'percent',
     combinedTempF: 'degF',
+    dewPoint: 'degC',
   },
 };
