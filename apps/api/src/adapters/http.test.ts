@@ -124,6 +124,22 @@ describe('describeError', () => {
     expect(describeError(new Error('boom'))).toBe('boom');
     expect(describeError('plain')).toBe('plain');
   });
+
+  it('uses the code of an error without a message, such as a refused connection (#127)', () => {
+    // What postgres.js rejects with when nothing listens on the database port.
+    const refused = Object.assign(
+      new AggregateError([new Error('connect ECONNREFUSED 127.0.0.1:5432')], ''),
+      { code: 'ECONNREFUSED' },
+    );
+    expect(describeError(refused)).toBe('ECONNREFUSED');
+    expect(describeError(new DrizzleQueryError('select 1', [], refused))).toBe('ECONNREFUSED');
+    expect(describeError(refused)).not.toContain('5432');
+  });
+
+  it('uses the error name when there is no message or code', () => {
+    expect(describeError(new AggregateError([], ''))).toBe('AggregateError');
+    expect(describeError(Object.assign(new Error(''), { code: 42 }))).toBe('Error');
+  });
 });
 
 describe('describeShape', () => {
