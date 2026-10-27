@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
-import { createTestDatabase } from '../../test/database.ts';
+import { createTestDatabase, createUnresponsiveDatabase } from '../../test/database.ts';
 import type { Logger, SourceError, SourceResult } from '../adapters/http.ts';
 import type { Database } from '../db/client.ts';
 import { sourceCache as table } from '../db/schema.ts';
@@ -169,6 +169,25 @@ describe('source cache', () => {
     expect(warn).toHaveBeenCalledWith('cache: read failed', expect.anything());
     expect(warn).toHaveBeenCalledWith('cache: write failed', expect.anything());
     ({ db, close } = await createTestDatabase()); // for afterEach
+  });
+
+  it('fetches within a bounded time when the database stops answering (#122)', async () => {
+    const unresponsive = await createUnresponsiveDatabase();
+    try {
+      const c = createSourceCache({ db: unresponsive.db, logger: { warn }, timeoutMs: 50 });
+      const fetch = vi.fn(async () => ok({ flow: 5 }));
+      expect(await get(fetch, c)).toMatchObject({ status: 'ok', data: { flow: 5 }, cached: false });
+      expect(warn).toHaveBeenCalledWith('cache: read failed', {
+        kind: 'usgs:latest',
+        error: 'database did not answer within 50 ms',
+      });
+      expect(warn).toHaveBeenCalledWith('cache: write failed', {
+        kind: 'usgs:latest',
+        error: 'database did not answer within 50 ms',
+      });
+    } finally {
+      await unresponsive.close();
+    }
   });
 });
 

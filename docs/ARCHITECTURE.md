@@ -496,6 +496,7 @@ Migrations via `drizzle-kit`, committed to the repo:
 
 - **Schema:** `apps/api/src/db/schema.ts`. Migrations go in `apps/api/drizzle/`, and Biome skips that generated folder.
 - **Driver:** postgres.js (`postgres`).
+- **Time limit:** every database call the API makes (cache read and write, error log writes, the Nominatim gate) is cut off after 5 s (`withTimeout` and `DATABASE_TIMEOUT_MS` in `apps/api/src/db/client.ts`) and then counts as failed. postgres.js limits connecting (`connect_timeout`) but not a query on an open connection, so without this a database that stops answering held `/conditions` open with no error (#122). With the database frozen, `/conditions` answers in about 15 s: one limit each for a cache read, a cache write, and the error log flush.
 - **Check constraints:** `gauges.source` is `usgs` or `nwps`, `ref` starts with its source, latitude and longitude are in range, and `source_cache.expires_at >= fetched_at`.
 - **`has_flow_forecast`** is nullable: null means NWPS hasn't been checked yet.
 - **Local database:** `docker-compose.yml` runs `postgres:18` (decision 0013). `drizzle.config.ts` falls back to that container's URL when `DATABASE_URL` is unset.

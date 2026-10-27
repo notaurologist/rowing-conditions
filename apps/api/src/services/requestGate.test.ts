@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { createTestDatabase } from '../../test/database.ts';
+import { createTestDatabase, createUnresponsiveDatabase } from '../../test/database.ts';
 import { createDatabaseGate } from './requestGate.ts';
 
 const INTERVAL = 1100;
@@ -93,6 +93,21 @@ describe('createDatabaseGate', () => {
     await client.close();
     close = undefined;
     await expect(g()).rejects.toThrow();
+  });
+
+  it('rejects within a bounded time when the database stops answering (#122)', async () => {
+    const unresponsive = await createUnresponsiveDatabase();
+    try {
+      const g = createDatabaseGate({
+        db: unresponsive.db,
+        name: 'test',
+        minIntervalMs: INTERVAL,
+        timeoutMs: 50,
+      });
+      await expect(g()).rejects.toThrow('database did not answer within 50 ms');
+    } finally {
+      await unresponsive.close();
+    }
   });
 
   it('spaces real requests in real time', async () => {

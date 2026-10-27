@@ -6,7 +6,7 @@ import {
   type SourceError,
   type SourceResult,
 } from '../adapters/http.ts';
-import type { Database } from '../db/client.ts';
+import { DATABASE_TIMEOUT_MS, type Database, withTimeout } from '../db/client.ts';
 import { sourceCache } from '../db/schema.ts';
 
 const MINUTE = 60_000;
@@ -52,18 +52,23 @@ export interface SourceCacheOptions {
   db: Database;
   logger: Logger;
   now?: () => Date;
+  timeoutMs?: number; // per database call; past it, the call counts as failed
 }
 
 export function createSourceCache({
   db,
   logger,
   now = () => new Date(),
+  timeoutMs = DATABASE_TIMEOUT_MS,
 }: SourceCacheOptions): SourceCache {
   const inFlight = new Map<string, Promise<CachedResult<unknown>>>();
 
   async function read<T>(key: string, schema: z.ZodType<T>) {
     try {
-      const [row] = await db.select().from(sourceCache).where(eq(sourceCache.key, key));
+      const [row] = await withTimeout(
+        db.select().from(sourceCache).where(eq(sourceCache.key, key)),
+        timeoutMs,
+      );
       if (row === undefined) return undefined;
       const parsed = schema.safeParse(row.payload);
       if (!parsed.success) {
@@ -83,10 +88,13 @@ export function createSourceCache({
   async function write(key: string, payload: unknown, fetchedAt: Date, ttlMs: number) {
     const expiresAt = new Date(fetchedAt.getTime() + ttlMs);
     try {
-      await db
-        .insert(sourceCache)
-        .values({ key, payload, fetchedAt, expiresAt })
-        .onConflictDoUpdate({ target: sourceCache.key, set: { payload, fetchedAt, expiresAt } });
+      await withTimeout(
+        db
+          .insert(sourceCache)
+          .values({ key, payload, fetchedAt, expiresAt })
+          .onConflictDoUpdate({ target: sourceCache.key, set: { payload, fetchedAt, expiresAt } }),
+        timeoutMs,
+      );
     } catch (error) {
       logger.warn('cache: write failed', { kind: keyKind(key), error: describeError(error) });
     }
