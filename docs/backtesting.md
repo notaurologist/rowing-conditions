@@ -1,6 +1,6 @@
 # Backtesting
 
-M9 replays remembered days from past seasons to see whether the app's view matches what crews remember. This page covers recording and replaying a case. Cases and findings get added here as they're reviewed (#37).
+M9 replays notable days picked from last season's data, such as high water, cold mornings, windy days, and gaps in gauge or station data. Each replay shows what the app would have shown that morning, next to what was measured that day. This page covers recording and replaying a case. Cases and findings get added here as they're reviewed (#37).
 
 ## Recording a case
 
