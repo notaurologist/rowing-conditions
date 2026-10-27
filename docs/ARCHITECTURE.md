@@ -616,7 +616,7 @@ Test files sit next to the code they test as `*.test.ts` or `*.test.tsx`. `pnpm 
 - **api routes:** tests with adapters stubbed by fixtures, covering partial failure.
 - **web:** component tests for timeline and thresholds with fixture data.
 - Fixture recording is a script (`pnpm fixtures:record`) run manually, never in the pre-push check or CI.
-- Historical fixtures from past rowing days double as backtesting cases, recorded with `pnpm fixtures:record-case` into `test/fixtures/cases/` (see `backtesting.md`).
+- Historical fixtures from notable past days double as backtesting cases, recorded with `pnpm fixtures:record-case` into `test/fixtures/cases/` (see `backtesting.md`).
 
 ## Tooling
 

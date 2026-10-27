@@ -108,10 +108,12 @@ Each milestone is small enough to break into agent tasks. A milestone is done wh
 ## M9: Backtesting (late January to February)
 
 - Script to record historical fixtures for specific past dates and gauges.
-- A set of cases from remembered days last season (high water, cold mornings, windy days), with notes on what actually happened.
-- Review whether the app's view matches memory; fix gaps.
+- A set of notable days picked from last season's data (high water, cold mornings, windy days, gaps in gauge or station data). Each is replayed to show what the app would have shown that morning, then compared with what was measured that day.
+- Review where the app's view and the measurements differ; fix gaps, and tune maximum ages and headroom scales.
 
-**Accept when:** at least five historical cases recorded and reviewed, with findings captured in `docs/backtesting.md`.
+No one's memory of a day is needed. Whether the app matches a crew's judgment on the water is left to tester feedback in M10.
+
+**Accept when:** at least five notable days recorded, replayed, and compared with measurements, with findings captured in `docs/backtesting.md`.
 
 ## M10: Tester readiness (February)
 
