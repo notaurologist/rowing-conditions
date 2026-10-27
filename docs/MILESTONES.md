@@ -2,7 +2,7 @@
 
 Status: Draft v0.2
 
-Target: usable by testers in February, launched as the spring season opens (March to April). Roughly 10 to 20 hours per week.
+Target: usable by the owner and a few people they share it with in February, launched as the spring season opens (March to April). Roughly 10 to 20 hours per week.
 
 Each milestone is small enough to break into agent tasks. A milestone is done when every acceptance criterion passes, tests are green, and any docs it affects are updated.
 
@@ -111,17 +111,17 @@ Each milestone is small enough to break into agent tasks. A milestone is done wh
 - A set of notable days picked from last season's data (high water, cold mornings, windy days, gaps in gauge or station data). Each is replayed to show what the app would have shown that morning, then compared with what was measured that day.
 - Review where the app's view and the measurements differ; fix gaps, and tune maximum ages and headroom scales.
 
-No one's memory of a day is needed. Whether the app matches a crew's judgment on the water is left to tester feedback in M10.
+No one's memory of a day is needed. Whether the app matches a crew's judgment on the water is left to the owner's own use in M10.
 
 **Accept when:** at least five notable days recorded, replayed, and compared with measurements, with findings captured in `docs/backtesting.md`.
 
-## M10: Tester readiness (February)
+## M10: Ready to share (February)
 
-- Simple feedback channel (link to a form or email).
 - Short onboarding: what the app does and does not do (conditions, not verdicts).
-- Recruit testers from own club and a few nearby clubs.
 
-**Accept when:** at least five testers have it installed with their own locations and thresholds.
+No formal user testing and no feedback channel. The owner tests it and shares it informally.
+
+**Accept when:** onboarding ships and the owner is using the deployed app with their own location and thresholds.
 
 ---
 
