@@ -546,7 +546,7 @@ No secrets in code or fixtures.
   - Each value is `{ version, data }`. On read, older versions are migrated one step at a time (`migrations[n]` turns version n into n + 1) and the data is validated with Zod.
   - Data that can't be read (bad JSON, no envelope, no migration path, failed validation) is discarded and logged. In a list, only the invalid items are dropped. Data from a newer version is left in place and defaults are used. Reading never throws.
   - Writes are validated first. A failed write (quota, blocked storage) throws to the caller, which must show it.
-- **Current conditions** (`src/features/conditions/`): `conditionRows` turns a `/conditions` response into one row per metric. Water temperature comes first, then flow, gauge height, air temperature, wind, gusts and direction.
+- **Current conditions** (`src/features/conditions/`): `conditionRows` turns a `/conditions` response into one row per metric. Water temperature comes first, then flow, gauge height, air temperature, wind, gusts and direction. Water temperature at a gauge that doesn't measure it is left out unless one of the location's rule sets has a water or combined temperature limit, matching the chart (#124).
   - **Values:** each value is in the chosen units (`displayValue`, `displayUnits`), with its source (USGS gauge, NWS station and distance, or "NWS forecast for this hour") and its observation time in the location's time zone.
   - **Freshness:** a stale or future-dated reading is flagged in words using core `freshness`, the same rule evaluation uses.
   - **Qualifiers** are shown in words, and the ones that keep a value out of limits say so.

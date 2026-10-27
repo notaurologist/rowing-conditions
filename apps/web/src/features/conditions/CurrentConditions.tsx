@@ -107,7 +107,14 @@ export function CurrentConditions({
         units={units}
         now={now}
       />
-      <ConditionsPanel conditions={conditions} units={units} now={now} />
+      <ConditionsPanel
+        conditions={conditions}
+        units={units}
+        now={now}
+        waterTempNeeded={choices.some(({ ruleSet }) =>
+          ruleSet.thresholds.some((t) => t.metric === 'waterTemp' || t.metric === 'combinedTempF'),
+        )}
+      />
       <p className="reading-meta refresh-row">
         Loaded {formatAge(loadedAt, now)}.{' '}
         <button type="button" onClick={retry} disabled={query.isFetching}>

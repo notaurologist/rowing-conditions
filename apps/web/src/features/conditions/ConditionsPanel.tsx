@@ -12,6 +12,7 @@ interface Props {
   conditions: Conditions;
   units: DisplaySystem;
   now: string;
+  waterTempNeeded?: boolean; // a rule set has a water or combined temperature limit
 }
 
 function Freshness({
@@ -143,7 +144,7 @@ function Alerts({ conditions, now }: { conditions: Conditions; now: string }) {
   );
 }
 
-export function ConditionsPanel({ conditions, units, now }: Props) {
+export function ConditionsPanel({ conditions, units, now, waterTempNeeded = false }: Props) {
   const zone = conditions.location.timezone;
   const notices = sourceNotices(conditions);
   return (
@@ -171,7 +172,7 @@ export function ConditionsPanel({ conditions, units, now }: Props) {
       ))}
 
       <ul className="readings">
-        {conditionRows(conditions, { units, now }).map((row) => (
+        {conditionRows(conditions, { units, now, waterTempNeeded }).map((row) => (
           <Row key={row.metric} row={row} now={now} timeZone={zone} />
         ))}
       </ul>

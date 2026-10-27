@@ -110,11 +110,33 @@ describe('conditionRows', () => {
 
   it('says when the gauge does not report a metric', () => {
     const conditions = base();
+    conditions.current = conditions.current.filter((r) => r.metric !== 'gaugeHeight');
+    expect(row(conditionRows(conditions, { units: 'us', now: NOW }), 'gaugeHeight')).toMatchObject({
+      state: 'notReported',
+      message: "This gauge doesn't report gauge height",
+    });
+  });
+
+  it('leaves out water temperature the gauge does not measure, unless a limit needs it (#124)', () => {
+    const conditions = base();
     conditions.current = conditions.current.filter((r) => r.metric !== 'waterTemp');
-    expect(row(conditionRows(conditions, { units: 'us', now: NOW }), 'waterTemp')).toMatchObject({
+    const without = conditionRows(conditions, { units: 'us', now: NOW });
+    expect(without.map((r) => r.metric)).not.toContain('waterTemp');
+    const needed = conditionRows(conditions, { units: 'us', now: NOW, waterTempNeeded: true });
+    expect(row(needed, 'waterTemp')).toMatchObject({
       state: 'notReported',
       message: "This gauge doesn't report water temperature",
     });
+  });
+
+  it('keeps water temperature the gauge measures, and explains it in weather-only mode', () => {
+    expect(row(conditionRows(base(), { units: 'us', now: NOW }), 'waterTemp').state).toBe('value');
+    const weatherOnly = base();
+    delete weatherOnly.gauge;
+    weatherOnly.current = weatherOnly.current.filter((r) => r.source !== 'usgs');
+    expect(row(conditionRows(weatherOnly, { units: 'us', now: NOW }), 'waterTemp').state).toBe(
+      'noGauge',
+    );
   });
 
   it('explains gauge metrics in weather-only mode', () => {

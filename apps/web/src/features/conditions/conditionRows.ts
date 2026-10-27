@@ -155,9 +155,15 @@ function trendLabel(
   return { direction: trend.direction, text: `${verb} ${rate} ${since}` };
 }
 
+// Water temperature at a gauge that doesn't measure it is left out unless a limit needs it, as
+// in the chart (#124); the card then explains why that limit is unknown.
 export function conditionRows(
   conditions: Conditions,
-  { units, now }: { units: DisplaySystem; now: string },
+  {
+    units,
+    now,
+    waterTempNeeded = false,
+  }: { units: DisplaySystem; now: string; waterTempNeeded?: boolean },
 ): ConditionRow[] {
   return ROW_ORDER.map((metric): ConditionRow => {
     const label = LABELS[metric];
@@ -228,7 +234,9 @@ export function conditionRows(
     return metric === 'flow' || metric === 'gaugeHeight'
       ? { ...value, trend: trendLabel(conditions, metric, shared.freshness, { units, now }) }
       : value;
-  });
+  }).filter(
+    (row) => !(row.metric === 'waterTemp' && row.state === 'notReported' && !waterTempNeeded),
+  );
 }
 
 export interface SourceNotice {
