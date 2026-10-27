@@ -8,6 +8,7 @@ export * from './geo/geo.ts';
 export * from './rules/entry.ts';
 export * from './rules/examples.ts';
 export * from './series/interpolate.ts';
+export * from './series/trend.ts';
 export * from './types/alert.ts';
 export * from './types/conditions.ts';
 export * from './types/evaluation.ts';

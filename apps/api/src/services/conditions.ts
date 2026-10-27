@@ -8,6 +8,9 @@ import {
   Reading,
   type SourceId,
   type SourceStatus,
+  type Trend,
+  TrendMetric,
+  trendOf,
   UtcTime,
 } from '@rowing/core';
 import { z } from 'zod';
@@ -20,6 +23,9 @@ export const FORECAST_HOURS = 48;
 // Cached longer than shown, so a cached forecast still covers the next 48 hours as time passes.
 const FORECAST_HOURS_FETCHED = 72;
 const HOUR = 3_600_000;
+// Recent readings fetched for trends: the 3-hour window, plus an hour for the latest reading
+// to lag the current time.
+const TREND_HISTORY_HOURS = 4;
 
 // Schemas for cached payloads: stored JSON is re-validated on read.
 const Readings = z.array(Reading);
@@ -61,6 +67,9 @@ interface River {
   gauge: Gauge | null;
   latest: Reading[];
   forecast: ForecastPoint[];
+  // Recent readings for trends, by metric; null if they couldn't be loaded. Only for the display
+  // gauge. Absent for an NWPS gauge, whose latest readings reach back days.
+  history?: Record<TrendMetric, Reading[] | null>;
 }
 
 function splitRef(ref: GaugeRef): { source: 'usgs' | 'nwps'; id: string } {
@@ -90,7 +99,21 @@ export async function getConditions(
     return result.status === 'error' ? undefined : result.data;
   };
 
-  async function river(ref: GaugeRef): Promise<River> {
+  // Recent readings of one metric. A failure leaves only the trend unknown, so it isn't
+  // reported as the source failing.
+  async function usgsHistory(id: string, metric: TrendMetric): Promise<Reading[] | null> {
+    const to = deps.now();
+    const from = new Date(to.getTime() - TREND_HISTORY_HOURS * HOUR);
+    const result = await cache.get(
+      `usgs:history:${id}:${metric}`,
+      cacheTtlMs.usgsHistory,
+      Readings,
+      () => usgs.getHistory(id, metric, from.toISOString(), to.toISOString()),
+    );
+    return result.status === 'error' ? null : result.data;
+  }
+
+  async function river(ref: GaugeRef, withHistory = false): Promise<River> {
     const { source, id } = splitRef(ref);
     const stageFlow = (lid: string) =>
       track(
@@ -109,11 +132,12 @@ export async function getConditions(
 
     if (source === 'nwps') {
       const [gauge, flow] = await Promise.all([nwpsGauge(id), stageFlow(id)]);
+      // NWPS observations already reach back days, so they double as history.
       return { gauge: gauge ?? null, latest: flow?.observed ?? [], forecast: flow?.forecast ?? [] };
     }
 
     const usgsNumber = id.replace(/^USGS-/, '');
-    const [gauge, latest, forecastPoint] = await Promise.all([
+    const [gauge, latest, forecastPoint, ...histories] = await Promise.all([
       track(
         'usgs',
         cache.get(`usgs:gauge:${id}`, cacheTtlMs.gaugeMetadata, Gauge.nullable(), () =>
@@ -125,10 +149,18 @@ export async function getConditions(
         cache.get(`usgs:latest:${id}`, cacheTtlMs.usgsLatest, Readings, () => usgs.getLatest(id)),
       ),
       nwpsGauge(usgsNumber),
+      ...(withHistory ? [usgsHistory(id, 'flow'), usgsHistory(id, 'gaugeHeight')] : []),
     ]);
     const lid = forecastPoint?.hasFlowForecast ? splitRef(forecastPoint.ref).id : undefined;
     const flow = lid ? await stageFlow(lid) : undefined;
-    return { gauge: gauge ?? null, latest: latest ?? [], forecast: flow?.forecast ?? [] };
+    const [flowHistory = null, heightHistory = null] = histories;
+    const history = withHistory ? { flow: flowHistory, gaugeHeight: heightHistory } : undefined;
+    return {
+      gauge: gauge ?? null,
+      latest: latest ?? [],
+      forecast: flow?.forecast ?? [],
+      ...(history !== undefined ? { history } : {}),
+    };
   }
 
   const [weatherPoint, weather, current, alerts, display, ...named] = await Promise.all([
@@ -156,8 +188,8 @@ export async function getConditions(
         nws.getAlerts(lat, lon),
       ),
     ),
-    input.gaugeRef ? river(input.gaugeRef) : Promise.resolve(undefined),
-    ...(input.flowGaugeRefs ?? []).map(river),
+    input.gaugeRef ? river(input.gaugeRef, true) : Promise.resolve(undefined),
+    ...(input.flowGaugeRefs ?? []).map((ref) => river(ref)),
   ]);
 
   const start = Math.floor(deps.now().getTime() / HOUR) * HOUR;
@@ -207,6 +239,16 @@ export async function getConditions(
     (r) => latestDisplay?.provenance[r.metric]?.asOf === r.observedAt,
   );
 
+  // A trend for each metric the display gauge reports now (#73).
+  const trends: Trend[] = TrendMetric.options
+    .filter((metric) => gaugeReadings.some((r) => r.metric === metric))
+    .map((metric): Trend => {
+      const history = display?.history?.[metric];
+      return history === null
+        ? { metric, direction: 'unknown', reason: 'historyError' }
+        : trendOf(metric, [...(history ?? []), ...(display?.latest ?? [])]);
+    });
+
   return {
     location: {
       lat,
@@ -225,6 +267,7 @@ export async function getConditions(
         }
       : {}),
     current: [...(current?.readings ?? []), ...gaugeReadings],
+    trends,
     ...(current ? { currentBasis: current.basis } : {}),
     ...(current?.station ? { station: current.station } : {}),
     forecast,

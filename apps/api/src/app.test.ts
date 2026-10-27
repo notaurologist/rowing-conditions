@@ -42,6 +42,7 @@ function fakeUsgs(overrides: Partial<FlowSource> = {}): FlowSource {
 const emptyConditions: ConditionsResponse = {
   location: { lat: 42.6, lon: -72.55, timezone: 'America/New_York' },
   current: [],
+  trends: [],
   forecast: [],
   flowSeries: [],
   daylight: [],

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { DaylightTimes } from '../daylight/daylight.ts';
+import { Trend } from '../series/trend.ts';
 import { Alert } from './alert.ts';
 import { Gauge } from './gauge.ts';
 import { SourceId, UtcTime } from './measurement.ts';
@@ -24,6 +25,9 @@ export const ConditionsResponse = z.object({
   }),
   gauge: Gauge.pick({ ref: true, name: true, lat: true, lon: true }).optional(),
   current: z.array(Reading),
+  // Flow and gauge height trends at the display gauge, one per metric the gauge reports. Defaults
+  // to none so a copy kept from before trends were added still parses.
+  trends: z.array(Trend).default([]),
   currentBasis: z.enum(['station', 'forecast']).optional(),
   station: z.object({ id: z.string(), name: z.string(), distanceKm: z.number() }).optional(),
   forecast: z.array(ForecastPoint), // hourly points from the current hour

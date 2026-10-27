@@ -9,12 +9,16 @@ import {
   type Qualifier,
   type Reading,
   type SourceId,
+  type Trend,
+  type TrendMetric,
+  unitDecimals,
 } from '@rowing/core';
 import type { Conditions } from '../../lib/api.ts';
 import {
   compassPoint,
   formatDistanceKm,
   formatNumber,
+  formatTime,
   metricName,
   unitSymbol,
 } from '../../lib/format.ts';
@@ -50,6 +54,12 @@ export interface ConditionRow {
   kind?: 'observation' | 'forecast';
   freshness?: Freshness;
   qualifiers: QualifierLabel[];
+  trend?: TrendLabel; // flow and gauge height, when there's a value
+}
+
+export interface TrendLabel {
+  direction: Trend['direction'];
+  text: string;
 }
 
 const LABELS: Record<RowMetric, string> = {
@@ -104,6 +114,45 @@ function formatReading(metric: RowMetric, value: number, units: DisplaySystem) {
     return { value: compassPoint(value), unit: `${Math.round(value)}°` };
   const unit = displayUnits[units][metric];
   return { value: formatNumber(displayValue(metric, value, unit), unit), unit: unitSymbol(unit) };
+}
+
+const UNKNOWN_TREND: Record<Extract<Trend, { direction: 'unknown' }>['reason'], string> = {
+  noReadings: 'no recent readings',
+  shortHistory: 'less than 2 hours of recent readings',
+  historyError: "couldn't load recent readings",
+};
+
+// "Rising 120 cfs per hour since 9:15 AM". Unknown is said as unknown, with why, and is never
+// shown as stable (#73).
+function trendLabel(
+  conditions: Conditions,
+  metric: TrendMetric,
+  freshness: Freshness,
+  { units, now }: { units: DisplaySystem; now: string },
+): TrendLabel {
+  const trend = conditions.trends.find((t) => t.metric === metric);
+  const unknown = (why: string): TrendLabel => ({
+    direction: 'unknown',
+    text: `Trend unknown: ${why}`,
+  });
+  if (freshness === 'stale') return unknown('the latest reading is stale');
+  if (freshness === 'future') return unknown('the latest reading is dated in the future');
+  if (!trend) return unknown(UNKNOWN_TREND.noReadings);
+  if (trend.direction === 'unknown') return unknown(UNKNOWN_TREND[trend.reason]);
+
+  const unit = displayUnits[units][metric];
+  const size = displayValue(metric, Math.abs(trend.ratePerHour), unit);
+  const perHour = (amount: number) => `${formatNumber(amount, unit)} ${unitSymbol(unit)} per hour`;
+  // A rate too small to show at display precision still isn't zero.
+  const tiny = size === 0 && trend.ratePerHour !== 0;
+  const rate = tiny ? `less than ${perHour(10 ** -unitDecimals[unit])}` : perHour(size);
+  const since = `since ${formatTime(trend.from, now, conditions.location.timezone)}`;
+  if (trend.direction === 'stable') {
+    const sign = tiny || size === 0 ? '' : trend.ratePerHour > 0 ? '+' : '−';
+    return { direction: 'stable', text: `Stable ${since} (${sign}${rate})` };
+  }
+  const verb = trend.direction === 'rising' ? 'Rising' : 'Falling';
+  return { direction: trend.direction, text: `${verb} ${rate} ${since}` };
 }
 
 export function conditionRows(
@@ -171,7 +220,14 @@ export function conditionRows(
     if (metric === 'windDirection' && windSpeed === 0) {
       return { ...shared, state: 'noValue', message: 'Calm, no direction' };
     }
-    return { ...shared, state: 'value', ...formatReading(metric, reading.value, units) };
+    const value = {
+      ...shared,
+      state: 'value',
+      ...formatReading(metric, reading.value, units),
+    } as const;
+    return metric === 'flow' || metric === 'gaugeHeight'
+      ? { ...value, trend: trendLabel(conditions, metric, shared.freshness, { units, now }) }
+      : value;
   });
 }
 
