@@ -16,8 +16,8 @@ export type InputMetric = Exclude<Metric, 'combinedTempF'>;
 // Maximum age of a value's asOf before it counts as stale. Starting values; tune in M9.
 // Weather observations have no agreed limit yet, so they share the 12-hour forecast limit.
 export const maxAgeHours: Record<InputMetric, Record<ValueProvenance['kind'], number>> = {
-  flow: { observation: 6, forecast: 36 },
-  gaugeHeight: { observation: 6, forecast: 36 },
+  flow: { observation: 3, forecast: 36 },
+  gaugeHeight: { observation: 3, forecast: 36 },
   waterTemp: { observation: 24, forecast: 24 },
   airTemp: { observation: 12, forecast: 12 },
   windSpeed: { observation: 12, forecast: 12 },

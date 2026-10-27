@@ -97,6 +97,35 @@ function table(rows: string[][]): string {
     .join('\n');
 }
 
+// How the status from measured values compares with the status the app showed.
+function measuredSummary(replay: Replay, timeZone: string): string[] {
+  const { measured, timeline } = replay;
+  const lines = [
+    'Measured: the status from the values measured in each hour (station report and gauge), with the same limits.',
+  ];
+  if (measured.leftOut.length > 0) {
+    lines.push(
+      `Measured leaves out limits on ${measured.leftOut.map((m) => metricLabels[m]).join(', ')}, which nothing measures.`,
+    );
+  }
+  if (measured.hours.length === 0) {
+    lines.push('No limits can be compared with measured values for this boat class.');
+    return lines;
+  }
+  const differing = timeline.hours.flatMap((hour, i) => {
+    const m = measured.hours[i];
+    return m && m.status !== hour.status
+      ? [`${formatTime(hour.time, timeZone, false)} (${hour.status}, measured ${m.status})`]
+      : [];
+  });
+  lines.push(
+    differing.length === 0
+      ? `The measured status matches in all ${timeline.hours.length} hours.`
+      : `The measured status differs in ${differing.length} of ${timeline.hours.length} hours: ${differing.join(', ')}.`,
+  );
+  return lines;
+}
+
 export interface FormatOptions {
   caseName: string;
   timeZone: string;
@@ -129,7 +158,12 @@ export function formatReplay(replay: Replay, options: FormatOptions): string {
     '- Flow forecast: none, since NWPS keeps no past forecasts. Later hours repeat the last measured flow, as the app does for a gauge without a forecast.',
   );
   lines.push('- Alerts: not recorded.');
-  for (const warning of replay.warnings) lines.push(`- Warning: ${warning}`);
+  // The same warning can repeat for every reading, so each is listed once with a count.
+  const warnings = new Map<string, number>();
+  for (const warning of replay.warnings) warnings.set(warning, (warnings.get(warning) ?? 0) + 1);
+  for (const [warning, count] of warnings) {
+    lines.push(`- Warning${count > 1 ? ` (${count} times)` : ''}: ${warning}`);
+  }
   lines.push('');
 
   if (!timeline.hasLimits) {
@@ -150,6 +184,7 @@ export function formatReplay(replay: Replay, options: FormatOptions): string {
     [
       'Time',
       `${ruleSet.name}'s limits`,
+      'Measured',
       'Light',
       'Air',
       'Wind',
@@ -168,10 +203,12 @@ export function formatReplay(replay: Replay, options: FormatOptions): string {
     const hour = timeline.hours[i];
     const observed = replay.observed[i];
     const lead = replay.forecastLeads[i];
+    const measured = replay.measured.hours[i];
     const v = point.values;
     rows.push([
       formatTime(point.time, timeZone, false),
       hour?.status ?? '–',
+      measured?.status ?? '–',
       hour?.light ?? '–',
       formatValue('airTemp', v.airTemp, units),
       formatValue('windSpeed', v.windSpeed, units),
@@ -181,10 +218,19 @@ export function formatReplay(replay: Replay, options: FormatOptions): string {
       formatValue('flow', v.flow, units),
       lead === null || lead === undefined ? '–' : `${lead} day`,
       ...observedLabel(observed?.values ?? {}, observed?.basis),
-      hour ? describeHour(hour, replay) : '',
+      [
+        hour ? describeHour(hour, replay) : '',
+        measured && hour && measured.status !== hour.status
+          ? `measured: ${describeHour(measured, replay) || 'none'}`
+          : '',
+      ]
+        .filter((part) => part !== '')
+        .join(' | '),
     ]);
   });
   lines.push(table(rows));
+  lines.push('');
+  lines.push(...measuredSummary(replay, timeZone));
   const basis = replay.observed.find((o) => o.basis)?.basis;
   lines.push('');
   lines.push(

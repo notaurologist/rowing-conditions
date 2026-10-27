@@ -91,7 +91,7 @@ describe('conditionRows', () => {
 
   it('marks a reading older than its maximum age as stale', () => {
     const rows = conditionRows(base(), { units: 'us', now: '2026-10-26T07:30:00.000Z' });
-    expect(row(rows, 'flow').freshness).toBe('stale'); // 6.5 h old; limit 6 h
+    expect(row(rows, 'flow').freshness).toBe('stale'); // 6.5 h old; limit 3 h
     expect(row(rows, 'waterTemp').freshness).toBe('fresh'); // limit 24 h
   });
 

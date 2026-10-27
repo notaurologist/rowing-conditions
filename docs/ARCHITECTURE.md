@@ -271,7 +271,7 @@ Constants in `packages/core`, starting values to tune in M9:
 
 | Metric and kind | Max age of `asOf` |
 |---|---|
-| flow, gaugeHeight, observation | 6 h |
+| flow, gaugeHeight, observation | 3 h (6 h until M9 backtesting; see `backtesting.md`) |
 | waterTemp, observation | 24 h |
 | flow, gaugeHeight, NWPS forecast | 36 h |
 | weather metrics, NWS forecast | 12 h |

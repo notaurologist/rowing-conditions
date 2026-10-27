@@ -8,11 +8,13 @@ import { join } from 'node:path';
 import {
   type ConditionsResponse,
   distanceKm,
+  evaluateHour,
   evaluateTimeline,
   type ForecastPoint,
   forecastForRuleSet,
   type Gauge,
   type GaugeRef,
+  type HourResult,
   type Metric,
   type Reading,
   type RuleSet,
@@ -104,9 +106,22 @@ export interface Replay {
   forecast: ForecastPoint[];
   timeline: TimelineResult;
   observed: ObservedHour[]; // one per forecast hour: what happened
+  measured: MeasuredTimeline;
   forecastLeads: (ForecastLead | null)[]; // one per forecast hour: how far ahead it was made
   warnings: string[]; // adapter warnings and sources that failed
 }
+
+// What the rule set would have said with the values measured in each hour, to compare with what
+// the app showed. Weather comes from the station report filed in the hour (never modeled history),
+// and river values from the gauge's last reading in the hour. Chance of rain has no measurement,
+// so its limits are left out rather than making every hour unknown.
+export interface MeasuredTimeline {
+  points: ForecastPoint[]; // one per forecast hour
+  hours: HourResult[]; // empty when the rule set has nothing measurable to compare
+  leftOut: Metric[]; // metrics whose limits were left out
+}
+
+const UNMEASURED: readonly Metric[] = ['precipChance'];
 
 // The earliest and latest replay times whose 48 hours ahead the case covers.
 export function replayRange(meta: CaseFile): { earliest: string; latest: string } {
@@ -190,6 +205,15 @@ export async function replayCase(input: ReplayInput): Promise<Replay> {
     return { time: point.time, values: {} };
   });
 
+  const measured = await measuredTimeline({
+    recorded,
+    logger,
+    times: conditions.forecast.map((p) => p.time),
+    reports,
+    ruleSet,
+    boatClassId,
+  });
+
   return {
     at: now.toISOString(),
     ruleSet,
@@ -198,9 +222,120 @@ export async function replayCase(input: ReplayInput): Promise<Replay> {
     forecast: forecastForRuleSet(timelineInput),
     timeline,
     observed,
+    measured,
     forecastLeads: conditions.forecast.map((p) => forecastLead(Date.parse(p.time), nowMs)),
     warnings,
   };
+}
+
+interface MeasuredInput {
+  recorded: RecordedCase;
+  logger: Logger;
+  times: string[];
+  reports: AsosReport[];
+  ruleSet: RuleSet;
+  boatClassId: string;
+}
+
+async function measuredTimeline(input: MeasuredInput): Promise<MeasuredTimeline> {
+  const { recorded, times, reports, ruleSet, boatClassId } = input;
+  const { meta } = recorded;
+  const usgsAdapter = createUsgsAdapter({
+    fetch: fixtureFetch(recorded.byUrl),
+    logger: input.logger,
+  });
+  const from = `${meta.window.start}T00:00:00Z`;
+  const to = `${meta.window.endExclusive}T00:00:00Z`;
+  const readings = async (gaugeId: string, metric: Metric) => {
+    const result = await usgsAdapter.getHistory(gaugeId, metric, from, to);
+    return result.ok ? result.data : [];
+  };
+
+  // As in the app: flow from the gauge the rule set names, if it names one; everything else
+  // from the location's gauge.
+  const displayGauge = meta.gauges[0] as string;
+  const flowRef = ruleSet.flowGaugeRef;
+  const flowGauge = flowRef === undefined ? displayGauge : flowRef.replace(/^usgs:/, '');
+  const river: Reading[] = [
+    ...(flowRef === undefined || flowRef.startsWith('usgs:')
+      ? await readings(flowGauge, 'flow')
+      : []),
+    ...(await readings(displayGauge, 'gaugeHeight')),
+    ...(await readings(displayGauge, 'waterTemp')),
+  ];
+
+  const points = times.map((time): ForecastPoint => {
+    const start = Date.parse(time);
+    const inHour = (t: string) => Date.parse(t) >= start && Date.parse(t) < start + HOUR;
+    const point: ForecastPoint = { time, values: {}, provenance: {} };
+    for (const r of river.filter((x) => inHour(x.observedAt))) {
+      const seen = point.provenance[r.metric];
+      if (seen && seen.asOf >= r.observedAt) continue;
+      point.values[r.metric] = r.value;
+      point.provenance[r.metric] = {
+        kind: 'observation',
+        asOf: r.observedAt,
+        source: 'usgs',
+        ...(r.sourceRef ? { sourceRef: r.sourceRef } : {}),
+        ...(r.qualifiers ? { qualifiers: r.qualifiers } : {}),
+      };
+    }
+    const report = reports.filter((r) => inHour(r.time)).at(-1);
+    if (report) {
+      for (const [metric, value] of Object.entries(report.values) as [Metric, number | null][]) {
+        point.values[metric] = value;
+        point.provenance[metric] = {
+          kind: 'observation',
+          asOf: report.time,
+          source: 'nws',
+          sourceRef: meta.station ?? report.station,
+        };
+      }
+    }
+    return point;
+  });
+
+  const measurable = {
+    ...ruleSet,
+    thresholds: ruleSet.thresholds.filter((t) => !UNMEASURED.includes(t.metric)),
+  };
+  const leftOut = [
+    ...new Set(
+      ruleSet.thresholds
+        .filter(
+          (t) =>
+            UNMEASURED.includes(t.metric) &&
+            (t.boatClassIds === undefined || t.boatClassIds.includes(boatClassId)),
+        )
+        .map((t) => t.metric),
+    ),
+  ];
+  // Evaluated one hour at a time, each as of the end of its hour, so a reading taken in the hour
+  // is never too old. A metric no hour has a measurement for has no source, as in the app.
+  const timeline = evaluateTimeline({
+    forecast: points,
+    ruleSet: measurable,
+    boatClassId,
+    lat: meta.lat,
+    lon: meta.lon,
+    now: times[0] ?? new Date(0).toISOString(),
+    // The points already carry flow from the rule set's gauge. Without this, evaluation would
+    // drop it and treat flow as having no source.
+    ...(flowRef ? { flowByGauge: { [flowRef]: points } } : {}),
+  });
+  const hours = timeline.hasLimits
+    ? points.map((point) =>
+        evaluateHour(point, {
+          ruleSet: measurable,
+          boatClassId,
+          lat: meta.lat,
+          lon: meta.lon,
+          now: new Date(Date.parse(point.time) + HOUR).toISOString(),
+          unavailableMetrics: timeline.unavailableMetrics,
+        }),
+      )
+    : [];
+  return { points, hours, leftOut };
 }
 
 // The forecast the app could have had at `nowMs` for an hour: one made a day before the hour if

@@ -50,6 +50,8 @@ pnpm fixtures:replay-case --name may-15-high-water --at 2026-05-15T06:00 \
 
 The replay reads only the case's fixtures and makes no network calls. It prints one row per hour for the 48 hours from `--at`. Each row has the status against the rule set (within, outside or unknown), what was outside or unknown and why, and the values the app would have shown. Beside those it puts what the station reported in that hour, or modeled history when the case has no station.
 
+The Measured column is the status the same limits give with the values measured in each hour: the station report filed in the hour and the gauge's last reading in it. Below the table, the replay lists the hours where the measured status differs from what the app showed. Limits on chance of rain are left out of the measured status, since nothing measures it, and the replay says so. Modeled history is never treated as measured.
+
 How a replay stands in for the live sources:
 
 - **Hours** are built by the app's own `getConditions`, and evaluated by `evaluateTimeline` as the web app does. The case's fixtures sit behind the same source interfaces.
@@ -59,6 +61,57 @@ How a replay stands in for the live sources:
 - **Gauge names** aren't recorded, so the gauge ID stands in.
 
 The `replay-test` case and the `test-club` rule set in the fixtures are for tests only. The rule set's limits are made up.
+
+## Cases
+
+Notable days from April to October 2026 at Turners Falls (42.6, -72.55), picked from the data (#37). All use Orange airport (KORE), 21.7 km away, for observed weather.
+
+| Case | Picked because | Gauges |
+|---|---|---|
+| `high-water-2026-04-02` | Montague's highest daily mean flow of the season, 46,300 cfs | Montague |
+| `windy-2026-05-05` | Sustained wind of 23 mph and gusts to 43 mph at KORE in daylight | Montague |
+| `data-gap-2026-06-09` | KORE filed 4 of its 14 daylight reports; Montague reported every 2 hours instead of every 15 minutes on June 7 and 8 | Montague |
+| `forecast-miss-2026-06-30` | The season's largest daylight temperature miss: KORE measured 18 °F below the day-ahead forecast | Montague |
+| `cold-2026-10-24` | −4.4 °C air between 5 and 8 a.m., with water at Northfield near 11 °C, so the combined air and water limit applies | Northfield (shown, water temperature), Montague |
+
+How they were picked: USGS daily mean flow at Montague and continuous water temperature at Northfield; KORE's routine hourly reports from IEM; and the NBM day-ahead forecast from Open-Meteo's Previous Runs API, compared with KORE hour by hour from 6 a.m. to 8 p.m. EDT.
+
+These cases aren't in the repo. Together they're about 3 MB of fixtures, and no test uses them. To re-record one, run its command below, then replay it at 6 a.m. with your rule set:
+
+```
+pnpm fixtures:record-case --name high-water-2026-04-02 --date 2026-04-02 --lat 42.6 --lon -72.55 --gauge USGS-01170500 --station KORE
+pnpm fixtures:record-case --name windy-2026-05-05 --date 2026-05-05 --lat 42.6 --lon -72.55 --gauge USGS-01170500 --station KORE
+pnpm fixtures:record-case --name data-gap-2026-06-09 --date 2026-06-09 --lat 42.6 --lon -72.55 --gauge USGS-01170500 --station KORE
+pnpm fixtures:record-case --name forecast-miss-2026-06-30 --date 2026-06-30 --lat 42.6 --lon -72.55 --gauge USGS-01170500 --station KORE
+pnpm fixtures:record-case --name cold-2026-10-24 --date 2026-10-24 --lat 42.6 --lon -72.55 --gauge USGS-01161280 --gauge USGS-01170500 --station KORE
+
+pnpm fixtures:replay-case --name windy-2026-05-05 --at 2026-05-05T06:00 --timezone America/New_York --rule-set ~/my-club.json
+```
+
+The findings below come from recordings made on October 27, 2026. USGS readings from the last several months are provisional and can be revised when they're approved, so a later recording may differ slightly. Don't commit the recordings.
+
+## Findings, October 2026
+
+Each case was replayed at 6 a.m. EDT on its date against the owner's club's only limit: flow at most 20 kcfs at Montague, measured at the same gauge the club watches (NWPS `MNTM3` shows USGS 01170500's readings). The club has no wind, temperature or daylight limits; it asks rowers to check the weather themselves. So the statuses below are about flow, and the weather comparisons are context.
+
+| Case | App at 6 a.m. | Measured status differs | What the replay showed |
+|---|---|---|---|
+| `high-water-2026-04-02` | Outside all 48 hours (45.5 kcfs) | Never | Flow stayed well over the limit for both days. |
+| `windy-2026-05-05` | Within all 48 hours (11.7 kcfs) | 2 hours, 2–3 a.m. the next night | A release took Montague from 15.3 to 21.7 kcfs in about 2 hours. Forecast wind was 5–9 mph under what Orange measured from 11 a.m., and gusts up to 18 mph under (25 mph forecast, 43 mph measured at 2 p.m.). |
+| `data-gap-2026-06-09` | Within all 48 hours (7.5 kcfs) | 2 hours, 9–10 p.m. | Orange's reports stopped, so current weather fell back to the forecast, labeled as such. A release took Montague from 14.8 to 23.4 kcfs within 2 hours. |
+| `forecast-miss-2026-06-30` | Within all 48 hours (5.3 kcfs) | 2 hours, 7–8 p.m. the next day | The day-ahead forecast had 90 °F all afternoon; Orange measured 72 °F at 3 p.m. after a sudden drop, with a 9–13% chance of rain forecast. Flow later crossed 20 kcfs briefly. |
+| `cold-2026-10-24` | Within all 48 hours (4.7 kcfs) | Never | Air at Orange was 24 °F at 6 a.m. and water at Northfield 53 °F. The air forecast was within 7 °F of what was measured until 4 p.m., then up to 10 °F too warm as it cooled. |
+
+What this means for the app:
+
+- **Flow changes faster than the app assumed.** Across April to October 2026, on 10 days Montague was within 20 kcfs at 6 a.m. and over it later the same day, once from 3.5 kcfs. The largest one-hour rise was 6,900 cfs. These are releases from the dams upstream: sharp rises over an hour or two, then slower falls.
+- **Maximum age for flow and gauge height readings lowered from 6 to 3 hours.** A 6-hour-old reading could be off by more than 15,000 cfs. Montague never went more than 2 hours between readings all season (every 2 hours on June 7 and 8, otherwise every 15 minutes), so 3 hours wouldn't have marked any reading stale.
+- **Without a flow forecast, the latest reading is held for 48 hours.** That's how the replays work, and how the app works for a gauge without an NWPS forecast. It missed every one of these releases. For Montague, the app uses the NWPS forecast instead, but whether NWPS anticipates releases can't be checked from history, since NWPS keeps no past forecasts (#81). #82 found the NWPS forecast at `MNTM3` disagreeing with the gauge by about half. What to do about held readings is #117.
+- **Wind on windy days was under-forecast.** On May 5 the day-ahead forecast had the wind's shape right but not its size. For limits on wind, the measured values from the station in the current hour matter.
+- **Northfield reports negative flow.** USGS 01161280 had 50 negative readings from October 23 to 26 (down to −4,890 cfs) and 189 in July, probably from the Northfield Mountain pumped storage station and the Turners Falls dam pool. The app treats negative flow as out of range, so those readings are missing (#116).
+- **Stale data and gaps behaved as designed.** Missing weather reports fell back to the forecast and said so, and Montague's 2-hourly readings stayed current.
+
+Headroom scales: reviewed and unchanged. Flow's scale is the limit itself, and 20 kcfs is the only limit in this rule set. A release can use up about a third of that in an hour, so headroom says little about the next few hours on this river. The fixed temperature and gauge height scales couldn't be checked, since the club has no limits on them.
 
 ## Limits
 
