@@ -313,6 +313,53 @@ describe('TimelineSection flow note without a usable forecast (#117, #82)', () =
   });
 });
 
+describe('TimelineSection set-aside flow forecast (#144)', () => {
+  // The forecast set aside: the 8:15 AM reading holds 3 hours, then flow is withheld, and the
+  // forecast itself comes along to be shown dashed.
+  const setAside = () => {
+    const conditions = structuredClone(montague) as Conditions;
+    const asOf = '2026-10-26T12:15:00.000Z';
+    for (const [i, p] of conditions.forecast.entries()) {
+      const provenance = { kind: 'observation' as const, asOf, source: 'usgs' as const };
+      p.values.flow = i < 3 ? 106 : null;
+      p.provenance.flow = i < 3 ? provenance : { ...provenance, withheld: 'forecastDisagrees' };
+    }
+    conditions.flowSetAside = [
+      {
+        gaugeRef: 'usgs:USGS-01170500',
+        issuedAt: '2026-10-25T14:44:00.000Z',
+        measured: toInternal('flow', 3750, 'cfs'),
+        measuredAt: asOf,
+        forecastForMeasurement: toInternal('flow', 2650, 'cfs'),
+        points: conditions.forecast.map((p) => ({
+          time: p.time,
+          flow: toInternal('flow', 5750, 'cfs'),
+        })),
+      },
+    ];
+    return conditions;
+  };
+
+  it('draws the forecast dashed, names it in the row, and says what it had in the note', () => {
+    const { html, text } = render(clubA, setAside());
+    expect(html).toContain('mg-line-set-aside');
+    expect(text).toContain("dashed: NWPS forecast, doesn't match the gauge");
+    expect(text).toContain(
+      "Flow: the National Water Prediction Service forecast doesn't match the gauge. It had 2,650 cfs for 8 AM; the gauge measured 3,750 cfs. It's drawn dashed and isn't compared against limits",
+    );
+  });
+
+  it('gives its value for unknown hours in the readout and table', () => {
+    const { text } = render(clubA, setAside());
+    expect(text).toContain("NWPS 5,750 cfs, doesn't match gauge");
+  });
+
+  it('draws nothing dashed without a set-aside forecast', () => {
+    const { html } = render();
+    expect(html).not.toContain('mg-line-set-aside');
+  });
+});
+
 describe('TimelineSection course (#103)', () => {
   it('adds the course wind to the readout and the hourly table, with the course notes', () => {
     const course = {

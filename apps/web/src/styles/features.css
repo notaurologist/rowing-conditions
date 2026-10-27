@@ -1155,3 +1155,11 @@ button.danger {
   margin: var(--space-1) 0 0;
   font-size: var(--text-sm);
 }
+
+/* A flow forecast set aside for disagreeing with the gauge (#144): shown, never compared. Dashed
+   and faded, so it isn't told apart by color alone. */
+.mg-line-set-aside {
+  stroke: var(--water);
+  stroke-dasharray: 2.5 2.5;
+  opacity: 0.55;
+}

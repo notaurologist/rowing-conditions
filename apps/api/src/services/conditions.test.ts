@@ -535,6 +535,54 @@ describe('getConditions with failures', () => {
   });
 });
 
+describe('getConditions: a set-aside flow forecast, to show and never compare (#144)', () => {
+  const disagreeing = () =>
+    vi
+      .mocked(deps.usgs.getLatest)
+      .mockResolvedValue(
+        ok([{ ...(usgsLatest[0] as Reading), observedAt: '2026-10-26T12:10:00.000Z' }]),
+      );
+
+  it('keeps the forecast it set aside, with the evidence', async () => {
+    disagreeing();
+    const r = await conditions();
+    expect(r.flowSetAside).toEqual([
+      {
+        gaugeRef: 'usgs:USGS-01170500',
+        issuedAt: '2026-10-26T06:00:00.000Z',
+        measured: toSI(5060, 'cfs'),
+        measuredAt: '2026-10-26T12:10:00.000Z',
+        forecastForMeasurement: toSI(3.4, 'kcfs'),
+        points: flowForecast.map((p) => ({ time: p.time, flow: toSI(3.4, 'kcfs') })),
+      },
+    ]);
+    // Still never compared: those hours have no flow value.
+    expect(r.forecast[10]?.values.flow).toBeNull();
+    expect(ConditionsResponse.parse(r).flowSetAside).toHaveLength(1);
+  });
+
+  it('has none when the forecast agrees with the reading', async () => {
+    vi.mocked(deps.usgs.getLatest).mockResolvedValue(
+      ok([
+        {
+          ...(usgsLatest[0] as Reading),
+          value: toSI(3600, 'cfs'),
+          observedAt: '2026-10-26T12:10:00.000Z',
+        },
+      ]),
+    );
+    expect((await conditions()).flowSetAside).toEqual([]);
+  });
+
+  it("keeps one for a rule set's flow gauge too, once per gauge", async () => {
+    disagreeing();
+    const r = await conditions({ gaugeRef: undefined, flowGaugeRefs: ['usgs:USGS-01170500'] });
+    expect(r.flowSetAside.map((f) => f.gaugeRef)).toEqual(['usgs:USGS-01170500']);
+    const both = await conditions({ flowGaugeRefs: ['usgs:USGS-01170500'] });
+    expect(both.flowSetAside).toHaveLength(1);
+  });
+});
+
 describe('getConditions: forecast archive (#81)', () => {
   it('keeps each NWPS forecast it fetches, but not one served from the cache', async () => {
     const record = vi.fn(async () => {});

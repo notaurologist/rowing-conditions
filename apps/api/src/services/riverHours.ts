@@ -40,21 +40,38 @@ function fromObservation(r: Reading): { value: number | null; provenance: ValueP
   };
 }
 
-// Whether the flow forecast for the hour of the latest flow measurement is more than
-// FORECAST_DISAGREEMENT away from it. Only a usable measurement from the first hour or the one
-// before counts, as for the current hour (#75); an older one says nothing about the forecast now.
-function forecastDisagrees(
-  firstHour: number,
-  forecastByTime: ReadonlyMap<number, ForecastPoint>,
-  measured: Reading | undefined,
-): boolean {
-  if (!measured || measured.value === null) return false;
-  if (measured.qualifiers?.some((q) => disqualifyingQualifiers.includes(q))) return false;
+export interface FlowDisagreement {
+  measured: number; // m³/s
+  measuredAt: string;
+  forecastForMeasurement: number; // the forecast for the measurement's hour, m³/s
+  issuedAt: string; // the forecast's issue time
+}
+
+// The evidence when the flow forecast for the hour of the latest flow measurement is more than
+// FORECAST_DISAGREEMENT away from it (#82). Only a usable measurement from the first hour or the
+// one before counts, as for the current hour (#75); an older one says nothing about the forecast
+// now. Undefined when they agree or can't be compared.
+export function flowDisagreement(
+  firstHour: string,
+  forecast: readonly ForecastPoint[],
+  latestReadings: readonly Reading[],
+): FlowDisagreement | undefined {
+  const measured = latestByMetric(latestReadings).get('flow');
+  if (!measured || measured.value === null) return undefined;
+  if (measured.qualifiers?.some((q) => disqualifyingQualifiers.includes(q))) return undefined;
   const at = Date.parse(measured.observedAt);
-  if (at < firstHour - HOUR) return false;
-  const forecast = forecastByTime.get(Math.floor(at / HOUR) * HOUR)?.values.flow;
-  if (forecast === undefined || forecast === null) return false;
-  return Math.abs(forecast - measured.value) > FORECAST_DISAGREEMENT * measured.value;
+  if (at < Date.parse(firstHour) - HOUR) return undefined;
+  const point = forecast.find((p) => Date.parse(p.time) === Math.floor(at / HOUR) * HOUR);
+  const value = point?.values.flow;
+  const provenance = point?.provenance.flow;
+  if (value === undefined || value === null || !provenance) return undefined;
+  if (Math.abs(value - measured.value) <= FORECAST_DISAGREEMENT * measured.value) return undefined;
+  return {
+    measured: measured.value,
+    measuredAt: measured.observedAt,
+    forecastForMeasurement: value,
+    issuedAt: provenance.asOf,
+  };
 }
 
 // River values for each hour (ARCHITECTURE.md, "Maximum ages"):
@@ -88,8 +105,7 @@ export function riverHours(
     }
   }
 
-  const firstHour = Date.parse(times[0] ?? '');
-  if (forecastDisagrees(firstHour, forecastByTime, latest.get('flow'))) spans.delete('flow');
+  if (flowDisagreement(times[0] ?? '', forecast, latestReadings)) spans.delete('flow');
   const setAside = !spans.has('flow') && forecast.some((p) => p.provenance.flow !== undefined);
 
   return times.map((time) => {

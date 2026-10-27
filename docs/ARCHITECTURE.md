@@ -386,6 +386,7 @@ Routes validate input with `@hono/zod-validator` and answer 400 on invalid input
   gauge?: { ref, name, lat, lon },
   current: Reading[],                 // station or forecast weather, plus the gauge's latest readings
   trends: Trend[],                    // flow and gauge height at the display gauge, for each it reports now (#73)
+  flowSetAside: FlowSetAside[],       // a flow forecast set aside for disagreeing (#82), with its evidence, to show dashed and never compare (#144)
   currentBasis?: 'station' | 'forecast',
   station?: { id, name, distanceKm },
   forecast: ForecastPoint[],          // 48 hourly points
