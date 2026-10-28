@@ -19,7 +19,7 @@ export async function recordFixture(
   trim?: Trim,
 ): Promise<{ body: unknown } | undefined> {
   const response = await fetch(url, {
-    signal: AbortSignal.timeout(90_000), // Overpass can take over 30 s when it's busy
+    signal: AbortSignal.timeout(90_000), // public sources can be slow when busy
     // NWS rejects requests without a User-Agent, and Nominatim requires one that identifies
     // the app. The recorder identifies itself by repository.
     headers: {

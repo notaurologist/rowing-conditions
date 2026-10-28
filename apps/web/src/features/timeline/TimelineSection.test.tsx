@@ -2,7 +2,6 @@ import { type RuleSet, type SavedLocation, toInternal } from '@rowing/core';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import montague from '../../../test/fixtures/conditions-montague.json' with { type: 'json' };
-import { NAMED_GAUGE, withNamedGauge } from '../../../test/namedGauge.ts';
 import type { Conditions } from '../../lib/api.ts';
 import { evaluateLocation } from './evaluateLocation.ts';
 import { TimelineSection } from './TimelineSection.tsx';
@@ -106,23 +105,20 @@ describe('TimelineSection', () => {
     expect(text).toContain('calm');
   });
 
-  it('spells out each status span in words with its symbol', () => {
+  it('shows each status span by color alone, and in words for screen readers', () => {
     const { html, text } = render();
-    expect(text).toContain('○ Outside');
-    expect(text).toContain("● Within Club A's limits");
-    expect(text).not.toMatch(/[✓✕]/); // a check mark would read as approval (#91)
-    // A symbol never stands alone: each one is followed by its word.
-    expect(html).not.toMatch(/<span class="mg-(long|short)">[●○?]<\/span>/);
-    expect(text).toContain('outside hours are striped and unknown hours dotted');
+    expect(html).toContain('class="mg-status-outside"');
+    expect(html).toContain('class="mg-status-within"');
+    expect(text).not.toMatch(/Outside|Within/);
     expect(html).toMatch(
-      /role="img" aria-label="Club A status: outside Today 8 AM to Today 1 PM; within Today 2 PM to/,
+      /role="img" aria-label="Club A status: outside Today 8 AM to 2 PM; within Today 2 PM to 6:20 PM; within Tomorrow 6:49 AM to 6:18 PM;/,
     );
   });
 
-  it('marks the windows within the limits', () => {
-    const { text } = render();
-    expect(text).toContain('Next window · 2 – 6:20 PM');
-    expect(text).toContain('Tue · 6:49 AM – 6:18 PM');
+  it('marks the windows within the limits with edges, without words', () => {
+    const { html, text } = render();
+    expect(html).toContain('class="mg-window-edge"');
+    expect(text).not.toContain('window');
   });
 
   it('reads out every row at the next window, with a slider for the hour', () => {
@@ -178,7 +174,7 @@ describe('TimelineSection', () => {
     );
     expect(html).not.toContain('mg-status');
     expect(html).not.toContain('class="mg-limit"');
-    expect(html).not.toContain('Next window');
+    expect(html).not.toContain('mg-window-edge');
   });
 
   it('says once when a limit cannot be checked here', () => {
@@ -239,39 +235,6 @@ describe('TimelineSection', () => {
     expect(text).not.toContain("Club A's water temperature limit");
     expect(text).toContain('Club E has no limits for All boats yet');
     expect(text).toContain('Club A all limits · drawn below');
-    expect(html.match(/<th scope="col">Club [AWE]<\/th>/g)).toHaveLength(3);
-  });
-
-  it('says where the flow forecast comes from, and offers every value as a table', () => {
-    const { html, text } = render();
-    expect(text).toContain(
-      'Flow: National Water Prediction Service forecast, issued Oct 25, 10:44 AM.',
-    );
-    expect(html).toContain('<summary>Hourly values</summary>');
-    expect(html.match(/<th scope="row">/g)).toHaveLength(48);
-  });
-
-  it('names the NWPS forecast even when the first hour holds a measurement', () => {
-    const conditions = structuredClone(montague) as Conditions;
-    const first = conditions.forecast[0];
-    if (first?.provenance.flow) {
-      first.provenance.flow = {
-        kind: 'observation',
-        asOf: '2026-10-26T12:15:00.000Z',
-        source: 'usgs',
-      };
-    }
-    expect(render(clubA, conditions).text).toContain(
-      'Flow: National Water Prediction Service forecast',
-    );
-  });
-
-  it('names the gauge in the flow note when the rule set has its own', () => {
-    const conditions = withNamedGauge(structuredClone(montague) as Conditions);
-    const { text } = render({ ...clubA, flowGaugeRef: NAMED_GAUGE }, conditions);
-    expect(text).toContain(
-      'Flow at North River at Shattuckville, MA: National Water Prediction Service forecast',
-    );
   });
 
   it('never gives a verdict', () => {
@@ -280,36 +243,6 @@ describe('TimelineSection', () => {
         /\bsafe\b|\bunsafe\b|go out|no go|good to go/,
       );
     }
-  });
-});
-
-describe('TimelineSection flow note without a usable forecast (#117, #82)', () => {
-  // Every hour's flow as the API sends it without a forecast: the 8:15 AM reading for 3 hours,
-  // then withheld.
-  const withoutForecast = (withheld: 'noForecast' | 'forecastDisagrees') => {
-    const conditions = structuredClone(montague) as Conditions;
-    const asOf = '2026-10-26T12:15:00.000Z';
-    for (const [i, p] of conditions.forecast.entries()) {
-      const provenance = { kind: 'observation' as const, asOf, source: 'usgs' as const };
-      p.values.flow = i < 3 ? 106 : null;
-      p.provenance.flow = i < 3 ? provenance : { ...provenance, withheld };
-    }
-    return conditions;
-  };
-
-  it('says the reading stands in for 3 hours when the gauge has no forecast', () => {
-    const { text } = render(clubA, withoutForecast('noForecast'));
-    expect(text).toContain(
-      'Flow: no forecast for this gauge. The latest observation, from 8:15 AM, stands in for the 3 hours after it; later hours are unknown.',
-    );
-    expect(text).not.toContain('every hour');
-  });
-
-  it('says why when the forecast was set aside', () => {
-    const { text } = render(clubA, withoutForecast('forecastDisagrees'));
-    expect(text).toContain(
-      'Flow: the National Water Prediction Service forecast was set aside, because it was more than 25% off the latest reading, from 8:15 AM. Flow after the current hour is unknown.',
-    );
   });
 });
 
@@ -340,18 +273,10 @@ describe('TimelineSection set-aside flow forecast (#144)', () => {
     return conditions;
   };
 
-  it('draws the forecast dashed, names it in the row, and says what it had in the note', () => {
+  it('draws the forecast dashed and names it in the row', () => {
     const { html, text } = render(clubA, setAside());
     expect(html).toContain('mg-line-set-aside');
     expect(text).toContain("dashed: NWPS forecast, doesn't match the gauge");
-    expect(text).toContain(
-      "Flow: the National Water Prediction Service forecast doesn't match the gauge. It had 2,650 cfs for 8 AM; the gauge measured 3,750 cfs. It's drawn dashed: hours that meet every limit on it are probably within, and hours where it's past a limit are outside.",
-    );
-  });
-
-  it('gives its value for unknown hours in the readout and table', () => {
-    const { text } = render(clubA, setAside());
-    expect(text).toContain("NWPS 5,750 cfs, doesn't match gauge");
   });
 
   it('marks hours that meet every limit on the doubted forecast as probably within (0020)', () => {
@@ -364,47 +289,13 @@ describe('TimelineSection set-aside flow forecast (#144)', () => {
           asOf: '2026-10-25T14:44:00.000Z',
         };
     }
-    const { html, text } = render(clubA, conditions);
-    expect(text).toContain("~ Probably within Club A's limits");
+    const { html } = render(clubA, conditions);
     expect(html).toContain('mg-status-probablyWithin');
-    expect(html).toContain('mg-window mg-window-probable');
-    expect(text).toMatch(/Probable window · /);
-    expect(text).toContain('Probably within limits'); // the hourly table
+    expect(html).toContain('mg-window-edge mg-window-edge-probable');
   });
 
   it('draws nothing dashed without a set-aside forecast', () => {
     const { html } = render();
     expect(html).not.toContain('mg-line-set-aside');
-  });
-});
-
-describe('TimelineSection course (#103)', () => {
-  it('adds the course wind to the readout and the hourly table, with the course notes', () => {
-    const course = {
-      taps: [
-        [42.6, -72.55],
-        [42.609, -72.55],
-      ] as [number, number][],
-      legs: [
-        {
-          points: [
-            [42.6, -72.55],
-            [42.609, -72.55],
-          ] as [number, number][],
-        },
-      ],
-      notes: 'Keep to the east bank going upstream.',
-    };
-    const { html, text } = render(clubA, undefined, { ...location, course });
-    expect(html).toContain('<th scope="col">Course wind</th>');
-    expect(text).toMatch(/Course: (Out: |Calm on the course|Course wind unknown)/);
-    expect(text).toContain('Course notes: Keep to the east bank going upstream.');
-    expect(text).toContain("the forecast doesn't see that");
-  });
-
-  it('shows no course wind without a saved course', () => {
-    const { html, text } = render();
-    expect(html).not.toContain('Course wind');
-    expect(text).not.toContain('Course:');
   });
 });

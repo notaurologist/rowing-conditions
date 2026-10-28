@@ -2,7 +2,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderToString } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { App } from './App.tsx';
-import { INTRO_VERSION } from './features/intro/Intro.tsx';
 import { createStorage, type KeyValueStore } from './lib/storage.ts';
 import { StorageContext } from './lib/useStoredData.ts';
 
@@ -19,14 +18,7 @@ function memoryStore(): KeyValueStore {
   };
 }
 
-const unseenStorage = () => createStorage(memoryStore(), { warn: () => {} });
-
-// Most tests start after the intro has been read.
-const newStorage = () => {
-  const storage = unseenStorage();
-  storage.savePreferences({ units: 'us', introVersion: INTRO_VERSION });
-  return storage;
-};
+const newStorage = () => createStorage(memoryStore(), { warn: () => {} });
 
 function render(storage = newStorage()) {
   return renderToString(
@@ -48,8 +40,10 @@ const turnersFalls = {
 };
 
 describe('App', () => {
-  it('renders the heading', () => {
-    expect(render()).toContain('Launch Window</p>');
+  it('renders the heading, with no About link', () => {
+    const html = render();
+    expect(html).toContain('Launch Window</p>');
+    expect(html).not.toContain('About');
   });
 
   it('opens location setup when there are no saved locations', () => {
@@ -66,7 +60,6 @@ describe('App', () => {
     ]);
     storage.savePreferences({
       units: 'us',
-      introVersion: INTRO_VERSION,
       selectedLocationId: 'loc-2',
     });
     const html = render(storage);
@@ -79,7 +72,6 @@ describe('App', () => {
     storage.saveLocations([turnersFalls]);
     storage.savePreferences({
       units: 'us',
-      introVersion: INTRO_VERSION,
       selectedLocationId: 'deleted',
     });
     const html = render(storage);
@@ -122,7 +114,6 @@ describe('App limits', () => {
     storage.saveLocations([{ ...turnersFalls, ruleSetIds: ['rs-a', 'rs-b'] }]);
     storage.savePreferences({
       units: 'us',
-      introVersion: INTRO_VERSION,
       selectedRuleSetIds: { 'loc-1': 'rs-b' },
     });
     const html = render(storage);
@@ -132,27 +123,5 @@ describe('App limits', () => {
     // Club C is stored but not attached here, so it can be added.
     expect(html).toMatch(/<option value="rs-c">Club C<\/option>/);
     expect(html).not.toMatch(/<option value="rs-a">Club A<\/option>/);
-  });
-
-  it('shows the intro on first use, before location setup', () => {
-    const html = render(unseenStorage());
-    expect(html).toContain('About Launch Window');
-    expect(html).toContain('>Continue</button>');
-    expect(html).not.toContain('Add a location');
-    expect(html).not.toContain('>About</button>');
-  });
-
-  it('shows the intro to someone who already has locations but has not seen it', () => {
-    const storage = unseenStorage();
-    storage.saveLocations([turnersFalls]);
-    const html = render(storage);
-    expect(html).toContain('About Launch Window');
-    expect(html).not.toContain('Turners Falls</option>');
-  });
-
-  it('offers About in the header once the intro has been seen', () => {
-    const html = render();
-    expect(html).toContain('>About</button>');
-    expect(html).not.toContain('About Launch Window');
   });
 });

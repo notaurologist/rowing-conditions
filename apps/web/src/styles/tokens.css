@@ -9,7 +9,7 @@
  *   water, room                              river flow and the room left before a limit
  *   wind, gust-fill, gust-edge, rain         weather series
  *   over, over-fill                          past a limit (always paired with words)
- *   within*, outside*, unknown*              status labels (always with a symbol and words)
+ *   within*, outside*, unknown*              status labels (with words, except the meteogram strip)
  *   twilight, night                          light-level shading, darker means darker
  */
 

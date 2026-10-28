@@ -39,14 +39,6 @@ The main river hazard. Fast water increases turbulence (often below the surface)
 
 The app shows each one's trend (#73) as rising, falling, or stable, with the rate per hour, measured over the last 3 hours of readings. Flow is stable when it changes less than 2% of its starting value per hour, since rivers range from about 100 cfs to tens of thousands. Gauge height is stable when it changes less than 0.01 m (about 0.03 ft) per hour. These cutoffs only choose a word. They are not limits, and nothing is evaluated against them. With less than 2 hours of usable readings, or a stale latest reading, the trend is unknown, never stable.
 
-### Wind along the course
-
-Crews row out and back, so a headwind one way is a tailwind the other, and some row loops, such as around an island and back up the other channel. A course is the points the rower taps, in rowing order; between each pair the course follows the river. Tapping the start again makes it a loop. Around an island, there must be a point in each channel, or the course takes the shorter channel both ways.
-
-The app splits the course into its stretches and classifies the forecast wind on each: within 45° of dead ahead is a headwind, within 45° of dead astern a tailwind, and the quarters between are crosswind. For out and back it shows the share of the course length for each kind of wind, out and back. For a loop it shows the whole loop, and each leg between points in the hourly table. One forecast wind covers the whole course, so shelter from banks and trees isn't in it. Calm is its own state, and missing wind direction is unknown, never calm. Local rules, such as which bank to keep to, are notes on the course, shown and not modeled. Context only: it never affects whether an hour is within limits. (Decided in #103 and #142, October 2026.)
-
-Where the map can't route a leg, it's a straight line, and the editor says why: no mapped river within 300 m of a point, points on waterways that don't meet, or a route more than 2.5 times the straight line and at least 0.5 km longer. That last one points to a gap in the map, such as a side channel not mapped as rejoining the river, which would otherwise send the course the long way round an island. Any leg can also be made straight by hand.
-
 ### Dam operations and low water
 
 On regulated rivers, dam releases can raise flow quickly, and drawdowns can leave water too shallow to row (locally on the Connecticut, sometimes nearly walkable). Observed flow and gauge height capture these once they happen, so a minimum flow or gauge height limit flags low water. Advance release schedules are published inconsistently by dam operators (web pages, phone lines, rarely APIs), so they are out of scope for the MVP. Source: member experience on the Connecticut River [19].

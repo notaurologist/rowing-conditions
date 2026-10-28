@@ -1,69 +1,9 @@
 import type { DisplaySystem, Metric, SavedLocation } from '@rowing/core';
 import type { Conditions } from '../../lib/api.ts';
-import { formatTime, metricName } from '../../lib/format.ts';
+import { metricName } from '../../lib/format.ts';
 import type { LocationEvaluation } from './evaluateLocation.ts';
 import { Meteogram } from './Meteogram.tsx';
-import { type MeteogramModel, meteogramModel, type StatusStrip } from './meteogramModel.ts';
-
-const STATUS_TEXT = {
-  within: 'Within limits',
-  outside: 'Outside limits',
-  probablyWithin: 'Probably within limits',
-  unknown: 'Unknown',
-} as const;
-
-function statusAt(strip: StatusStrip, i: number) {
-  const span = strip.spans.find((s) => i >= s.from && i < s.to);
-  return span ? STATUS_TEXT[span.status] : '';
-}
-
-// Every number in the chart, as a table, for screen readers and anyone who wants the figures.
-function HourTable({ model }: { model: MeteogramModel }) {
-  const rows = model.rows.filter((r) => r.kind !== 'message');
-  return (
-    <details className="mg-table">
-      <summary>Hourly values</summary>
-      <div className="mg-table-scroll">
-        <table>
-          <thead>
-            <tr>
-              <th scope="col">Hour</th>
-              <th scope="col">Light</th>
-              {model.course && <th scope="col">Course wind</th>}
-              <th scope="col">Fog (NWS)</th>
-              {model.statuses.map((strip) => (
-                <th key={strip.ruleSetId} scope="col">
-                  {strip.name}
-                </th>
-              ))}
-              {rows.map((r) => (
-                <th key={r.id} scope="col">
-                  {r.label}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {model.hours.map((h, i) => (
-              <tr key={h.time}>
-                <th scope="row">{h.label}</th>
-                <td>{h.light}</td>
-                {model.course && <td>{model.course.words[i]?.detail}</td>}
-                <td>{h.fog.text}</td>
-                {model.statuses.map((strip) => (
-                  <td key={strip.ruleSetId}>{statusAt(strip, i)}</td>
-                ))}
-                {rows.map((r) => (
-                  <td key={r.id}>{r.readouts[i]}</td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </details>
-  );
-}
+import { meteogramModel } from './meteogramModel.ts';
 
 interface Props {
   conditions: Conditions;
@@ -77,17 +17,6 @@ interface Props {
 export function TimelineSection({ conditions, location, evaluated, alongside, units, now }: Props) {
   const all = alongside ?? (evaluated ? [evaluated] : []);
   const model = meteogramModel({ conditions, location, units, now, evaluated, alongside: all });
-  const timeZone = conditions.location.timezone;
-  // The first hour holds the latest measurement (#75), so a forecast anywhere in the series is
-  // what says whether the gauge has one.
-  const flows = (evaluated?.forecast ?? conditions.forecast).flatMap((p) =>
-    p.provenance.flow ? [p.provenance.flow] : [],
-  );
-  const flow = flows.find((f) => f.kind === 'forecast') ?? flows[0];
-  // Without a usable forecast, the latest reading stands in for 3 hours (#117), or for the same
-  // 3 hours when the forecast was set aside for disagreeing with it (#82).
-  const setAside = flows.some((f) => f.withheld === 'forecastDisagrees');
-  const flowAt = evaluated?.flowGauge ? `Flow at ${evaluated.flowGauge.name}` : 'Flow';
 
   return (
     <section className="timeline" aria-labelledby="timeline-heading">
@@ -118,40 +47,6 @@ export function TimelineSection({ conditions, location, evaluated, alongside, un
       )}
 
       <Meteogram key={location.id} model={model} />
-
-      <div className="mg-notes">
-        <p>
-          Lines are forecasts; dots are the latest measurements. Shaded hours are twilight and
-          night.
-          {model.rows.some((r) => r.limits.length > 0) &&
-            ' The light fill is the room left before each limit; red fill is past it.'}
-          {model.hours.some((h) => h.fog.state === 'fog') &&
-            ' Fog is the National Weather Service forecast, shown as context; it never changes whether an hour is within limits.'}
-          {model.statuses.some((st) => st.spans.length > 0) &&
-            ' In the status strip, outside hours are striped and unknown hours dotted.'}
-        </p>
-        {model.course && (
-          <p>
-            Course wind is the forecast wind against the course as rowed: headwind within 45° of
-            dead ahead, tailwind within 45° of dead astern, crosswind between. Banks and trees can
-            shelter parts of the river; the forecast doesn't see that.
-            {model.course.notes && ` Course notes: ${model.course.notes}`}
-          </p>
-        )}
-        {flow && (
-          <p>
-            {flow.kind === 'forecast'
-              ? `${flowAt}: National Water Prediction Service forecast, issued ${formatTime(flow.asOf, now, timeZone)}. Hours between its 6-hourly steps are interpolated.`
-              : setAside && model.flowSetAside
-                ? `${flowAt}: the National Water Prediction Service forecast doesn't match the gauge. It had ${model.flowSetAside.forecast} for ${model.flowSetAside.hour}; the gauge measured ${model.flowSetAside.measured}. It's drawn dashed: hours that meet every limit on it are probably within, and hours where it's past a limit are outside.`
-                : setAside
-                  ? `${flowAt}: the National Water Prediction Service forecast was set aside, because it was more than 25% off the latest reading, from ${formatTime(flow.asOf, now, timeZone)}. Flow after the current hour is unknown.`
-                  : `${flowAt}: no forecast for this gauge. The latest observation, from ${formatTime(flow.asOf, now, timeZone)}, stands in for the 3 hours after it; later hours are unknown.`}
-          </p>
-        )}
-      </div>
-
-      <HourTable model={model} />
     </section>
   );
 }

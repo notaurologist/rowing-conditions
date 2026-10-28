@@ -8,7 +8,6 @@ import {
   type ForecastPoint,
   hourLightLevel,
   type Metric,
-  nextWindow,
   type SavedLocation,
   type Threshold,
   temperatureDifference,
@@ -16,7 +15,6 @@ import {
 } from '@rowing/core';
 import type { Conditions } from '../../lib/api.ts';
 import { compassPoint, formatNumber, unitSymbol } from '../../lib/format.ts';
-import { type CourseWindWords, courseWindByHour } from '../course/courseWords.ts';
 import type { LocationEvaluation } from './evaluateLocation.ts';
 import { dayLabel, formatClock } from './periodCopy.ts';
 
@@ -81,20 +79,19 @@ export interface StatusStrip {
   name: string;
   sub: string; // the boat class when the rule set has several, else "all limits"
   selected: boolean;
-  spans: { from: number; to: number; status: EvaluationStatus }[]; // empty: no limits to compare
+  // From the same periods as the windows: rowing hours only, cut at dawn and dusk to the minute,
+  // so night is blank and the edges match the windows. Empty: no limits to compare.
+  spans: { from: number; to: number; status: EvaluationStatus; words: string }[];
 }
 
 export interface MeteogramModel {
   hours: { time: string; label: string; light: string; fog: FogWords }[]; // light: Twilight, then night
-  course?: { words: CourseWindWords[]; notes?: string | undefined }; // wind along the saved course, per hour
-  // A set-aside flow forecast's evidence, in display units: what it had for the reading's hour.
-  flowSetAside?: { forecast: string; measured: string; hour: string };
   rows: MeteogramRow[];
   light: { from: number; to: number; light: 'twilight' | 'night' }[];
   // One strip per attached rule set, in the location's order. The selected one also drives the
   // limit lines and windows.
   statuses: StatusStrip[];
-  windows: { from: number; to: number; label: string; probable?: boolean }[]; // probable: dashed
+  windows: { from: number; to: number; probable?: boolean }[]; // probable: dashed
   days: { at: number; label: string }[];
   ticks: { at: number; label: string }[];
   defaultHour: number;
@@ -118,8 +115,6 @@ type RowSpec = {
 };
 
 const fmt = (value: number, unit: Unit) => formatNumber(value, unit);
-// Window labels closer than this share of the timeline would overlap; the later one is left out.
-const LABEL_GAP = 0.2;
 
 function valueAt(point: ForecastPoint, metric: Metric, unit: Unit): number | null {
   if (metric === 'combinedTempF') {
@@ -167,14 +162,6 @@ function niceDomain(lo: number, hi: number): [number, number] {
   const norm = rough / magnitude;
   const step = (norm < 1.5 ? 1 : norm < 3 ? 2 : norm < 7 ? 5 : 10) * magnitude;
   return [Math.floor(lo / step) * step, Math.ceil(hi / step) * step];
-}
-
-// "2 PM – 6:20 PM" becomes "2 – 6:20 PM" when both ends share AM or PM.
-function compactRange(start: string, end: string, timeZone: string | null): string {
-  const a = formatClock(start, timeZone);
-  const b = formatClock(end, timeZone);
-  const suffix = (t: string) => t.slice(-2);
-  return suffix(a) === suffix(b) ? `${a.slice(0, -3)} – ${b}` : `${a} – ${b}`;
 }
 
 function marginWords(value: number, limit: MeteogramLimit, unit: Unit): string {
@@ -293,8 +280,8 @@ export function meteogramModel(input: MeteogramInput): MeteogramModel {
   const forecast = evaluated?.forecast ?? conditions.forecast;
   const flowGauge = evaluated?.flowGauge ?? null;
   // A flow forecast set aside for disagreeing with the gauge (#82), for whichever gauge the flow
-  // row shows. Drawn dashed and worded as not matching the gauge; evaluation counts it only as a doubted value
-  // (probably within or outside, decision 0020).
+  // row shows. Drawn dashed; evaluation counts it only as a doubted value (probably within or
+  // outside, decision 0020).
   const setAside = conditions.flowSetAside.find(
     (f) => f.gaugeRef === (flowGauge?.ref ?? location.gaugeRef),
   );
@@ -571,19 +558,17 @@ export function meteogramModel(input: MeteogramInput): MeteogramModel {
     };
   });
 
-  // Status spans for each rule set, one per run of hours with the same status.
+  // Status spans for each rule set, one per period, the span of the chart each covers.
   const statuses: StatusStrip[] = alongside.map((e) => {
-    const byTime = new Map(
-      (e.timeline.hasLimits ? e.evaluation.hours : []).map((h) => [h.time, h.status]),
-    );
-    const spans: StatusStrip['spans'] = [];
-    forecast.forEach((p, i) => {
-      const s = byTime.get(p.time);
-      if (!s) return;
-      const last = spans.at(-1);
-      if (last && last.status === s && last.to === i) last.to = i + 1;
-      else spans.push({ from: i, to: i + 1, status: s });
-    });
+    const clock = (t: string) => formatClock(t, timeZone);
+    const spans: StatusStrip['spans'] = (e.timeline.hasLimits ? e.periods : [])
+      .map((p) => ({
+        from: Math.max(0, at(p.start)),
+        to: Math.min(n, at(p.end)),
+        status: p.status,
+        words: `${dayLabel(p.start, now, timeZone)} ${clock(p.start)} to ${clock(p.end)}`,
+      }))
+      .filter((s) => s.to > s.from);
     return {
       ruleSetId: e.ruleSet.id,
       name: e.ruleSet.name,
@@ -595,35 +580,14 @@ export function meteogramModel(input: MeteogramInput): MeteogramModel {
 
   const windows: MeteogramModel['windows'] = [];
   if (evaluated?.timeline.hasLimits) {
-    // Within windows, and probable ones with dashed brackets (decision 0020). The next is the
-    // earliest within window, or the earliest probable one when there's no within window.
-    const next =
-      nextWindow(evaluated.periods, now) ?? nextWindow(evaluated.periods, now, 'probablyWithin');
-    let lastLabeled: number | null = null;
+    // Within windows, and probable ones with dashed edges (decision 0020).
     for (const p of evaluated.periods) {
       if (p.status !== 'within' && p.status !== 'probablyWithin') continue;
       if (Date.parse(p.end) <= Date.parse(now)) continue;
-      const probable = p.status === 'probablyWithin';
-      const range = compactRange(p.start, p.end, timeZone);
-      const isNext = next?.window.start === p.start;
-      const day = new Date(p.start).toLocaleDateString('en-US', {
-        timeZone: timeZone ?? undefined,
-        weekday: 'short',
-      });
-      const from = Math.max(0, at(p.start));
-      // A label starting this close to the previous one would be drawn over it, as when a within
-      // window runs straight into a probable one; the bracket alone shows the later window.
-      const crowded = !isNext && lastLabeled !== null && from - lastLabeled < n * LABEL_GAP;
-      if (!crowded) lastLabeled = from;
       windows.push({
-        from,
+        from: Math.max(0, at(p.start)),
         to: Math.min(n, at(p.end)),
-        label: crowded
-          ? ''
-          : isNext
-            ? `${probable ? 'Probable window' : 'Next window'} · ${range}`
-            : `${day} · ${probable ? 'probable · ' : ''}${range}`,
-        ...(probable ? { probable: true } : {}),
+        ...(p.status === 'probablyWithin' ? { probable: true } : {}),
       });
     }
   }
@@ -654,26 +618,7 @@ export function meteogramModel(input: MeteogramInput): MeteogramModel {
   const firstWindow = windows[0];
   const defaultHour = firstWindow ? Math.min(n - 1, Math.max(0, Math.floor(firstWindow.from))) : 0;
 
-  // Wind along the saved course, out and back or around a loop, per hour (#103, #142).
-  const course = location.course
-    ? { words: courseWindByHour(location.course, forecast), notes: location.course.notes }
-    : undefined;
-
-  const flowUnit = displayUnits[units].flow;
-  const flowNote = setAside
-    ? {
-        forecast: `${fmt(displayValue('flow', setAside.forecastForMeasurement, flowUnit), flowUnit)} ${unitSymbol(flowUnit)}`,
-        measured: `${fmt(displayValue('flow', setAside.measured, flowUnit), flowUnit)} ${unitSymbol(flowUnit)}`,
-        hour: formatClock(
-          new Date(Math.floor(Date.parse(setAside.measuredAt) / HOUR) * HOUR).toISOString(),
-          timeZone,
-        ),
-      }
-    : undefined;
-
   return {
-    ...(course ? { course } : {}),
-    ...(flowNote ? { flowSetAside: flowNote } : {}),
     hours,
     rows,
     light: light.filter(

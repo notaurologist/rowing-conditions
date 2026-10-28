@@ -226,7 +226,7 @@ The code is in `packages/core/src/evaluation/evaluate.ts`.
   - The start is cut by the first hour's solar day and the end by the last hour's.
   - A window that cutting leaves empty is dropped.
   - During polar day nothing is cut.
-- `findPeriods(hours, { ruleSet, lat, lon }) → Period[]` and `nextWindow(periods, now)` are in `packages/core/src/evaluation/periods.ts`. They feed the main screen's summary: the answer and the "Dawn to dusk" days.
+- `findPeriods(hours, { ruleSet, lat, lon }) → Period[]` and `nextWindow(periods, now)` are in `packages/core/src/evaluation/periods.ts`. They feed the main screen's summary: the answer.
   - A period is a run of rowing hours with the same status. Night and gaps split periods.
   - Edges are cut to the minute at the rule set's daylight window, or at civil dawn and dusk (`civilDaylightSpan`), so a period never runs into the dark.
   - Each non-within period carries its reasons: the worst value against each limit that failed, with how many hours failed it, and each unknown metric and reason.
@@ -373,7 +373,6 @@ Hono on Node. Export the app type so clients use `hono/client` for typed calls. 
 | GET | `/gauges/:ref` | `{ gauge, latest: Reading[], sources }` for a `usgs:` ref. Returns 404 if there's no such gauge. If the readings fail, it still returns the gauge, with that source marked `error`. `nwps:` refs get 501 until #18. |
 | GET | `/conditions?lat&lon&gaugeRef?&flowGaugeRefs?` | Current readings plus 48-hour hourly forecast (including forecast flow where available) and daylight data. `flowGaugeRefs` (comma-separated, up to 5) adds flow series for gauges named by rule sets. Always 200 on valid input; failures are reported per source. |
 | GET | `/places/search?q` | `{ places: Place[] }` from Nominatim, US only, at most 5. `q` is 2 to 200 characters. Clients call it only when the user submits a search (the usage policy forbids autocomplete). Returns 503 when `GEOCODING_ENABLED=false`. |
-| GET | `/course/snap?taps=lat,lon;lat,lon;…` | `{ legs: { points: [lat, lon][], straight?: 'noRiver' \| 'notConnected' \| 'detour' }[] }`: one leg between each pair of taps, in rowing order (#103, #142). A leg follows the river from the node nearest one tap to the node nearest the next, or is a straight line between the taps with the reason (see DOMAIN.md, Wind along the course). Waterways come from OpenStreetMap through Overpass, fetched once for the box around every tap and cached 30 days. 422 for taps more than 30 km apart (`tooFar`) or more than 12 of them (`tooMany`); 502 when Overpass fails after one retry. Can take a minute. |
 
 Routes validate input with `@hono/zod-validator` and answer 400 on invalid input. An adapter failure becomes 502 with `{ error: { source, kind, message } }`. `createApp(deps)` takes the adapters, so route tests pass in fake ones.
 
@@ -485,7 +484,6 @@ Fetch on demand, cache in Postgres. No scheduled jobs in the MVP.
   - NWS points lookup: 30 days
   - Gauge metadata: 7 days
   - Nominatim place search: 30 days (places don't move, and the usage policy asks for caching)
-  - OpenStreetMap waterways for snapping a course: 30 days (rivers don't move)
 - **On upstream failure**, serve the last cached value marked `stale` if one exists.
 - **Concurrent fetches** for the same key are deduplicated in process.
 - **Implementation:** `createSourceCache({ db, logger, now })` in `apps/api/src/services/sourceCache.ts`. `cache.get(key, ttlMs, schema, fetch)` returns one of three results:
@@ -572,37 +570,34 @@ No secrets in code or fixtures.
     - `features.css` holds feature layout.
   - **Features use tokens by role** (`var(--water)`, `var(--space-4)`), never raw values, and compose the shared components instead of restyling controls.
   - **Color roles:** paper, surface, ink, muted and hairline for the page; accent for links, focus and the selected control; water, wind, rain and room for data; and over, within and outside for status.
-    - Status colors always come with a symbol and words.
+    - Status colors always come with words, except the meteogram's status strip, which is color only on screen (an exception to hard rule 9) and gives its spans in words to screen readers.
     - The pairs that must be told apart (water blue against over-the-limit red, within against outside) pass a contrast and color-vision-deficiency check in both themes.
   - **Type:** Source Sans 3, self-hosted from `src/assets/fonts/` (SIL Open Font License), with tabular numbers throughout.
 - Charts with visx (scales and shapes). The 48-hour timeline is a feature folder of its own (`features/timeline/`) with its chart components kept independent of data fetching, so they can be tested with fixture data.
 - **Main screen order** for a location, all from one evaluation (`evaluateLocation`):
   - **The summary** (`src/features/summary/`). `summaryModel` writes:
-    - **The answer as the page's `<h1>`:** the next window ("Within Club A's limits today, 2 PM to 6:20 PM"), "now, until …", or "No hours within … from dawn to dusk in the next 48 hours".
-    - **One detail paragraph:** the deciding limit from `findLimitingFactor` and the closest it comes to its limit in the window, in the limit's unit. When the latest flow reading differs from that hour's forecast by more than 10%, it says so in plain numbers.
-    - **"Dawn to dusk":** a sentence per period for each day, with reasons (`reasonText`), dawn and dusk named, and a note when the forecast ends before dusk. Without limits, it gives each day's daylight times instead.
-
-    It sits beside the answer on wide screens and stacks below 820 px.
+    - **The answer as the page's `<h1>`:** the next window ("Within limits today, 2 PM to 6:20 PM"), "now, until …", or "No hours within limits from dawn to dusk in the next 48 hours". The selected rule set is named in the line above, so the headline doesn't repeat it; the sentences for other attached rule sets name theirs.
+    - **For a probable window only:** one line saying why ("The flow forecast doesn't match the gauge.", decision 0020).
+    - **The caveat** that forecasts can be wrong, with every answer.
   - **The meteogram.**
   - **Current conditions.**
 
   Copy says "within/outside Club A's limits", never a verdict.
 - **Meteogram** (`src/features/timeline/`):
   - `meteogramModel` turns a `/conditions` response and its evaluation into rows on one time axis:
-    - flow (a hydrograph) from the selected rule set's own gauge when it names one, the same series it is evaluated against (`LocationEvaluation.forecast`), with that gauge's name, latest measurement and source note; otherwise from the location's gauge. A weather-only location shows flow when the rule set names a gauge. The summary's limit margin and context line follow the same gauge, and the note comparing a measurement with the forecast is left out for a named gauge, whose series already puts the measurement in the first hour.
+    - flow (a hydrograph) from the selected rule set's own gauge when it names one, the same series it is evaluated against (`LocationEvaluation.forecast`), with that gauge's name and latest measurement; otherwise from the location's gauge. A weather-only location shows flow when the rule set names a gauge. The summary's context line follows the same gauge.
     - wind (a band from sustained to gusts, with arrows every 3 hours), air temperature, water temperature (left out at a gauge without it, unless a water or combined temperature limit needs a row saying it isn't measured), gauge height and combined temperature when a limit uses them, and rain chance (bars, 0–100%)
     - each applicable limit, in the row's display unit
     - a scale per row rounded to steps of 1, 2 or 5, so its top and bottom labels read as 25,000, not 22,177
     - the latest measurement at the current time; one further outside the forecast than half its span or a quarter of its size is marked off-scale and drawn at the edge, so a forecast that missed doesn't flatten the row
     - a readout per hour with the margin to the limit ("3,090 cfs · 10 under"). When the current hour holds a measurement and the next a forecast, that point is marked `measured`: its readout says so and the lines start at the forecast, so the measured dot isn't joined to a forecast that may disagree with it (#82).
-    - status spans, windows (the next one named), twilight and night from the exact daylight times, and day and hour labels in the location's time zone
+    - status spans from the evaluation's periods (dawn to dusk, cut to the minute, so they match the windows), windows (their edges only, no labels), twilight and night from the exact daylight times, and day and hour labels in the location's time zone
     - each hour's light in words ("Daylight", "Twilight, then night"), so light isn't shown by shading alone
   - `Meteogram` draws from the model with visx `scaleLinear`, `LinePath` and `Area`, positioning by percentage so it fits any width without measuring. The space between each series and its limit is filled (Playfair's balance chart): room in `--room`, past the limit in `--over-fill`.
-  - Row labels sit in a left column on wide screens and above their rows below 600 px (a container query). There, the hour chip and later window labels are hidden, and status spans use short words. Scale labels move inside the plot's left corners, readouts sit against the plot's edge away from the selected hour so they never run off it, and the readout's hour and light get their own line so the page doesn't reflow as it changes.
+  - Row labels sit in a left column on wide screens and above their rows below 600 px (a container query). There, the hour chip is hidden. Scale labels move inside the plot's left corners, readouts sit against the plot's edge away from the selected hour so they never run off it, and the readout's hour and light get their own line so the page doesn't reflow as it changes.
   - **Readout:** a pointer layer and a range input (for keyboard and touch) choose the hour, shown with its light. It starts at the next window.
   - Each row's readout sits above the selected point, or below it near the row's top. If that would cover a limit's label, it moves to the other side when that side covers none and stays clear of the wind arrows and, on the left, the scale numbers (`readoutPlacement.ts`, #123).
-  - **Hourly values** table: every readout, for screen readers.
-  - **Rule sets:** one status strip per attached rule set, in the location's order, each evaluated for its chosen boat class. Only the selected rule set's limits, fills and windows are drawn in the rows, and its strip says "drawn below". The hourly table has a light column and a status column per rule set.
+  - **Rule sets:** one status strip per attached rule set, in the location's order, each evaluated for its chosen boat class. Only the selected rule set's limits, fills and windows are drawn in the rows, and its strip says "drawn below". Each strip has no words on screen; its `aria-label` lists the spans in words for screen readers.
 - **Rule set editor** (`src/features/rules/`): name, boat classes, limits, an optional daylight window and an optional flow gauge.
   - A collapsed "How some clubs word their limits" section lists cited examples from `limitExamples` (`packages/core/src/rules/examples.ts`), grouped by topic. Every flow example names its gauge. Nothing in it fills in or applies a limit.
   - Each limit reads as the club words it: metric, wording ("at most", "below", "at least", "above"), number and unit. The unit defaults to the display units and can be any unit in `metricUnits`; it is kept as `enteredUnit`. `thresholdFromEntry` and `entryFromThreshold` (`packages/core/src/rules/entry.ts`) convert between what was typed and a `Threshold`, so a saved limit opens again exactly as entered.

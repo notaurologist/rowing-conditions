@@ -311,12 +311,18 @@ describe('meteogramModel measurements and readouts', () => {
 });
 
 describe('meteogramModel status and windows', () => {
-  it('turns hourly statuses into spans', () => {
-    expect(model().statuses[0]?.spans).toEqual([
-      { from: 0, to: 6, status: 'outside' },
-      { from: 6, to: 37, status: 'within' },
-      { from: 37, to: 48, status: 'outside' },
-    ]);
+  it('turns the periods into spans, dawn to dusk, so they match the windows', () => {
+    const m = model();
+    const spans = m.statuses[0]?.spans ?? [];
+    expect(spans.map((s) => s.status)).toEqual(['outside', 'within', 'within', 'outside']);
+    expect(spans[0]).toMatchObject({ from: 0, to: 6, words: 'Today 8 AM to 2 PM' });
+    // Night is blank: today's span ends at dusk, and tomorrow's starts at dawn.
+    expect(spans[1]).toMatchObject({ from: 6, words: 'Today 2 PM to 6:20 PM' });
+    expect(spans[2]?.words).toBe('Tomorrow 6:49 AM to 6:18 PM');
+    // The within spans are the windows.
+    for (const [i, w] of m.windows.entries()) {
+      expect(spans[i + 1]).toMatchObject({ from: w.from, to: w.to });
+    }
   });
 
   it('gives each attached rule set its own strip, and draws only the selected one’s limits', () => {
@@ -354,8 +360,8 @@ describe('meteogramModel status and windows', () => {
       ['Club B', 'all limits', true],
     ]);
     // Club A is outside early on (flow over 3,100 cfs); Club B is within for every hour.
-    expect(m.statuses[0]?.spans[0]).toEqual({ from: 0, to: 6, status: 'outside' });
-    expect(m.statuses[1]?.spans).toEqual([{ from: 0, to: 48, status: 'within' }]);
+    expect(m.statuses[0]?.spans[0]).toMatchObject({ from: 0, to: 6, status: 'outside' });
+    expect(m.statuses[1]?.spans.every((s) => s.status === 'within')).toBe(true);
     expect(row(m, 'flow').limits.map((l) => l.value)).toEqual([20000]);
     expect(row(m, 'wind').limits).toEqual([]);
   });
@@ -368,11 +374,11 @@ describe('meteogramModel status and windows', () => {
     );
   });
 
-  it('marks windows within the limits, the next one first and named', () => {
+  it('marks windows within the limits, in time order', () => {
     const windows = model().windows;
-    expect(windows[0]).toMatchObject({ from: 6, label: 'Next window · 2 – 6:20 PM' });
+    expect(windows[0]?.from).toBe(6);
     expect(windows[0]?.to).toBeCloseTo(10.33, 1);
-    expect(windows[1]).toMatchObject({ label: 'Tue · 6:49 AM – 6:18 PM' });
+    expect(windows[1]?.from).toBeCloseTo(22.82, 1);
   });
 
   it('leaves out windows that have already ended', () => {
@@ -390,7 +396,8 @@ describe('meteogramModel status and windows', () => {
       now: later,
       evaluated: evaluateLocation(conditions, location, clubA, later),
     });
-    expect(m.windows.map((w) => w.label)).toEqual(['Next window · 6:49 AM – 6:18 PM']);
+    expect(m.windows).toHaveLength(1);
+    expect(m.windows[0]?.from).toBeCloseTo(22.82, 1);
   });
 
   it('starts the readout at the next window', () => {
@@ -468,41 +475,6 @@ describe('meteogramModel with a rule set that names its flow gauge', () => {
       kind: 'message',
       message: 'No flow values from USGS 01169000.',
     });
-  });
-});
-
-describe('course wind (#103, #142)', () => {
-  const A: [number, number] = [42.6, -72.55];
-  const B: [number, number] = [42.609, -72.55];
-  const course = {
-    taps: [A, B],
-    legs: [{ points: [A, B] }],
-    notes: 'Keep to the east bank going upstream.',
-  };
-
-  it('words the wind along a saved course for each hour, with its notes', () => {
-    const m = model({ location: { ...location, course } });
-    expect(m.course?.words).toHaveLength(m.hours.length);
-    expect(m.course?.words[0]?.summary).toMatch(
-      /^(Out: .*\. Back: .*\.|Calm on the course|Course wind unknown)$/,
-    );
-    expect(m.course?.notes).toBe('Keep to the east bank going upstream.');
-  });
-
-  it('gives a loop its legs in the table words', () => {
-    const C: [number, number] = [42.609, -72.5378];
-    const loop = {
-      taps: [A, B, C, A],
-      legs: [{ points: [A, B] }, { points: [B, C] }, { points: [C, A] }],
-      loop: true,
-    };
-    const m = model({ location: { ...location, course: loop } });
-    const windy = m.course?.words.find((w) => w.summary.startsWith('Loop:'));
-    expect(windy?.detail).toMatch(/Leg 1: .*Leg 2: .*Leg 3: /);
-  });
-
-  it('has no course without one saved', () => {
-    expect(model().course).toBeUndefined();
   });
 });
 

@@ -55,20 +55,19 @@ Implications for all features and copy:
 
 ### 3. 48-hour timeline
 
-The centerpiece of the product. The main screen leads with the answer (the next window within the selected rule set's limits, and what follows), then the chart, then a plain-language summary of each day from civil dawn to civil dusk with reasons.
+The centerpiece of the product. The main screen leads with the answer (the next window within the selected rule set's limits), then the chart. The chart carries the rest: when each limit is reached and why an hour is outside are read from the rows, not written out.
 
 The chart is a **rowing meteogram**: every element on one shared time axis, each in its customary form, so nothing has to be switched on to be seen (decided in #77, October 2026).
 
 - **River flow** as a hydrograph, wind as a band from sustained speed to gusts with direction arrows, air and water temperature as lines, and rain chance as bars.
 - **Limits:** each limit is a line on its row, and the space between the forecast and the limit is filled: a light tint for the room left, red where the forecast is past it.
-- **Degrees of certainty** (decision 0020): every status rests on forecasts that can be wrong, and every answer says so: "Forecasts can be wrong. Check conditions on the water before you go." Where the app has a named reason to doubt a value, such as a flow forecast that doesn't match the gauge, hours that meet every limit on it are **probably within**: offered as a window ("Probably within Club A's limits tomorrow, 7 AM to 2 PM"), with the reason, drawn lighter and hatched with dashed window brackets. When no hour is within and some are unknown, the answer says "No hours known to be within", not "No hours within".
-- **Status:** a strip above the rows shows each span within, probably within, outside or unknown, in words, with ● within, ○ outside and ? unknown beside them where the words fit. Outside spans are striped and unknown spans dotted, so even a one-hour span is told apart without color, and the strip lines up with the hours below. The symbols only describe position against the limits; ✓ and ✕ were replaced because a check mark reads as approval (decided in #91, October 2026). With several rule sets attached, each gets its own strip, and the rows draw the selected one's limits.
-- **Windows** within the rule set's limits are bracketed above the rows and carried down through them.
+- **Degrees of certainty** (decision 0020): every status rests on forecasts that can be wrong, and every answer says so: "Forecasts can be wrong. Check conditions on the water before you go." Where the app has a named reason to doubt a value, such as a flow forecast that doesn't match the gauge, hours that meet every limit on it are **probably within**: offered as a window ("Probably within limits tomorrow, 7 AM to 2 PM"), with a one-line reason ("The flow forecast doesn't match the gauge."), drawn in a lighter green with dashed window edges. When no hour is within and some are unknown, the answer says "No hours known to be within", not "No hours within".
+- **Status:** a strip above the rows shows each span within, probably within, outside or unknown in solid color only: green within, light green probably within, light red outside, gray unknown. It covers the same dawn-to-dusk periods as the windows, cut to the minute, so night is blank and its edges match the window edges. Screen readers get the spans in words. The strip is the one exception to hard rule 9 (the owner's call, October 27, 2026; textures and words were removed). Before that, #91 had replaced ✓ and ✕ because a check mark reads as approval. With several rule sets attached, each gets its own strip, and the rows draw the selected one's limits.
+- **Windows** within the rule set's limits are marked by edges through the rows, dashed for a probable window.
 - **Latest measurements** are shown as dots against the forecast lines, so a forecast that has drifted from what's measured is visible. The lines start at the first forecast hour rather than joining the dot. A measurement far off the forecast's scale sits at the row's edge with an arrow.
-- **Course wind:** with a course saved for the location (tap points in rowing order; it follows the river between them), each hour gives the share of headwind, crosswind and tailwind, out and back, or for a loop the whole loop and each leg. Context only (decided in #103 and #142).
-- **Fog** is the NWS forecaster's call for each hour, in words ("Patchy fog (NWS)"), in the readout and the hourly table, with the air temperature's gap to the dew point. Context only, like light (decided in #42).
+- **Fog** is the NWS forecaster's call for each hour, in words ("Patchy fog (NWS)"), in the readout, with the air temperature's gap to the dew point. Context only, like light (decided in #42).
 - **Light level** is shaded (twilight, night) from the exact civil dawn, sunrise, sunset and civil dusk. Light is context: crews often row before sunrise with lights, so it does not change whether an hour is within limits unless a rule set sets a hard daylight window.
-- **Readout:** one readout line shows every row's value and its margin to the limit at any hour, by pointer or by slider. Every value is also in an hourly table.
+- **Readout:** one readout line shows every row's value and its margin to the limit at any hour, by pointer or by slider.
 - **Missing rows:** flow at a weather-only location gets a row that says so. Water temperature at a gauge without a sensor is left out, unless a limit needs it, when its row says it isn't measured.
 
 ### 4. Rule sets
@@ -132,7 +131,7 @@ There is no formal user testing. Jason shares it informally and doesn't plan to 
 - Notifications ("within your limits tomorrow 6 to 8 AM").
 - Native mobile app.
 - Shared club pages: a club publishes its rule set so members subscribe instead of entering limits by hand.
-- Wind against the current (the course itself is done: #103).
+- Wind against the current.
 - Lightning proximity.
 - Banded or zone-based rules (see `DOMAIN.md`).
 - Tide data for tidal rivers.

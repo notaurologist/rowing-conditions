@@ -230,21 +230,16 @@ function Plot({ row, n, sel }: { row: MeteogramRow; n: number; sel: number }) {
   );
 }
 
-// Symbols that only describe position against the limits: a check mark would read as approval,
-// which the app never gives (#91).
+// Status words for screen readers. On screen, color alone carries it: green within, light green
+// probably within, light red outside, gray unknown (an exception to hard rule 9).
 const STATUS_WORDS = {
-  within: { symbol: '●', long: (name: string) => `Within ${name}’s limits`, short: 'Within' },
-  outside: { symbol: '○', long: () => 'Outside', short: 'Outside' },
-  // A forecast the app doubts says within (decision 0020).
-  probablyWithin: {
-    symbol: '~',
-    long: (name: string) => `Probably within ${name}’s limits`,
-    short: 'Probably',
-  },
-  unknown: { symbol: '?', long: () => 'Unknown', short: 'Unknown' },
+  within: 'within',
+  outside: 'outside',
+  probablyWithin: 'probably within', // a forecast the app doubts says within (decision 0020)
+  unknown: 'unknown',
 } as const;
 
-// One rule set's status across the hours, in words and symbols as well as color. With several
+// One rule set's status across the hours, by color. With several
 // rule sets, the selected one's label says its limits are the lines drawn in the rows.
 function StatusRow({
   strip,
@@ -256,12 +251,7 @@ function StatusRow({
   several: boolean;
 }) {
   const n = hours.length;
-  const summary = strip.spans
-    .map(
-      (s) =>
-        `${STATUS_WORDS[s.status].short.toLowerCase()} ${hours[s.from]?.label} to ${hours[s.to - 1]?.label}`,
-    )
-    .join('; ');
+  const summary = strip.spans.map((s) => `${STATUS_WORDS[s.status]} ${s.words}`).join('; ');
   return (
     <div className={`mg-row mg-status-row`}>
       <div className="mg-label">
@@ -275,31 +265,14 @@ function StatusRow({
         <div className="mg-status-empty">No limits for this boat class yet.</div>
       ) : (
         <div className="mg-status" role="img" aria-label={`${strip.name} status: ${summary}.`}>
-          {strip.spans.map((s) => {
-            const words = STATUS_WORDS[s.status];
-            const share = (s.to - s.from) / n;
+          {strip.spans.map((s) => (
             // Placed by its hours, like the rows below, so it lines up with them at any width.
-            // The texture (outside hatched, unknown dotted) is the cue that isn't color and
-            // fits any span. The symbol appears only with its word, where both fit (#91).
-            return (
-              <div
-                key={s.from}
-                className={`mg-status-${s.status}`}
-                style={{ left: pct(s.from, n), width: pct(s.to - s.from, n) }}
-              >
-                <span className="mg-long">
-                  {share > 0.12
-                    ? `${words.symbol} ${words.long(strip.name)}`
-                    : share > 0.06
-                      ? `${words.symbol} ${words.short}`
-                      : ''}
-                </span>
-                <span className="mg-short">
-                  {share > 0.22 ? `${words.symbol} ${words.short}` : ''}
-                </span>
-              </div>
-            );
-          })}
+            <div
+              key={s.from}
+              className={`mg-status-${s.status}`}
+              style={{ left: pct(s.from, n), width: pct(s.to - s.from, n) }}
+            />
+          ))}
         </div>
       )}
     </div>
@@ -338,27 +311,6 @@ export function Meteogram({ model }: { model: MeteogramModel }) {
           </div>
         </div>
 
-        {model.windows.length > 0 && (
-          <div className="mg-row mg-windows-row">
-            <div className="mg-label mg-empty" />
-            <div className="mg-windows">
-              {model.windows.map((w, i) => (
-                <div
-                  key={w.from}
-                  className={`mg-window${w.probable ? ' mg-window-probable' : ''}`}
-                  style={{ left: pct(w.from, n), width: pct(w.to - w.from, n) }}
-                >
-                  <span
-                    className={`mg-window-label${i > 0 ? ' mg-hide-sm' : ''}${w.from / n > 0.7 ? ' mg-window-label-end' : ''}`}
-                  >
-                    {w.label}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
         {model.statuses.map((strip) => (
           <StatusRow
             key={strip.ruleSetId}
@@ -385,18 +337,13 @@ export function Meteogram({ model }: { model: MeteogramModel }) {
               {model.days.slice(1).map((d) => (
                 <span key={d.at} className="mg-midnight" style={{ left: pct(d.at, n) }} />
               ))}
-              {model.windows.flatMap((w) => [
-                <span
-                  key={`${w.from}a`}
-                  className="mg-window-edge"
-                  style={{ left: pct(w.from, n) }}
-                />,
-                <span
-                  key={`${w.from}b`}
-                  className="mg-window-edge"
-                  style={{ left: pct(w.to, n) }}
-                />,
-              ])}
+              {model.windows.flatMap((w) => {
+                const edge = `mg-window-edge${w.probable ? ' mg-window-edge-probable' : ''}`;
+                return [
+                  <span key={`${w.from}a`} className={edge} style={{ left: pct(w.from, n) }} />,
+                  <span key={`${w.from}b`} className={edge} style={{ left: pct(w.to, n) }} />,
+                ];
+              })}
               {row.kind === 'message' ? (
                 <p className="mg-message">{row.message}</p>
               ) : (
@@ -445,7 +392,6 @@ export function Meteogram({ model }: { model: MeteogramModel }) {
               : ''}
           </span>
         </label>
-        {model.course && <p className="mg-course">Course: {model.course.words[hour]?.summary}</p>}
       </div>
     </div>
   );

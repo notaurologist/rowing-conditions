@@ -1,7 +1,6 @@
 import { type RuleSet, type SavedLocation, toInternal } from '@rowing/core';
 import { describe, expect, it } from 'vitest';
 import montague from '../../../test/fixtures/conditions-montague.json' with { type: 'json' };
-import { NAMED_GAUGE, withNamedGauge } from '../../../test/namedGauge.ts';
 import type { Conditions } from '../../lib/api.ts';
 import { evaluateLocation } from '../timeline/evaluateLocation.ts';
 import { summaryModel } from './summaryModel.ts';
@@ -74,12 +73,12 @@ function summary(
 
 describe('summaryModel headline', () => {
   it('names the next window', () => {
-    expect(summary().headline).toBe('Within Club A’s limits today, 2 PM to 6:20 PM');
+    expect(summary().headline).toBe('Within limits today, 2 PM to 6:20 PM');
   });
 
   it('says when the window is under way', () => {
     expect(summary(clubA, { now: '2026-10-26T19:00:00.000Z', conditions: fresh() }).headline).toBe(
-      'Within Club A’s limits now, until 6:20 PM',
+      'Within limits now, until 6:20 PM',
     );
   });
 
@@ -87,7 +86,7 @@ describe('summaryModel headline', () => {
     // After today's window closes, the next is tomorrow's.
     const conditions = fresh();
     expect(summary(clubA, { now: '2026-10-27T00:00:00.000Z', conditions }).headline).toBe(
-      'Within Club A’s limits tomorrow, 6:49 AM to 6:18 PM',
+      'Within limits tomorrow, 6:49 AM to 6:18 PM',
     );
   });
 
@@ -96,7 +95,7 @@ describe('summaryModel headline', () => {
     const flow = strict.thresholds[0];
     if (flow) flow.value = toInternal('flow', 2000, 'cfs');
     expect(summary(strict).headline).toBe(
-      'No hours within Club A’s limits from dawn to dusk in the next 48 hours',
+      'No hours within limits from dawn to dusk in the next 48 hours',
     );
   });
 
@@ -113,71 +112,13 @@ describe('summaryModel headline', () => {
 });
 
 describe('summaryModel detail', () => {
-  it('names the deciding limit, its closest margin in the window, and a measurement that disagrees with the forecast', () => {
-    expect(summary().detail).toEqual([
-      'Flow is past its limit for 6 rowing hours, the most of any limit.',
-      'In the window, it comes no closer than 10 cfs to the 3,100 cfs limit.',
-      'The river measured 3,750 cfs at 8:15 AM; the forecast for that hour was 3,230 cfs.',
-    ]);
-  });
-
-  it('reads flow from the gauge the rule set names, without the location gauge’s measurement', () => {
-    const conditions = withNamedGauge(structuredClone(montague) as Conditions);
-    const detail = summary({ ...clubA, flowGaugeRef: NAMED_GAUGE }, { conditions }).detail;
-    // Twice the location's flow is past the limit for more hours than the location's 6.
-    const hours = Number(
-      /^Flow is past its limit for (\d+) rowing hours/.exec(detail[0] ?? '')?.[1],
-    );
-    expect(hours).toBeGreaterThan(6);
-    expect(detail.some((d) => d.startsWith('The river measured'))).toBe(false);
-  });
-
-  it('leaves out the measurement note when it agrees with the forecast', () => {
-    const conditions = structuredClone(montague) as Conditions;
-    const flow = conditions.current.find((r) => r.metric === 'flow');
-    if (flow) flow.value = toInternal('flow', 3250, 'cfs');
-    expect(
-      summary(clubA, { conditions }).detail.some((d) => d.startsWith('The river measured')),
-    ).toBe(false);
-  });
-
-  it('describes the closest limit when none is crossed', () => {
-    const loose = structuredClone(clubA);
-    loose.thresholds = loose.thresholds.filter((t) => t.id === 'gust');
-    expect(summary(loose).detail[0]).toBe('Wind gusts come closest to their limit.');
-  });
-});
-
-describe('summaryModel days', () => {
-  it('says what each day holds from dawn to dusk, with reasons', () => {
-    expect(summary().days).toEqual([
-      {
-        name: 'Today',
-        text: 'Outside from 8 AM to 2 PM: flow up to 3,230 cfs (limit: at most 3,100 cfs); air temperature down to 26 °F (limit: at least 35 °F). Within from 2 PM to dusk, 6:20 PM.',
-      },
-      { name: 'Tomorrow', text: 'Within from dawn, 6:49 AM, to dusk, 6:18 PM.' },
-      {
-        name: 'Wed, Oct 28',
-        text: 'Outside from dawn, 6:51 AM, to 8 AM: air temperature down to 23 °F (limit: at least 35 °F). The forecast ends at 8 AM.',
-      },
-    ]);
-  });
-
-  it('leaves out periods that have already ended', () => {
-    const days = summary(clubA, { now: '2026-10-27T00:00:00.000Z', conditions: fresh() }).days;
-    expect(days[0]?.name).toBe('Tomorrow');
-  });
-
-  it('gives daylight times when there is no rule set', () => {
-    expect(summary(null).days[0]).toEqual({
-      name: 'Today',
-      text: 'Civil dawn 6:47 AM, sunrise 7:16 AM, sunset 5:51 PM, civil dusk 6:20 PM.',
-    });
+  it('says nothing more under a plain answer', () => {
+    expect(summary().detail).toEqual([]);
   });
 
   it('never gives a verdict', () => {
     const all = [summary(), summary(null)]
-      .flatMap((s) => [s.headline, ...s.detail, ...s.days.map((d) => d.text)])
+      .flatMap((s) => [s.headline, ...s.detail])
       .join(' ')
       .toLowerCase();
     expect(all).not.toMatch(/\bsafe\b|\bunsafe\b|go out|no go|good to go|row now/);
@@ -256,18 +197,8 @@ describe('summaryModel degrees of certainty (decision 0020)', () => {
 
   it('offers a probable window when no hour is plainly within, and says why', () => {
     const s = summary(clubA, { conditions: doubted() });
-    expect(s.headline).toMatch(/^Probably within Club A’s limits/);
-    expect(s.detail.join(' ')).toContain(
-      'It rests on the NWPS flow forecast, which doesn’t match the gauge: it had 2,600 cfs for 8 AM; the gauge measured 3,750 cfs.',
-    );
-  });
-
-  it('words probable periods in the days', () => {
-    const s = summary(clubA, { conditions: doubted() });
-    expect(s.days.map((d) => d.text).join(' ')).toContain('Probably within from');
-    expect(s.days.map((d) => d.text).join(' ')).toContain(
-      "flow from a forecast that doesn't match the gauge",
-    );
+    expect(s.headline).toMatch(/^Probably within limits /);
+    expect(s.detail).toEqual(['The flow forecast doesn’t match the gauge.']);
   });
 
   it('puts the caveat with every answer', () => {
@@ -286,7 +217,7 @@ describe('summaryModel degrees of certainty (decision 0020)', () => {
       if (prov) delete prov.setAside;
     }
     expect(summary(clubA, { conditions }).headline).toBe(
-      'No hours known to be within Club A’s limits from dawn to dusk in the next 48 hours',
+      'No hours known to be within limits from dawn to dusk in the next 48 hours',
     );
   });
 });
