@@ -141,6 +141,62 @@ select {
   width: 100%;
 }
 
+/* The browser's own arrow is small and hugs the edge; this one matches the text color and
+   leaves room on the right. Two gradients draw the chevron, so it follows the theme. */
+select {
+  appearance: none;
+  padding-right: calc(var(--space-3) + 20px);
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--ink-2) 50%),
+    linear-gradient(135deg, var(--ink-2) 50%, transparent 50%);
+  background-position:
+    calc(100% - var(--space-3) - 6px) 50%,
+    calc(100% - var(--space-3)) 50%;
+  background-size: 6px 6px;
+  background-repeat: no-repeat;
+  cursor: pointer;
+}
+
+select:hover {
+  border-color: var(--ink-2);
+}
+
+/* Where the browser allows it, the open list matches the app instead of the system menu. */
+@supports (appearance: base-select) {
+  select,
+  ::picker(select) {
+    appearance: base-select;
+  }
+
+  select::picker-icon {
+    display: none;
+  }
+
+  ::picker(select) {
+    margin-top: var(--space-1);
+    padding: var(--space-1);
+    border: 1px solid var(--hair);
+    border-radius: var(--radius-md);
+    background: var(--paper);
+    color: var(--ink);
+    box-shadow: 0 6px 20px rgb(0 0 0 / 25%);
+  }
+
+  option {
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-sm);
+  }
+
+  option:hover,
+  option:focus-visible {
+    background: var(--surface);
+  }
+
+  option::checkmark {
+    content: "✓";
+  }
+}
+
 .field > .field-hint {
   color: var(--muted);
   font-size: var(--text-sm);

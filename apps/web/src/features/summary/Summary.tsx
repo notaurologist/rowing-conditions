@@ -3,8 +3,7 @@ import { tidyGaugeName } from '../../lib/format.ts';
 import type { LocationEvaluation } from '../timeline/evaluateLocation.ts';
 import { summaryModel } from './summaryModel.ts';
 
-// The top of the main screen: the answer as the page's heading, why and how sure, and each day
-// from dawn to dusk. Beside each other on wide screens, stacked on phones.
+// The top of the main screen: the answer as the page's heading, and how sure.
 export function Summary({
   conditions,
   evaluated,
@@ -52,16 +51,6 @@ export function Summary({
           </p>
         )}
       </div>
-      {summary.days.length > 0 && (
-        <div className="summary-days">
-          <h2 className="summary-kicker">Dawn to dusk</h2>
-          {summary.days.map((d) => (
-            <p key={d.name}>
-              <strong>{d.name}.</strong> {d.text}
-            </p>
-          ))}
-        </div>
-      )}
     </section>
   );
 }

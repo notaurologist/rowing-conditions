@@ -302,14 +302,9 @@
   color: var(--muted);
 }
 
-.mg-axis,
-.mg-windows {
+.mg-axis {
   position: relative;
   height: 22px;
-}
-
-.mg-windows {
-  height: 28px;
 }
 
 .mg-day {
@@ -340,30 +335,6 @@
   z-index: 3;
 }
 
-.mg-window {
-  position: absolute;
-  bottom: 2px;
-  height: 7px;
-  border: 1.5px solid var(--within);
-  border-bottom: 0;
-  border-radius: 3px 3px 0 0;
-}
-
-.mg-window-label {
-  position: absolute;
-  bottom: 8px;
-  left: 0;
-  font-size: var(--text-xs);
-  font-weight: 700;
-  color: var(--within-ink);
-  white-space: nowrap;
-}
-
-.mg-window-label-end {
-  left: auto;
-  right: 0;
-}
-
 .mg-status {
   position: relative;
   height: 26px;
@@ -375,36 +346,10 @@
   position: absolute;
   top: 0;
   bottom: 0;
-  display: flex;
-  align-items: center;
   box-sizing: border-box;
-  overflow: hidden;
   border-left: 1px solid var(--paper);
   border-right: 1px solid var(--paper);
   border-radius: var(--radius-sm);
-  font-size: var(--text-sm);
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-/* Padding on the words, not the span, so a one-hour span is no wider than its hour. */
-.mg-status > div > span {
-  padding: 0 3px;
-}
-
-.mg-status > div > span:empty {
-  padding: 0;
-}
-
-/* The symbol and words sit on a solid chip, so the stripes or dots never run behind them. */
-.mg-status-outside > span:not(:empty) {
-  border-radius: var(--radius-sm);
-  background: var(--outside-bg);
-}
-
-.mg-status-unknown > span:not(:empty) {
-  border-radius: var(--radius-sm);
-  background: var(--unknown-bg);
 }
 
 .mg-status-row + .mg-status-row {
@@ -420,35 +365,15 @@
 }
 
 .mg-status-within {
-  background: var(--within-bg);
-  color: var(--within-ink);
+  background: var(--within);
 }
 
 .mg-status-outside {
-  background:
-    repeating-linear-gradient(
-      135deg,
-      transparent 0 3px,
-      color-mix(in srgb, var(--outside-ink) 45%, transparent) 3px 5px
-    ),
-    var(--outside-bg);
-  color: var(--outside-ink);
+  background: color-mix(in srgb, var(--over) 40%, var(--paper));
 }
 
 .mg-status-unknown {
-  background:
-    radial-gradient(
-      circle,
-      color-mix(in srgb, var(--ink-2) 45%, transparent) 1px,
-      transparent 1.5px
-    )
-    0 0 / 5px 5px,
-    var(--unknown-bg);
-  color: var(--ink-2);
-}
-
-.mg-short {
-  display: none;
+  background: color-mix(in srgb, var(--unknown) 35%, var(--paper));
 }
 
 .mg-plot {
@@ -696,44 +621,6 @@
   white-space: nowrap;
 }
 
-.mg-notes {
-  margin-top: var(--space-4);
-  font-size: var(--text-sm);
-  color: var(--muted);
-}
-
-.mg-notes p {
-  margin: 0 0 var(--space-1);
-}
-
-.mg-table {
-  margin-top: var(--space-3);
-}
-
-.mg-table summary {
-  cursor: pointer;
-  color: var(--accent);
-}
-
-.mg-table-scroll {
-  overflow-x: auto;
-}
-
-.mg-table table {
-  border-collapse: collapse;
-  font-size: var(--text-sm);
-  margin-top: var(--space-2);
-  min-width: 100%;
-}
-
-.mg-table th,
-.mg-table td {
-  text-align: left;
-  padding: 3px var(--space-3) 3px 0;
-  border-bottom: 1px solid var(--hair);
-  white-space: nowrap;
-}
-
 .timeline {
   margin-bottom: var(--space-6);
 }
@@ -759,14 +646,8 @@
   }
 
   .mg-empty,
-  .mg-sel-time,
-  .mg-hide-sm,
-  .mg-long {
+  .mg-sel-time {
     display: none;
-  }
-
-  .mg-short {
-    display: inline;
   }
 
   .mg-day-near {
@@ -864,12 +745,8 @@
   width: auto;
 }
 
-/* The summary (features/summary/Summary.tsx): the answer beside the days, stacked on phones. */
+/* The summary (features/summary/Summary.tsx): the answer and how sure. */
 .summary {
-  display: grid;
-  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
-  gap: var(--space-5) var(--space-7);
-  align-items: start;
   margin: var(--space-4) 0 var(--space-5);
 }
 
@@ -902,38 +779,9 @@
   margin-top: var(--space-1);
 }
 
-.summary-days {
-  border-left: 1px solid var(--hair);
-  padding-left: var(--space-5);
-}
-
-.summary-kicker {
-  margin: 0 0 var(--space-1);
-  font-size: var(--text-xs);
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-
-.summary-days p {
-  margin: var(--space-2) 0 0;
-  font-size: var(--text-md);
-}
-
 @media (max-width: 820px) {
-  .summary {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
   .summary h1 {
     font-size: var(--text-2xl);
-  }
-
-  .summary-days {
-    border-left: 0;
-    border-top: 1px solid var(--hair);
-    padding: var(--space-4) 0 0;
   }
 }
 
@@ -1090,70 +938,11 @@ button.danger {
   margin-top: var(--space-1);
 }
 
-/* The intro and disclaimer (features/intro/Intro.tsx). */
+/* The header's controls, at its right. */
 .app-header-actions {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-}
-
-.intro {
-  max-width: 40rem;
-}
-
-.intro h2 {
-  margin: 0 0 var(--space-3);
-}
-
-.intro h3 {
-  font-size: var(--text-md);
-  margin: var(--space-5) 0 var(--space-2);
-}
-
-.intro ul {
-  margin: 0;
-  padding-left: 1.25em;
-}
-
-.intro li + li {
-  margin-top: var(--space-2);
-}
-
-.intro-disclaimer {
-  margin: 0;
-  padding: var(--space-3) var(--space-4);
-  background: var(--surface);
-  border-radius: var(--radius-md);
-}
-
-.intro .setup-actions {
-  margin-top: var(--space-5);
-}
-
-/* Course editor (#103): the start and turn markers on the map. */
-.course-editor {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-
-.course-end-letter {
-  display: grid;
-  place-items: center;
-  width: 26px;
-  height: 26px;
-  border: 2px solid var(--paper);
-  border-radius: 50%;
-  background: var(--accent);
-  color: var(--paper);
-  font-weight: 700;
-  font-size: var(--text-sm);
-  box-shadow: 0 1px 3px rgb(0 0 0 / 40%);
-}
-
-.mg-course {
-  margin: var(--space-1) 0 0;
-  font-size: var(--text-sm);
 }
 
 /* A flow forecast set aside for disagreeing with the gauge (#144): a doubted value (decision
@@ -1164,26 +953,13 @@ button.danger {
   opacity: 0.55;
 }
 
-/* Probably within (decision 0020): a lighter within, hatched, so it isn't told apart by color
-   alone, and dashed window brackets. */
+/* Probably within (decision 0020): a lighter within. */
 .mg-status-probablyWithin {
-  background:
-    repeating-linear-gradient(
-      45deg,
-      transparent 0 4px,
-      color-mix(in srgb, var(--within-ink) 30%, transparent) 4px 5px
-    ),
-    color-mix(in srgb, var(--within-bg) 60%, var(--paper));
-  color: var(--within-ink);
+  background: color-mix(in srgb, var(--within) 40%, var(--paper));
 }
 
-.mg-status-probablyWithin > span:not(:empty) {
-  border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--within-bg) 60%, var(--paper));
-}
-
-.mg-window-probable {
-  border-style: dashed;
+.mg-window-edge-probable {
+  border-left-style: dashed;
 }
 
 .summary-caveat {

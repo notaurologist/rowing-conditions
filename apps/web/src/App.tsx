@@ -2,8 +2,6 @@ import type { SavedLocation } from '@rowing/core';
 import { useState } from 'react';
 import { UnitToggle } from './components/UnitToggle.tsx';
 import { CurrentConditions } from './features/conditions/CurrentConditions.tsx';
-import { CourseEditor } from './features/course/CourseEditor.tsx';
-import { INTRO_VERSION, Intro } from './features/intro/Intro.tsx';
 import { LocationSetup } from './features/location-setup/LocationSetup.tsx';
 import { RuleSetBar } from './features/rules/RuleSetBar.tsx';
 import { RuleSetEditor } from './features/rules/RuleSetEditor.tsx';
@@ -22,11 +20,7 @@ export function App() {
   const [adding, setAdding] = useState(false);
   // The rule set being edited: an id, 'new', or null when not editing.
   const [editing, setEditing] = useState<string | null>(null);
-  const [editingCourse, setEditingCourse] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
-  const [showingAbout, setShowingAbout] = useState(false);
-  const introDue = (preferences.introVersion ?? 0) < INTRO_VERSION;
-  const introOpen = introDue || showingAbout;
 
   const selected =
     locations.find((location) => location.id === preferences.selectedLocationId) ?? locations[0];
@@ -52,7 +46,6 @@ export function App() {
 
   const select = (id: string) => {
     setEditing(null);
-    setEditingCourse(false);
     try {
       storage.savePreferences({ ...preferences, selectedLocationId: id });
     } catch (error) {
@@ -65,16 +58,6 @@ export function App() {
       storage.savePreferences({ ...preferences, units });
     } catch (error) {
       setProblem(`Couldn't save the unit choice: ${String(error)}`);
-    }
-  };
-
-  const closeIntro = () => {
-    setShowingAbout(false);
-    if (!introDue) return;
-    try {
-      storage.savePreferences({ ...preferences, introVersion: INTRO_VERSION });
-    } catch (error) {
-      setProblem(`Couldn't save that you've read this: ${String(error)}`);
     }
   };
 
@@ -92,11 +75,6 @@ export function App() {
       <header className="app-header">
         <p className="app-title">Launch Window</p>
         <div className="app-header-actions">
-          {!introOpen && (
-            <button type="button" className="link-button" onClick={() => setShowingAbout(true)}>
-              About
-            </button>
-          )}
           <UnitToggle units={preferences.units} onChange={setUnits} />
         </div>
       </header>
@@ -106,9 +84,7 @@ export function App() {
             {problem}
           </p>
         )}
-        {introOpen ? (
-          <Intro firstUse={introDue} onContinue={closeIntro} />
-        ) : adding || !selected ? (
+        {adding || !selected ? (
           <>
             {!selected && <p>No saved locations yet.</p>}
             <LocationSetup
@@ -132,9 +108,6 @@ export function App() {
               </select>
             </label>
 
-            <button type="button" onClick={() => setEditingCourse(true)}>
-              {selected.course ? 'Edit course' : 'Set course'}
-            </button>
             <button type="button" onClick={() => setAdding(true)}>
               Add location
             </button>
@@ -143,14 +116,7 @@ export function App() {
             </button>
           </section>
         )}
-        {!introOpen && !adding && selected && editingCourse && (
-          <CourseEditor
-            key={selected.id}
-            location={selected}
-            onDone={() => setEditingCourse(false)}
-          />
-        )}
-        {!introOpen && !adding && selected && !editingCourse && editing !== null && (
+        {!adding && selected && editing !== null && (
           <RuleSetEditor
             key={`${selected.id}:${editing}`}
             ruleSet={ruleSets.find((r) => r.id === editing)}
@@ -159,7 +125,7 @@ export function App() {
             onDone={() => setEditing(null)}
           />
         )}
-        {!introOpen && !adding && selected && !editingCourse && editing === null && (
+        {!adding && selected && editing === null && (
           <>
             <RuleSetBar
               choices={choices}

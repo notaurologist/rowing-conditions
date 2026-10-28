@@ -24,7 +24,6 @@ export const cacheTtlMs = {
   nwsPoint: 30 * DAY,
   gaugeMetadata: 7 * DAY,
   placeSearch: 30 * DAY,
-  waterways: 30 * DAY, // OpenStreetMap river centerlines, for snapping courses (#103)
 } as const;
 
 export type CachedResult<T> =

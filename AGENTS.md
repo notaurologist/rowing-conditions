@@ -23,7 +23,7 @@ A web app that shows rowers river flow, water temperature, wind, weather, and da
 6. **Use USGS Water Data APIs v1** (`api.waterdata.usgs.gov/ogcapi/v1`) for observations and the **NWPS API** (`api.water.noaa.gov/nwps/v1`) for flow forecasts. Never the legacy `waterservices.usgs.gov`.
 7. **No live network calls in tests.** Use recorded fixtures.
 8. **No secrets** in code, fixtures, or logs.
-9. **Never convey status by color alone.**
+9. **Never convey status by color alone.** One exception, the owner's call: the meteogram's status strip is solid color, with the spans in words for screen readers.
 10. **Ask before** adding a dependency, changing a recorded decision, or expanding scope beyond the current milestone.
 
 ## Stack

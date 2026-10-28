@@ -6,7 +6,6 @@ import { z } from 'zod';
 import type { SourceError } from './adapters/http.ts';
 import type { FlowSource } from './adapters/types.ts';
 import type { ConditionsInput } from './services/conditions.ts';
-import type { SnapCourse } from './services/courseSnap.ts';
 import type { ErrorLog } from './services/errorLog.ts';
 import type { SearchPlaces } from './services/places.ts';
 
@@ -14,7 +13,6 @@ export interface AppDeps {
   usgs: FlowSource;
   conditions: (input: ConditionsInput) => Promise<ConditionsResponse>;
   searchPlaces?: SearchPlaces; // absent when place search is turned off (GEOCODING_ENABLED=false)
-  snapCourse?: SnapCourse; // absent in tests that don't need it
   errorLog?: Pick<ErrorLog, 'record' | 'flush'>; // absent in tests that don't need it
 }
 
@@ -57,34 +55,6 @@ const ConditionsQuery = z.object({
 });
 
 const PlaceQuery = z.object({ q: z.string().trim().min(2).max(200) });
-
-// Taps as "lat,lon;lat,lon;…" in rowing order.
-const SnapQuery = z.object({
-  taps: z
-    .string()
-    .max(1000)
-    .transform((value, ctx) => {
-      const taps = value.split(';').map((pair) => pair.split(',').map(Number));
-      const valid = taps.every(
-        (t) =>
-          t.length === 2 &&
-          t.every(Number.isFinite) &&
-          Math.abs(t[0] as number) <= 90 &&
-          Math.abs(t[1] as number) <= 180,
-      );
-      if (!valid || taps.length < 2) {
-        ctx.addIssue({ code: 'custom', message: 'Expected at least two "lat,lon" pairs' });
-        return z.NEVER;
-      }
-      return taps as [number, number][];
-    }),
-});
-
-// Why a course couldn't be found, in words the app shows as they are.
-const SNAP_PROBLEMS = {
-  tooFar: 'The points are more than 30 km apart.',
-  tooMany: 'A course can have at most 12 points.',
-} as const;
 
 const upstreamError = (error: SourceError) => ({
   error: { source: error.source, kind: error.kind, message: error.message },
@@ -138,34 +108,6 @@ export function createApp(deps: AppDeps) {
         const result = await deps.searchPlaces(c.req.valid('query').q);
         if (!result.ok) return c.json(upstreamError(result.error), 502);
         return c.json({ places: result.data }, 200);
-      })
-
-      // A course following the river between each pair of taps, or straight where it can't
-      // (#103, #142). Can take a minute: Overpass is slow when busy.
-      .get('/course/snap', zValidator('query', SnapQuery), async (c) => {
-        if (!deps.snapCourse) {
-          return c.json({ error: { message: 'Course snapping is turned off.' } }, 503);
-        }
-        const result = await deps.snapCourse(c.req.valid('query').taps);
-        if (result.ok) return c.json({ legs: result.legs }, 200);
-        if (result.reason === 'sourceError') {
-          const { error } = upstreamError(result.error);
-          // The public Overpass server is often busy for a few minutes.
-          return c.json(
-            {
-              error: {
-                ...error,
-                message:
-                  "OpenStreetMap's river data is busy right now. Try again in a few minutes.",
-              },
-            },
-            502,
-          );
-        }
-        return c.json(
-          { error: { kind: result.reason, message: SNAP_PROBLEMS[result.reason] } },
-          422,
-        );
       })
 
       .get('/gauges/nearby', zValidator('query', NearbyQuery), async (c) => {
