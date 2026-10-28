@@ -1,6 +1,6 @@
 import { scaleLinear } from '@visx/scale';
 import { Area, LinePath } from '@visx/shape';
-import { type PointerEvent, useState } from 'react';
+import { type PointerEvent, type ReactNode, useState } from 'react';
 import type {
   MeteogramLimit,
   MeteogramModel,
@@ -279,7 +279,13 @@ function StatusRow({
   );
 }
 
-export function Meteogram({ model }: { model: MeteogramModel }) {
+export function Meteogram({
+  model,
+  below,
+}: {
+  model: MeteogramModel;
+  below?: (hour: number) => ReactNode; // follows the readout's hour (the wind map)
+}) {
   const n = model.hours.length;
   const [sel, setSel] = useState(model.defaultHour);
   if (n === 0) return <p>No forecast values are available for this location.</p>;
@@ -393,6 +399,12 @@ export function Meteogram({ model }: { model: MeteogramModel }) {
           </span>
         </label>
       </div>
+      {below && (
+        <div className="mg-row mg-below-row">
+          <div className="mg-label mg-empty" />
+          {below(hour)}
+        </div>
+      )}
     </div>
   );
 }

@@ -1,9 +1,12 @@
 import type { DisplaySystem, Metric, SavedLocation } from '@rowing/core';
+import { lazy, Suspense } from 'react';
 import type { Conditions } from '../../lib/api.ts';
 import { metricName } from '../../lib/format.ts';
 import type { LocationEvaluation } from './evaluateLocation.ts';
 import { Meteogram } from './Meteogram.tsx';
 import { meteogramModel } from './meteogramModel.ts';
+
+const WindMap = lazy(() => import('./WindMap.tsx'));
 
 interface Props {
   conditions: Conditions;
@@ -46,7 +49,19 @@ export function TimelineSection({ conditions, location, evaluated, alongside, un
         )),
       )}
 
-      <Meteogram key={location.id} model={model} />
+      <Meteogram
+        key={location.id}
+        model={model}
+        below={(hour) => {
+          const h = model.hours[hour];
+          if (!h) return null;
+          return (
+            <Suspense fallback={<div className="wind-map-frame map-loading">Loading map…</div>}>
+              <WindMap lat={location.lat} lon={location.lon} wind={h.wind} label={h.label} />
+            </Suspense>
+          );
+        }}
+      />
     </section>
   );
 }

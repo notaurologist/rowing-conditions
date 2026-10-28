@@ -5,7 +5,13 @@ import northfield from '../../../test/fixtures/conditions-northfield.json' with 
 import { NAMED_GAUGE, withNamedGauge } from '../../../test/namedGauge.ts';
 import type { Conditions } from '../../lib/api.ts';
 import { evaluateLocation } from './evaluateLocation.ts';
-import { dewPointGapWords, fogWords, type MeteogramRow, meteogramModel } from './meteogramModel.ts';
+import {
+  dewPointGapWords,
+  fogWords,
+  type MeteogramRow,
+  meteogramModel,
+  windWords,
+} from './meteogramModel.ts';
 
 // Recorded from the live API. Montague (USGS-01170500) has an NWPS flow forecast and no water
 // temperature; Northfield (USGS-01161280) has no forecast but measures water temperature.
@@ -512,5 +518,58 @@ describe('fog and dew point (#42)', () => {
 
   it('leaves the gap out when there is no dew point', () => {
     expect(row(model(), 'airTemp').readouts[5]).not.toContain('dew point');
+  });
+});
+
+describe('wind map words', () => {
+  // Speeds in m/s: 5.36 m/s is 12 mph, 8.05 m/s is 18 mph.
+  const point = (values: {
+    windSpeed?: number | null;
+    windGust?: number | null;
+    windDirection?: number | null;
+  }) => ({ time: NOW, values, provenance: {} }) as Conditions['forecast'][number];
+
+  it('points the arrows where the wind blows, from the direction it comes from', () => {
+    expect(
+      windWords(point({ windSpeed: 5.36, windGust: 8.05, windDirection: 315 }), 'mph'),
+    ).toEqual({
+      toward: 135,
+      text: '12, gusts 18 mph, from NW',
+    });
+    expect(windWords(point({ windSpeed: 5.36, windDirection: 90 }), 'mph').toward).toBe(270);
+    expect(windWords(point({ windSpeed: 5.36, windDirection: 180 }), 'mph').toward).toBe(0);
+  });
+
+  it('leaves out gusts no stronger than the wind', () => {
+    expect(
+      windWords(point({ windSpeed: 5.36, windGust: 5.36, windDirection: 0 }), 'mph').text,
+    ).toBe('12 mph, from N');
+  });
+
+  it('draws no arrows when calm, and says so', () => {
+    expect(windWords(point({ windSpeed: 0, windDirection: 0 }), 'mph')).toEqual({
+      toward: null,
+      text: 'calm',
+    });
+  });
+
+  it('never treats a missing direction or speed as calm', () => {
+    expect(windWords(point({ windSpeed: 5.36, windDirection: null }), 'mph')).toEqual({
+      toward: null,
+      text: '12 mph, direction unknown',
+    });
+    expect(windWords(point({ windSpeed: 0, windGust: 4, windDirection: null }), 'mph').text).toBe(
+      '0, gusts 9 mph, direction unknown',
+    );
+    expect(windWords(point({ windDirection: 315 }), 'mph')).toEqual({
+      toward: null,
+      text: 'no forecast',
+    });
+  });
+
+  it('gives each hour its wind', () => {
+    const m = model();
+    expect(m.hours).not.toHaveLength(0);
+    for (const h of m.hours) expect(h.wind.text).not.toBe('');
   });
 });

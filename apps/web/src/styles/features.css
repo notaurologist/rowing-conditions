@@ -625,6 +625,73 @@
   margin-bottom: var(--space-6);
 }
 
+/* The wind over the water at the readout's hour: muted tiles, arrows where the wind blows. */
+.wind-map {
+  min-width: 0;
+  margin: var(--space-4) 0 0;
+}
+
+.wind-map .leaflet-container .leaflet-control-attribution {
+  background: color-mix(in srgb, var(--paper) 80%, transparent);
+  color: var(--muted);
+}
+
+.wind-map .leaflet-container .leaflet-control-attribution a {
+  color: var(--ink-2);
+}
+
+.wind-map-frame {
+  position: relative;
+  height: 200px;
+  border: 1px solid var(--hair);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.wind-map-tiles {
+  height: 100%;
+  background: var(--surface);
+}
+
+.wind-map-tiles .leaflet-tile-pane {
+  filter: grayscale(1) contrast(0.85) brightness(1.08);
+}
+
+@media (prefers-color-scheme: dark) {
+  .wind-map-tiles .leaflet-tile-pane {
+    filter: grayscale(1) invert(1) contrast(0.8) brightness(0.9);
+  }
+}
+
+.wind-map-arrows {
+  position: absolute;
+  inset: 0;
+  z-index: 500; /* above Leaflet's panes, below its attribution */
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  place-items: center;
+  pointer-events: none;
+}
+
+.wind-map-arrows svg {
+  width: 26px;
+  height: 26px;
+  fill: none;
+  stroke: var(--wind);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  paint-order: stroke;
+  filter: drop-shadow(0 0 2px var(--paper)) drop-shadow(0 0 1px var(--paper));
+}
+
+.wind-map figcaption {
+  margin-top: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--ink-2);
+}
+
 @container (max-width: 600px) {
   /* Not on .meteogram: it is the container, and a container query can't style its container.
      Set there, the pointer layer kept the 156 px label column and missed touches on the left. */

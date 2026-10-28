@@ -68,6 +68,7 @@ The chart is a **rowing meteogram**: every element on one shared time axis, each
 - **Fog** is the NWS forecaster's call for each hour, in words ("Patchy fog (NWS)"), in the readout, with the air temperature's gap to the dew point. Context only, like light (decided in #42).
 - **Light level** is shaded (twilight, night) from the exact civil dawn, sunrise, sunset and civil dusk. Light is context: crews often row before sunrise with lights, so it does not change whether an hour is within limits unless a rule set sets a hard daylight window.
 - **Readout:** one readout line shows every row's value and its margin to the limit at any hour, by pointer or by slider.
+- **Wind map:** under the chart, a small, muted map of the location with arrows pointing where the wind blows at the readout's hour, and the wind in words, so head, cross and tail wind can be read against the water. No course to set. Context only, like light. Calm or an unknown direction draws no arrows and says which.
 - **Missing rows:** flow at a weather-only location gets a row that says so. Water temperature at a gauge without a sensor is left out, unless a limit needs it, when its row says it isn't measured.
 
 ### 4. Rule sets

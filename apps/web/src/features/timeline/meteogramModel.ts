@@ -85,7 +85,8 @@ export interface StatusStrip {
 }
 
 export interface MeteogramModel {
-  hours: { time: string; label: string; light: string; fog: FogWords }[]; // light: Twilight, then night
+  // light: Twilight, then night
+  hours: { time: string; label: string; light: string; fog: FogWords; wind: WindWords }[];
   rows: MeteogramRow[];
   light: { from: number; to: number; light: 'twilight' | 'night' }[];
   // One strip per attached rule set, in the location's order. The selected one also drives the
@@ -264,6 +265,25 @@ export function fogWords(fog: string | null | undefined): FogWords {
   if (fog === undefined) return { state: 'unknown', text: 'Fog forecast unknown' };
   if (fog === null) return { state: 'none', text: 'No fog forecast' };
   return { state: 'fog', text: FOG_COVERAGE[fog] ?? `Fog (${fog.replaceAll('_', ' ')})` };
+}
+
+// The hour's wind for the wind map: which way it blows, and in words. Context only. A missing
+// direction is unknown, never calm, and draws no arrows.
+export interface WindWords {
+  toward: number | null; // degrees the wind blows toward; null: no arrows (calm or unknown)
+  text: string; // "12, gusts 18 mph, from NW", "calm", "8 mph, direction unknown", "no forecast"
+}
+
+export function windWords(point: ForecastPoint, unit: Unit): WindWords {
+  const speed = valueAt(point, 'windSpeed', unit);
+  const gust = valueAt(point, 'windGust', unit);
+  const from = point.values.windDirection;
+  if (speed === null) return { toward: null, text: 'no forecast' };
+  const gusts = gust === null || gust <= speed ? '' : `, gusts ${fmt(gust, unit)}`;
+  if (speed === 0 && gusts === '') return { toward: null, text: 'calm' };
+  const amount = `${fmt(speed, unit)}${gusts} ${unitSymbol(unit)}`;
+  if (typeof from !== 'number') return { toward: null, text: `${amount}, direction unknown` };
+  return { toward: (from + 180) % 360, text: `${amount}, from ${compassPoint(from)}` };
 }
 
 function hourLight(spans: readonly { from: number; to: number; light: Light }[], i: number) {
@@ -614,6 +634,7 @@ export function meteogramModel(input: MeteogramInput): MeteogramModel {
     label: `${dayLabel(p.time, now, timeZone)} ${formatClock(p.time, timeZone)}`,
     light: hourLight(light, i),
     fog: fogWords(p.fog),
+    wind: windWords(p, displayUnits[units].windSpeed),
   }));
   const firstWindow = windows[0];
   const defaultHour = firstWindow ? Math.min(n - 1, Math.max(0, Math.floor(firstWindow.from))) : 0;
